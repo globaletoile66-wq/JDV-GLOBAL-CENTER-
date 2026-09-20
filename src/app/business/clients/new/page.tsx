@@ -1,0 +1,4 @@
+'use client';
+import Link from 'next/link';
+import { ArrowLeft, ArrowRight, Construction } from 'lucide-react';
+export default function Page(){return <main className="min-h-screen bg-[#0D1F3C] text-white px-4 py-10"><div className="mx-auto max-w-2xl"><Link href="/business/clients" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm"><ArrowLeft size={16}/>Retour</Link><section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8"><Construction className="mb-4 text-[#F97316]" size={32}/><h1 className="text-2xl font-extrabold">Nouveau client</h1><p className="mt-3 leading-7 text-white/60">Préparez la fiche client puis utilisez le workflow client sécurisé du module CRM.</p><Link href="/business/clients" className="btn-primary mt-7 inline-flex">Ouvrir le module<ArrowRight size={16}/></Link></section></div></main>}
