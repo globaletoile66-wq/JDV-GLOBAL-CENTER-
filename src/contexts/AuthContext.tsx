@@ -67,15 +67,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [supabase]);
 
-  const checkSuperAdmin = useCallback(async (userId: string) => {
+  const checkSuperAdmin = useCallback(async (_userId: string) => {
     try {
-      const { data } = await supabase
-        .from('super_admins')
-        .select('id, admin_status')
-        .eq('user_id', userId)
-        .eq('admin_status', 'active')
-        .maybeSingle();
-      setIsSuperAdmin(!!data);
+      const { data, error } = await supabase.rpc('is_super_admin');
+      if (error) throw error;
+      setIsSuperAdmin(data === true);
     } catch {
       setIsSuperAdmin(false);
     }
