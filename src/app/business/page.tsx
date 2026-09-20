@@ -153,8 +153,18 @@ export default function JDVBusinessDashboard() {
         supabase.from('business_expenses').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('expense_status', 'pending'),
       ]);
 
-      const salesData = salesRes.data || [];
-      const totalRevenue = salesData.filter(s => s.sale_status === 'paid').reduce((sum, s) => sum + (s.total_amount || 0), 0);
+      type DashboardSale = {
+        id: string;
+        total_amount: number | null;
+        sale_status: string;
+        sale_date: string;
+        client_id: string | null;
+      };
+
+      const salesData: DashboardSale[] = (salesRes.data || []) as DashboardSale[];
+      const totalRevenue = salesData
+        .filter((sale) => sale.sale_status === 'paid')
+        .reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
 
       setStats({
         totalSales: salesData.length,
