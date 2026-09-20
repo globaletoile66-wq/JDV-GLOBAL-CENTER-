@@ -16,6 +16,13 @@ const modules = [
   ['JDV INSURANCE', 'Assurance', ShieldCheck],
   ['JDV ACADEMY', 'Formation', GraduationCap],
   ['JDV AI', 'Intelligence artificielle', Sparkles],
+  ['JDV TRANSIT', 'Transit et logistique', Truck],
+  ['JDV TONTINE', 'Épargne collective et tontine', CreditCard],
+  ['JDV AGRICULTURE', 'Agriculture et services', Home],
+  ['JDV ENERGY', 'Énergie et services', Sparkles],
+  ['JDV PUB', 'Publicité et diffusion', Sparkles],
+  ['JDV MEDIA', 'Média et contenus', Sparkles],
+  ['JDV SOCIAL', 'Réseau social JDV', Building2],
 ] as const;
 
 export default function HomePage() {
