@@ -80,41 +80,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    const initSession = async () => {
-      try {
-        const { data: { session: s } } = await supabase.auth.getSession();
-        if (!mounted) return;
-        setSession(s);
-        setUser(s?.user ?? null);
-        if (s?.user) {
-          await Promise.all([
-            loadProfile(s.user.id),
-            checkSuperAdmin(s.user.id),
-          ]);
-        }
-      } catch {
-        // Session retrieval failed
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    initSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const applySession = async (s: Session | null) => {
       if (!mounted) return;
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) {
-        await Promise.all([
-          loadProfile(s.user.id),
-          checkSuperAdmin(s.user.id),
-        ]);
-      } else {
+
+      if (!s?.user) {
         setProfile(null);
         setIsSuperAdmin(false);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      await Promise.all([
+        loadProfile(s.user.id),
+        checkSuperAdmin(s.user.id),
+      ]);
+
+      if (mounted) setLoading(false);
+    };
+
+    supabase.auth.getSession()
+      .then(({ data: { session: s } }) => applySession(s))
+      .catch(() => {
+        if (mounted) setLoading(false);
+      });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      void applySession(s);
     });
 
     return () => {
