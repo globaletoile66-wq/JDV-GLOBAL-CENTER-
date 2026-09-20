@@ -1,17 +1,7 @@
 'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Construction } from 'lucide-react';
-import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
-
-export default function Page(){
- const {user,loading}=useAuth(); const router=useRouter();
- useEffect(()=>{if(!loading&&!user)router.replace('/auth/login');},[loading,user,router]);
- if(loading||!user)return <main className="min-h-screen bg-[#0D1F3C] flex items-center justify-center text-white">Chargement…</main>;
- return <main className="min-h-screen bg-[#0D1F3C] text-white px-4 py-10"><div className="max-w-3xl mx-auto">
-  <Link href="/business" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm mb-8"><ArrowLeft size={16}/>Retour au tableau de bord</Link>
-  <section className="rounded-2xl border border-white/10 bg-white/5 p-8"><Construction className="text-[#F97316] mb-4" size={32}/><h1 className="text-2xl font-bold">Factures</h1><p className="mt-3 text-white/60 leading-relaxed">Consultez et gérez les factures de votre entreprise.</p><p className="mt-6 text-sm text-white/40">Cette interface est reliée à l'authentification réelle JDV et sera branchée aux données métier existantes sans données de démonstration.</p></section>
- </div></main>;
-}
+import {useEffect,useState} from 'react'; import Link from 'next/link'; import {ArrowLeft} from 'lucide-react';
+import {useAuth} from '@/contexts/AuthContext'; import {createClient} from '@/lib/supabase/client'; import {getCurrentBusinessId} from '@/lib/business/current-business';
+export default function Page(){const {user,loading}=useAuth();const [rows,setRows]=useState<any[]>([]);const [busy,setBusy]=useState(true);const supabase=createClient();
+useEffect(()=>{(async()=>{if(!user||loading)return;const id=await getCurrentBusinessId(supabase,user.id);if(id){const {data}=await supabase.from('business_invoices').select('*').eq('business_id',id).order('created_at',{ascending:false}).limit(100);setRows(data||[])}setBusy(false)})()},[user,loading]);
+if(loading||busy)return <main className="min-h-screen bg-[#0D1F3C] text-white grid place-items-center">Chargement…</main>;
+return <main className="min-h-screen bg-[#0D1F3C] text-white p-6"><div className="max-w-6xl mx-auto"><Link href="/business" className="inline-flex items-center gap-2 text-white/60 mb-6"><ArrowLeft size={16}/>Retour</Link><h1 className="text-2xl font-bold">Factures</h1><div className="mt-6 overflow-auto rounded-xl border border-white/10"><table className="w-full text-sm"><tbody>{rows.map(r=><tr key={r.id} className="border-b border-white/10"><td className="p-3">invoice_number: {String(r.invoice_number??'—')}</td><td className="p-3">total_amount: {String(r.total_amount??'—')}</td><td className="p-3">invoice_status: {String(r.invoice_status??'—')}</td><td className="p-3">due_date: {String(r.due_date??'—')}</td></tr>)}</tbody></table>{rows.length===0&&<p className="p-8 text-center text-white/50">Aucune donnée enregistrée.</p>}</div></div></main>}
