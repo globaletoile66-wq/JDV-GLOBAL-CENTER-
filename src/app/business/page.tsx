@@ -89,10 +89,9 @@ export default function JDVBusinessDashboard() {
   const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { user, profile, signOut } = useAuth();
-  const { activeOrganizationName, setActiveModule } = useJDV();
+  const { setActiveModule } = useJDV();
   const router = useRouter();
   const supabase = createClient();
 
@@ -195,7 +194,7 @@ export default function JDVBusinessDashboard() {
             id: sale.id,
             sale_number: `VTE-${sale.id.slice(0, 8).toUpperCase()}`,
             sale_status: sale.sale_status,
-            total_amount: sale.total_amount,
+            total_amount: sale.total_amount ?? 0,
             sale_date: sale.sale_date,
             client_name: clientName,
           };
