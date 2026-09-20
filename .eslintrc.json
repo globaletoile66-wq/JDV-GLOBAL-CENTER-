@@ -3,26 +3,13 @@
   "extends": [
     "next/core-web-vitals",
     "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:prettier/recommended"
+    "plugin:@typescript-eslint/recommended"
   ],
   "parser": "@typescript-eslint/parser",
   "plugins": [
-    "@typescript-eslint",
-    "prettier"
+    "@typescript-eslint"
   ],
   "rules": {
-    "prettier/prettier": [
-      "error",
-      {
-        "endOfLine": "auto",
-        "singleQuote": true,
-        "semi": true,
-        "tabWidth": 2,
-        "printWidth": 100,
-        "trailingComma": "es5"
-      }
-    ],
     "@typescript-eslint/no-unused-vars": [
       "warn",
       {
