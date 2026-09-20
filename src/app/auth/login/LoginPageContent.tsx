@@ -96,7 +96,7 @@ export default function LoginPageContent() {
 
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
             <ArrowLeft size={15} />
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Link>
 
           <div className="mb-8">
