@@ -1,0 +1,4 @@
+'use client';
+import Link from 'next/link';
+import { ArrowLeft, ArrowRight, Construction } from 'lucide-react';
+export default function Page(){return <main className="min-h-screen bg-[#0D1F3C] text-white px-4 py-10"><div className="mx-auto max-w-2xl"><Link href="/business/invoices" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm"><ArrowLeft size={16}/>Retour</Link><section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8"><Construction className="mb-4 text-[#F97316]" size={32}/><h1 className="text-2xl font-extrabold">Nouvelle facture</h1><p className="mt-3 leading-7 text-white/60">Les champs de facturation seront enregistrés uniquement via les workflows métier sécurisés. La page existante des factures reste accessible sans données de démonstration.</p><Link href="/business/invoices" className="btn-primary mt-7 inline-flex">Ouvrir le module<ArrowRight size={16}/></Link></section></div></main>}
