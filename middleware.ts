@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected routes — require authentication
-  const protectedPaths = ['/dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay'];
+  const protectedPaths = ['/dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain'];
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
 
   if (!user && isProtected) {
@@ -51,7 +51,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Super admin route — basic check (full check done server-side)
+  // Hidden concepteur portal: authentication plus server-side authorization.
+  if (pathname.startsWith('/hidden-concepteur-gate')) {
+    if (!user) {
+      if (pathname !== '/hidden-concepteur-gate/login') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/hidden-concepteur-gate/login';
+        url.searchParams.set('redirect', pathname);
+        return NextResponse.redirect(url);
+      }
+    } else if (pathname !== '/hidden-concepteur-gate/login') {
+      const { data: allowed } = await supabase.rpc('is_super_admin');
+      if (allowed !== true) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/dashboard';
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
+  // Legacy super-admin route
   if (pathname.startsWith('/super-admin') && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';
