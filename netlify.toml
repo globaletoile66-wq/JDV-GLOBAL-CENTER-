@@ -1,5 +1,2 @@
 [build]
-  command = "npm run format && npm run build"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+  command = "npm run build"
