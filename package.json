@@ -23,8 +23,7 @@
       "autoprefixer",
       "postcss",
       "eslint",
-      "prettier",
-      "@netlify/plugin-nextjs"
+      "prettier"
     ],
     "scripts": [
       "dev",
@@ -36,7 +35,7 @@
       "serve",
       "type-check"
     ],
-    "warning": "🚨 CRITICAL: DO NOT REMOVE OR MODIFY ABOVE DEPENDENCIES - Required for Next.js 15 TypeScript app functionality"
+    "warning": "Dependencies listed here are required for the Next.js 15 TypeScript application. Netlify's modern Next.js OpenNext adapter is intentionally not pinned."
   },
   "scripts": {
     "dev": "next dev -p 4028",
