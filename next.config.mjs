@@ -2,9 +2,11 @@ import { imageHosts } from './image-hosts.config.mjs';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  productionBrowserSourceMaps: true,
+  // Désactivé : ne pas exposer le code source non minifié en production.
+  productionBrowserSourceMaps: false,
   distDir: process.env.DIST_DIR || '.next',
 
+  // Ces erreurs doivent être corrigées, pas masquées.
   typescript: {
     ignoreBuildErrors: false,
   },

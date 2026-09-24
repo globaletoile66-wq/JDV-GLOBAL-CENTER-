@@ -23,7 +23,8 @@
       "autoprefixer",
       "postcss",
       "eslint",
-      "prettier"
+      "prettier",
+      "@netlify/plugin-nextjs"
     ],
     "scripts": [
       "dev",
@@ -35,12 +36,12 @@
       "serve",
       "type-check"
     ],
-    "warning": "Dependencies listed here are required for the Next.js 15 TypeScript application. Netlify's modern Next.js OpenNext adapter is intentionally not pinned."
+    "warning": "🚨 CRITICAL: DO NOT REMOVE OR MODIFY ABOVE DEPENDENCIES - Required for Next.js 15 TypeScript app functionality"
   },
   "scripts": {
     "dev": "next dev -p 4028",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 4028",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md,json}\"",
@@ -64,6 +65,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@netlify/plugin-nextjs": "^5.11.1",
     "@types/node": "^20",
     "@types/react": "19.0.3",
     "@types/react-dom": "19.0.3",
