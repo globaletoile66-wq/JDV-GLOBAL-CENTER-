@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919121409 transport_02_deliveries_parcels
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919195122 jdv_pay_lock_wallet_mutations_v2
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

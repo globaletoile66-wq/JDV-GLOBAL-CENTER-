@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920012235 jdv_security_harden_anon_public_access
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

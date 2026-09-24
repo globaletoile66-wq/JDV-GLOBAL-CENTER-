@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920170151 fix_module_statuses
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

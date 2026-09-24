@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919171537 health_01_providers_professionals_services
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

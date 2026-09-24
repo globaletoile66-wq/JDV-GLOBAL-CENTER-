@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920015831 jdv_rpc_security_helper_restrictions
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

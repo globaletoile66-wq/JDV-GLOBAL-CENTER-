@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920015729 jdv_security_revoke_marketplace_trigger_execute
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

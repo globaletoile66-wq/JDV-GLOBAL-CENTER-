@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919122309 create_business_admin_account_romarica15_part3
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920012242 jdv_security_harden_financial_direct_writes
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

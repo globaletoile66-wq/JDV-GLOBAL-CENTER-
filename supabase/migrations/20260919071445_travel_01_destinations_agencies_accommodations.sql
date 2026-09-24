@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919071445 travel_01_destinations_agencies_accommodations
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

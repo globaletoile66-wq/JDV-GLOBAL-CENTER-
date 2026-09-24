@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919205457 jdv_ai_guardrails_v8
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

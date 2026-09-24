@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919202215 harden_transit_payments_tracking_crm_v1
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

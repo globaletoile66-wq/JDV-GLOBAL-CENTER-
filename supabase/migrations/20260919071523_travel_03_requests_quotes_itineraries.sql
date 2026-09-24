@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919071523 travel_03_requests_quotes_itineraries
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

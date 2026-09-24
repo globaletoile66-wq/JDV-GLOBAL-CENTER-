@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920012326 jdv_security_enforce_single_concepteur_super_admin_v3
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

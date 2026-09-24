@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260923093731 activate_jdv_crm_module
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

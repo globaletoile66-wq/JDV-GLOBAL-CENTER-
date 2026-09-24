@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920013312 jdv_pay_harden_wallet_org_and_provider_catalog
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

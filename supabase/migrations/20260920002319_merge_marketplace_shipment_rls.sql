@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920002319 merge_marketplace_shipment_rls
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920120535 create_ddl_export_helper
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920005433 jdv_tontine_phase4c_dispatch_finalization
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

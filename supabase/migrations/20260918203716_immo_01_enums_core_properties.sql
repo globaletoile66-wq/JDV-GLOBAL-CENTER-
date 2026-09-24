@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260918203716 immo_01_enums_core_properties
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

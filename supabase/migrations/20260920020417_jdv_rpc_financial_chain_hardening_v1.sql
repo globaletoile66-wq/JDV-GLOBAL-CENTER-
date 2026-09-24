@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920020417 jdv_rpc_financial_chain_hardening_v1
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

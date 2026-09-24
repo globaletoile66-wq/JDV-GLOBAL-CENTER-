@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920013826 jdv_marketplace_allow_trusted_inventory_reservation
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

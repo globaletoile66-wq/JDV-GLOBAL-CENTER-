@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919020546 immo_04_leases_commissions_documents_reports
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

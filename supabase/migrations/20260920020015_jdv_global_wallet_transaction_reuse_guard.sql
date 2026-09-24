@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920020015 jdv_global_wallet_transaction_reuse_guard
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

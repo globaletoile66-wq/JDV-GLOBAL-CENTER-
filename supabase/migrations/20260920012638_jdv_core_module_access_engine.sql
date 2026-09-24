@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920012638 jdv_core_module_access_engine
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

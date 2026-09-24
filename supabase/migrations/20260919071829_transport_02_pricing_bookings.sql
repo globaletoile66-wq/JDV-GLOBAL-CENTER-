@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919071829 transport_02_pricing_bookings
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920015701 jdv_future_branches_security_hardening
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

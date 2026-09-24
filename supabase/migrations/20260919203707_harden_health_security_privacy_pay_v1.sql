@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919203707 harden_health_security_privacy_pay_v1
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

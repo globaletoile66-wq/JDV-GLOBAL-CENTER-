@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919121349 transport_01_ride_functions
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919020307 set_initial_super_admin
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

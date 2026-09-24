@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920005852 jdv_tontine_phase4e_financial_control
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

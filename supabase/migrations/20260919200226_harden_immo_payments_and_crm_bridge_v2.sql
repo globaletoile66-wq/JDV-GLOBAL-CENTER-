@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919200226 harden_immo_payments_and_crm_bridge_v2
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

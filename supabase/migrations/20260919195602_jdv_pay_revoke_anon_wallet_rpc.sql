@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919195602 jdv_pay_revoke_anon_wallet_rpc
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

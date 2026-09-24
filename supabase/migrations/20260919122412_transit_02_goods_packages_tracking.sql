@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919122412 transit_02_goods_packages_tracking
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

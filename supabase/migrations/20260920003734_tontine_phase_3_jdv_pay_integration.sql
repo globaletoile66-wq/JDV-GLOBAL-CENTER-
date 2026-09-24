@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920003734 tontine_phase_3_jdv_pay_integration
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

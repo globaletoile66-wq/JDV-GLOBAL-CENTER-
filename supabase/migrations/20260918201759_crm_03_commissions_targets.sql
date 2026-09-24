@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260918201759 crm_03_commissions_targets
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

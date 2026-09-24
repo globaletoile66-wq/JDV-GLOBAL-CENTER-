@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920005717 jdv_tontine_phase4d_late_penalty_accounting
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

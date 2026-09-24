@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920002755 restrict_ai_admin_rpcs
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

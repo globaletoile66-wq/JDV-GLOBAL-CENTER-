@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920020844 jdv_cross_module_financial_direct_write_lockdown_v1
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

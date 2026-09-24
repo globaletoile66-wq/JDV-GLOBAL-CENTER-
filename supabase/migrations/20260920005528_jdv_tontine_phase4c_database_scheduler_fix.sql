@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920005528 jdv_tontine_phase4c_database_scheduler_fix
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920013514 jdv_pay_catalog_security_invoker
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

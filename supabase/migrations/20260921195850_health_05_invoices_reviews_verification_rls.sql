@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260921195850 health_05_invoices_reviews_verification_rls
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

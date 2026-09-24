@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920014349 jdv_transport_harden_production_security
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260918201925 crm_05b_add_business_id_to_schedules
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

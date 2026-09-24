@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919171556 health_02_availabilities_appointments
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

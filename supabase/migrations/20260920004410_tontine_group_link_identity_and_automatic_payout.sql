@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920004410 tontine_group_link_identity_and_automatic_payout
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

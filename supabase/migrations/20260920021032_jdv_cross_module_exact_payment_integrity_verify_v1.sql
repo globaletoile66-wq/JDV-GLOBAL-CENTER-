@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920021032 jdv_cross_module_exact_payment_integrity_verify_v1
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

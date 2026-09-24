@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920015602 jdv_social_foundation
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919195552 jdv_business_rls_hardening
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

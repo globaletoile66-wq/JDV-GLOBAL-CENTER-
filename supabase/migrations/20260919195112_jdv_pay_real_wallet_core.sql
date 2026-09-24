@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919195112 jdv_pay_real_wallet_core
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

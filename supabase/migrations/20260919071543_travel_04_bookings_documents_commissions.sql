@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919071543 travel_04_bookings_documents_commissions
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

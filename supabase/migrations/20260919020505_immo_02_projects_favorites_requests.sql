@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919020505 immo_02_projects_favorites_requests
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

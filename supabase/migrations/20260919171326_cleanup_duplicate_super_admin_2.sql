@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919171326 cleanup_duplicate_super_admin_2
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

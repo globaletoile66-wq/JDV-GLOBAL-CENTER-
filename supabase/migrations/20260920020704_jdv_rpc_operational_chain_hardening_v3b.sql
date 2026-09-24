@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920020704 jdv_rpc_operational_chain_hardening_v3b
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

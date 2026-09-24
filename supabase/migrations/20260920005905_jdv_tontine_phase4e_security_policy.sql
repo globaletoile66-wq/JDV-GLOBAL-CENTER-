@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920005905 jdv_tontine_phase4e_security_policy
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

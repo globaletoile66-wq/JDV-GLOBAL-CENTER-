@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919204730 jdv_ai_audit_v6
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

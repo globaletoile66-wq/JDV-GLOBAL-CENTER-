@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920013606 jdv_crm_harden_sensitive_rpc_authorization
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

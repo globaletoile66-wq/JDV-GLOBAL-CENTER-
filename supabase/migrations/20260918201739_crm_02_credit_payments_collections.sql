@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260918201739 crm_02_credit_payments_collections
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

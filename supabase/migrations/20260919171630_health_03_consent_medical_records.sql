@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919171630 health_03_consent_medical_records
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

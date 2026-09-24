@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920040405 jdv_business_company_onboarding_and_404_routes_foundation
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

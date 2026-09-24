@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920002307 normalize_multiple_permissive_rls_policies
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

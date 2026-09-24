@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919122435 transit_03_quotes_invoices_payments
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

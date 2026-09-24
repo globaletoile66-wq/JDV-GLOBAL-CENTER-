@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919121430 transport_03_rentals_requests_commissions
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

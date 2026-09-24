@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919122352 transit_01_operations_shipments_partners_warehouses
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

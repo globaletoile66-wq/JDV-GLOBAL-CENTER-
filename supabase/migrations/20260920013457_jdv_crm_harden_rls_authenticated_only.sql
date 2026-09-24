@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920013457 jdv_crm_harden_rls_authenticated_only
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

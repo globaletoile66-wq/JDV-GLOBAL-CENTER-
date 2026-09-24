@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260920021638 jdv_transit_final_financial_tracking_integrity_v1
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

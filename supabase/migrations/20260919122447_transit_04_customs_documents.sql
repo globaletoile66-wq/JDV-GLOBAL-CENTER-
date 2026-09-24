@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919122447 transit_04_customs_documents
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

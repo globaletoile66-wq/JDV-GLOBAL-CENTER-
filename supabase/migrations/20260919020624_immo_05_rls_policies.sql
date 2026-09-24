@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919020624 immo_05_rls_policies
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

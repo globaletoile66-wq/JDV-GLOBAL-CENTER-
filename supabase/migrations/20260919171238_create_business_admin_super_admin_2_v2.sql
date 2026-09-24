@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919171238 create_business_admin_super_admin_2_v2
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

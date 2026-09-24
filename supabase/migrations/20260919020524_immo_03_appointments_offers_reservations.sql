@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919020524 immo_03_appointments_offers_reservations
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.

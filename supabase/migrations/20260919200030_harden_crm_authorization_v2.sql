@@ -1,0 +1,3 @@
+-- Historical migration placeholder: 20260919200030 harden_crm_authorization_v2
+-- Original SQL body is not recoverable from Supabase migration metadata.
+-- Current schema is preserved in supabase/snapshot/.
