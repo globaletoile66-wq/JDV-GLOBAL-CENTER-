@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
-import './src/styles/tailwind.css';
+import '../styles/tailwind.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { JDVProvider } from '@/contexts/JDVContext';
