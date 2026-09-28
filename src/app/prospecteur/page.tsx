@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BriefcaseBusiness, LogOut, Loader2, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 export default function ProspecteurDashboard() {
   const { user, loading, isSuperAdmin, signOut } = useAuth();
   const router = useRouter();
   const [allowed, setAllowed] = useState(false);
-  const supabase = require('@/lib/supabase/client').createClient();
+  const supabase = createClient();
 
   useEffect(() => {
     if (loading) return;
