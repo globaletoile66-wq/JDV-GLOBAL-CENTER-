@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, Building2, Grid3X3, Shield, LogOut, ChevronRight, BarChart3 } from 'lucide-react';
+import { Users, Building2, Grid3X3, Shield, LogOut, ChevronRight, BarChart3, BriefcaseBusiness } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { toast } from 'sonner';
@@ -84,7 +84,11 @@ export default function SuperAdminDashboard({ stats, recentUsers, recentOrgs, ad
               <span className="text-sm">{item.label}</span>
             </button>
           ))}
-          <div className="mt-4 pt-4 border-t border-border">
+          <div className="mt-4 pt-4 border-t border-border flex flex-col gap-1">
+            <Link href="/hidden-concepteur-gate/dashboard/portefeuille-clients" className="nav-item">
+              <BriefcaseBusiness size={17} className="flex-shrink-0 text-accent" />
+              <span className="text-sm">Mon portefeuille clients</span>
+            </Link>
             <Link href="/dashboard" className="nav-item">
               <ChevronRight size={17} className="flex-shrink-0" />
               <span className="text-sm">Espace utilisateur</span>
