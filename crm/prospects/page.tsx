@@ -16,10 +16,10 @@ interface Prospect {
   last_name: string | null;
   phone: string | null;
   email: string | null;
-  desired_product: string | null;
-  requested_amount: number | null;
+  desired_article: string | null;
+  estimated_amount: number | null;
   temperature: 'hot' | 'warm' | 'cold';
-  prospect_status: string;
+  status: string;
   next_follow_up_at: string | null;
 }
 
@@ -28,8 +28,8 @@ interface ProspectForm {
   last_name: string;
   phone: string;
   email: string;
-  desired_product: string;
-  requested_amount: string;
+  desired_article: string;
+  estimated_amount: string;
   temperature: 'hot' | 'warm' | 'cold';
 }
 
@@ -44,84 +44,188 @@ const STATUS_LABELS: Record<string, string> = {
   converted: 'Converti', lost: 'Perdu', archived: 'Archivé',
 };
 
+const EMPTY_FORM: ProspectForm = {
+  first_name: '', last_name: '', phone: '', email: '', desired_article: '',
+  estimated_amount: '', temperature: 'warm',
+};
+
 export default function CrmProspectsPage() {
-  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [prospecteurId, setProspecteurId] = useState<string | null>(null);
+  const [portfolioId, setPortfolioId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [tempFilter, setTempFilter] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [form, setForm] = useState<ProspectForm>({
-    first_name: '', last_name: '', phone: '', email: '', desired_product: '', requested_amount: '', temperature: 'warm',
-  });
+  const [form, setForm] = useState<ProspectForm>(EMPTY_FORM);
 
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
+  const resolveContext = useCallback(async () => {
+    if (!user) return false;
+
+    const { data: superAdmin, error: superAdminError } = await supabase.rpc('is_super_admin');
+    if (superAdminError) throw superAdminError;
+
+    if (superAdmin === true) {
+      setIsSuperAdmin(true);
+      const { data: portfolio, error } = await supabase
+        .from('client_portfolios')
+        .select('id, organization_id')
+        .eq('owner_user_id', user.id)
+        .eq('owner_type', 'super_admin')
+        .eq('status', 'active')
+        .maybeSingle();
+      if (error) throw error;
+      if (!portfolio) throw new Error('Votre portefeuille personnel SUPER ADMIN est introuvable.');
+      setOrganizationId(portfolio.organization_id);
+      setPortfolioId(portfolio.id);
+      return true;
+    }
+
+    const { data: prospecteur, error: prospecteurError } = await supabase
+      .from('prospecteurs')
+      .select('id, organization_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (prospecteurError) throw prospecteurError;
+
+    if (prospecteur) {
+      setProspecteurId(prospecteur.id);
+      setOrganizationId(prospecteur.organization_id);
+
+      const { data: portfolio, error: portfolioError } = await supabase
+        .from('client_portfolios')
+        .select('id')
+        .eq('owner_user_id', user.id)
+        .eq('owner_type', 'prospecteur')
+        .eq('organization_id', prospecteur.organization_id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (portfolioError) throw portfolioError;
+
+      if (portfolio) {
+        setPortfolioId(portfolio.id);
+      } else {
+        const { data: createdPortfolio, error: createError } = await supabase
+          .from('client_portfolios')
+          .insert({
+            organization_id: prospecteur.organization_id,
+            owner_user_id: user.id,
+            owner_type: 'prospecteur',
+            name: 'Mon portefeuille clients',
+            status: 'active',
+          })
+          .select('id')
+          .single();
+        if (createError) throw createError;
+        setPortfolioId(createdPortfolio.id);
+      }
+      return true;
+    }
+
+    const { data: membership, error: membershipError } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle();
+    if (membershipError) throw membershipError;
+    if (!membership) return false;
+
+    setOrganizationId(membership.organization_id);
+    return true;
+  }, [user, supabase]);
+
   const load = useCallback(async () => {
     if (!user) return;
-    const { data: business } = await supabase
-      .from('business_profiles').select('id').eq('owner_user_id', user.id).maybeSingle();
-    if (!business) { setIsLoading(false); return; }
-    setBusinessId(business.id);
+    try {
+      const contextReady = organizationId || portfolioId ? true : await resolveContext();
+      if (!contextReady) {
+        setIsLoading(false);
+        return;
+      }
 
-    const { data } = await supabase
-      .from('crm_prospects')
-      .select('id, first_name, last_name, phone, email, desired_product, requested_amount, temperature, prospect_status, next_follow_up_at')
-      .eq('business_id', business.id)
-      .order('created_at', { ascending: false });
-    setProspects((data || []) as Prospect[]);
-    setIsLoading(false);
-  }, [user]);
+      let query = supabase
+        .from('prospects')
+        .select('id, first_name, last_name, phone, email, desired_article, estimated_amount, temperature, status, next_follow_up_at')
+        .order('created_at', { ascending: false });
+
+      if (portfolioId) {
+        query = query.eq('portfolio_id', portfolioId);
+      } else if (organizationId) {
+        query = query.eq('organization_id', organizationId).eq('prospecteur_id', prospecteurId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      setProspects((data || []) as Prospect[]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Impossible de charger les prospects.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, organizationId, portfolioId, prospecteurId, resolveContext, supabase]);
 
   useEffect(() => {
     if (!user) { router.push('/auth/login'); return; }
     const urlFilter = searchParams.get('filter');
     if (urlFilter === 'hot' || urlFilter === 'warm' || urlFilter === 'cold') setTempFilter(urlFilter);
     load();
-  }, [user, load, searchParams]);
+  }, [user, load, router, searchParams]);
 
   const handleSave = async () => {
-    if (!businessId) return;
+    if (!user) return;
     if (!form.first_name.trim()) { toast.error('Le prénom est requis'); return; }
+    if (!organizationId) { toast.error('Organisation introuvable pour ce compte.'); return; }
+
     setIsSaving(true);
     try {
-      const { error } = await supabase.from('crm_prospects').insert({
-        business_id: businessId,
+      const payload: Record<string, unknown> = {
+        organization_id: organizationId,
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim() || null,
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
-        desired_product: form.desired_product.trim() || null,
-        requested_amount: form.requested_amount ? Number(form.requested_amount) : null,
+        desired_article: form.desired_article.trim() || null,
+        estimated_amount: form.estimated_amount ? Number(form.estimated_amount) : null,
         temperature: form.temperature,
-        prospect_status: 'new',
-        created_by: user?.id,
-      });
+        status: 'new',
+      };
+
+      if (prospecteurId) payload.prospecteur_id = prospecteurId;
+      if (portfolioId) payload.portfolio_id = portfolioId;
+
+      const { error } = await supabase.from('prospects').insert(payload);
       if (error) throw error;
-      toast.success('Prospect créé');
+
+      toast.success('Prospect enregistré avec succès.');
       setShowForm(false);
-      setForm({ first_name: '', last_name: '', phone: '', email: '', desired_product: '', requested_amount: '', temperature: 'warm' });
+      setForm(EMPTY_FORM);
       await load();
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur lors de la création');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur lors de la création du prospect.';
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const filtered = useMemo(() => {
-    return prospects.filter((p) => {
-      if (tempFilter !== 'all' && p.temperature !== tempFilter) return false;
-      if (!search) return true;
-      const q = search.toLowerCase();
-      return `${p.first_name} ${p.last_name || ''}`.toLowerCase().includes(q) ||
-        (p.phone || '').includes(q) || (p.email || '').toLowerCase().includes(q);
-    });
-  }, [prospects, search, tempFilter]);
+  const filtered = useMemo(() => prospects.filter((p) => {
+    if (tempFilter !== 'all' && p.temperature !== tempFilter) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return `${p.first_name} ${p.last_name || ''}`.toLowerCase().includes(q) ||
+      (p.phone || '').includes(q) || (p.email || '').toLowerCase().includes(q);
+  }), [prospects, search, tempFilter]);
 
   if (isLoading) {
     return <div className="min-h-screen bg-[#0D1F3C] flex items-center justify-center"><Loader2 className="w-8 h-8 text-[#F97316] animate-spin" /></div>;
@@ -177,11 +281,11 @@ export default function CrmProspectsPage() {
                 className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#F97316]" />
               <input placeholder="Téléphone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#F97316]" />
-              <input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+              <input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#F97316]" />
-              <input placeholder="Produit souhaité" value={form.desired_product} onChange={(e) => setForm({ ...form, desired_product: e.target.value })}
+              <input placeholder="Produit / article souhaité" value={form.desired_article} onChange={(e) => setForm({ ...form, desired_article: e.target.value })}
                 className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#F97316]" />
-              <input placeholder="Montant demandé" type="number" value={form.requested_amount} onChange={(e) => setForm({ ...form, requested_amount: e.target.value })}
+              <input placeholder="Montant estimé" type="number" min="0" value={form.estimated_amount} onChange={(e) => setForm({ ...form, estimated_amount: e.target.value })}
                 className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#F97316]" />
               <select value={form.temperature} onChange={(e) => setForm({ ...form, temperature: e.target.value as ProspectForm['temperature'] })}
                 className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#F97316] sm:col-span-2">
@@ -190,9 +294,9 @@ export default function CrmProspectsPage() {
                 <option value="cold" className="bg-[#0D1F3C]">❄️ Froid</option>
               </select>
             </div>
-            <button onClick={handleSave} disabled={isSaving}
+            <button type="button" onClick={handleSave} disabled={isSaving || !organizationId}
               className="mt-4 w-full bg-[#F97316] hover:bg-[#F97316]/90 disabled:opacity-50 text-white font-medium py-2.5 rounded-xl flex items-center justify-center gap-2">
-              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Créer le prospect
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Enregistrer le prospect
             </button>
           </div>
         )}
@@ -205,7 +309,7 @@ export default function CrmProspectsPage() {
         ) : (
           <div className="space-y-2">
             {filtered.map((p) => {
-              const temp = TEMP_CONFIG[p.temperature];
+              const temp = TEMP_CONFIG[p.temperature] || TEMP_CONFIG.cold;
               const TempIcon = temp.icon;
               return (
                 <Link key={p.id} href={`/crm/prospects/${p.id}`}
@@ -218,13 +322,13 @@ export default function CrmProspectsPage() {
                       <p className="text-white font-medium text-sm truncate">{p.first_name} {p.last_name || ''}</p>
                       <p className="text-white/40 text-xs truncate flex items-center gap-1">
                         {p.phone && <><Phone size={11} /> {p.phone}</>}
-                        {p.desired_product && <span className="ml-1">· {p.desired_product}</span>}
+                        {p.desired_article && <span className="ml-1">· {p.desired_article}</span>}
                       </p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    {p.requested_amount && <p className="text-white text-sm font-semibold">{Number(p.requested_amount).toLocaleString('fr-FR')}</p>}
-                    <p className="text-white/40 text-xs">{STATUS_LABELS[p.prospect_status] || p.prospect_status}</p>
+                    {p.estimated_amount != null && <p className="text-white text-sm font-semibold">{Number(p.estimated_amount).toLocaleString('fr-FR')}</p>}
+                    <p className="text-white/40 text-xs">{STATUS_LABELS[p.status] || p.status}</p>
                   </div>
                 </Link>
               );
