@@ -14,20 +14,19 @@ import { toast } from 'sonner';
 
 interface Prospect {
   id: string;
-  business_id: string;
+  organization_id: string;
   first_name: string;
   last_name: string | null;
   phone: string | null;
   email: string | null;
   address: string | null;
   city: string | null;
-  desired_product: string | null;
-  requested_amount: number | null;
+  desired_article: string | null;
+  estimated_amount: number | null;
   temperature: 'hot' | 'warm' | 'cold';
-  prospect_status: string;
-  converted_client_id: string | null;
-  next_follow_up_at: string | null;
-  assigned_prospecteur_id: string | null;
+  status: string;
+    next_follow_up_at: string | null;
+  prospecteur_id: string | null;
 }
 
 interface Activity {
@@ -82,7 +81,7 @@ export default function ProspectDetailPage() {
 
   const load = useCallback(async () => {
     if (!user || !prospectId) return;
-    const { data: p, error } = await supabase.from('crm_prospects').select('*').eq('id', prospectId).maybeSingle();
+    const { data: p, error } = await supabase.from('prospects').select('*').eq('id', prospectId).maybeSingle();
     if (error || !p) {
       toast.error("Prospect introuvable ou accès refusé");
       router.push('/crm/prospects');
@@ -91,8 +90,8 @@ export default function ProspectDetailPage() {
     setProspect(p as Prospect);
 
     const { data: acts } = await supabase
-      .from('crm_prospect_activities')
-      .select('id, activity_type, result, comment, created_at')
+      .from('prospect_activities')
+      .select('id, activity_type, result, notes, created_at')
       .eq('prospect_id', prospectId)
       .order('created_at', { ascending: false });
     setActivities((acts || []) as Activity[]);
@@ -108,25 +107,21 @@ export default function ProspectDetailPage() {
     if (!prospect || !user) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase.from('crm_prospect_activities').insert({
-        business_id: prospect.business_id,
+      const { error } = await supabase.from('prospect_activities').insert({
+        business_id: prospect.organization_id,
         prospect_id: prospect.id,
-        actor_user_id: user.id,
+        created_by: user.id,
         activity_type: activityType,
-        comment: activityComment.trim() || null,
-        next_action_at: nextFollowUp ? new Date(nextFollowUp).toISOString() : null,
+        notes: activityComment.trim() || null,
+        next_follow_up_at: nextFollowUp ? new Date(nextFollowUp).toISOString() : null, activity_date: new Date().toISOString(),
       });
       if (error) throw error;
 
-      const updates: Record<string, unknown> = {
-        last_contact_at: new Date().toISOString(),
-        contact_count: undefined,
-      };
+      const updates: Record<string, unknown> = { last_contact_at: new Date().toISOString() };
       if (nextFollowUp) updates.next_follow_up_at = new Date(nextFollowUp).toISOString();
-      if (prospect.prospect_status === 'new') updates.prospect_status = 'contacted';
-      delete updates.contact_count;
-
-      await supabase.from('crm_prospects').update(updates).eq('id', prospect.id);
+      if (prospect.prospect_status === 'new') updates.status = 'contacted';
+      
+      await supabase.from('prospects').update(updates).eq('id', prospect.id);
 
       toast.success('Activité enregistrée');
       setShowActivityForm(false);
@@ -144,7 +139,7 @@ export default function ProspectDetailPage() {
     if (!prospect) return;
     setIsConverting(true);
     try {
-      const { data, error } = await supabase.rpc('crm_convert_prospect_to_client', { p_prospect_id: prospect.id });
+      const { data, error } = await supabase.rpc('jdvcrm_convert_prospect_to_client_v1', { p_prospect_id: prospect.id });
       if (error) throw error;
       toast.success('Prospect converti en client');
       if (data?.id) {
@@ -288,7 +283,7 @@ export default function ProspectDetailPage() {
                         <p className="text-white text-sm font-medium">{cfg.label}</p>
                         <p className="text-white/30 text-xs shrink-0">{formatDateTime(a.created_at)}</p>
                       </div>
-                      {a.comment && <p className="text-white/50 text-xs mt-1">{a.comment}</p>}
+                      {a.notes && <p className="text-white/50 text-xs mt-1">{a.notes}</p>}
                     </div>
                   </div>
                 );
