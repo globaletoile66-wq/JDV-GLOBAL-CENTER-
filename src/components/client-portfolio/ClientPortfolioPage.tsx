@@ -136,7 +136,7 @@ export default function ClientPortfolioPage({ mode }: Props) {
   return (
     <main className="min-h-screen bg-[#0D1F3C] text-white px-4 py-8">
       <div className="mx-auto max-w-6xl">
-        <Link href={mode === 'super_admin' ? '/hidden-concepteur-gate/dashboard' : '/business'} className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm">
+        <Link href={mode === 'super_admin' ? '/hidden-concepteur-gate/dashboard' : '/prospecteur'} className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm">
           <ArrowLeft size={16}/>Retour
         </Link>
 
