@@ -70,10 +70,17 @@ export default function CrmProspectsPage() {
   const resolveContext = useCallback(async () => {
     if (!user) return false;
 
-    const { data: superAdmin, error: superAdminError } = await supabase.rpc('is_super_admin');
+    // Ne pas appeler private.is_super_admin() via RPC : le schéma private n'est pas exposé par PostgREST.
+    // La table super_admins possède une policy SELECT limitée à auth.uid().
+    const { data: superAdminRow, error: superAdminError } = await supabase
+      .from('super_admins')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .eq('actif', true)
+      .maybeSingle();
     if (superAdminError) throw superAdminError;
 
-    if (superAdmin === true) {
+    if (superAdminRow?.user_id === user.id) {
       setIsSuperAdmin(true);
       const { data: portfolio, error } = await supabase
         .from('client_portfolios')
