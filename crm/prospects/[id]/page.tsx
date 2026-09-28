@@ -33,7 +33,7 @@ interface Activity {
   id: string;
   activity_type: string;
   result: string | null;
-  comment: string | null;
+  notes: string | null;
   created_at: string;
 }
 
@@ -108,7 +108,7 @@ export default function ProspectDetailPage() {
     setIsSaving(true);
     try {
       const { error } = await supabase.from('prospect_activities').insert({
-        business_id: prospect.organization_id,
+        organization_id: prospect.organization_id,
         prospect_id: prospect.id,
         created_by: user.id,
         activity_type: activityType,
@@ -119,7 +119,7 @@ export default function ProspectDetailPage() {
 
       const updates: Record<string, unknown> = { last_contact_at: new Date().toISOString() };
       if (nextFollowUp) updates.next_follow_up_at = new Date(nextFollowUp).toISOString();
-      if (prospect.prospect_status === 'new') updates.status = 'contacted';
+      if (prospect.status === 'new') updates.status = 'contacted';
       
       await supabase.from('prospects').update(updates).eq('id', prospect.id);
 
