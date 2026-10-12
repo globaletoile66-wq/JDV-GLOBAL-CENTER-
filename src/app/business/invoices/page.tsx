@@ -9,7 +9,17 @@ import { createClient } from '@/lib/supabase/client';
 import { getCurrentBusinessId } from '@/lib/business/current-business';
 
 type InvoiceRow = { id: string; invoice_number: string; total_amount: number | string; invoice_status: string; due_date: string | null; issue_date: string };
-const invoiceStatusLabel = (status: string) => ({ draft: 'Brouillon', issued: 'Émise', paid: 'Payée', partially_paid: 'Partiellement payée', overdue: 'En retard', cancelled: 'Annulée' }[status] ?? status);
+function invoiceStatusLabel(status: string): string {
+  switch (status) {
+    case 'draft': return 'Brouillon';
+    case 'issued': return 'Émise';
+    case 'paid': return 'Payée';
+    case 'partially_paid': return 'Partiellement payée';
+    case 'overdue': return 'En retard';
+    case 'cancelled': return 'Annulée';
+    default: return status;
+  }
+}
 export default function BusinessInvoicesPage() {
   const { user, loading } = useAuth(); const router = useRouter(); const supabase = createClient();
   const [rows, setRows] = useState<InvoiceRow[]>([]); const [busy, setBusy] = useState(true); const [error, setError] = useState('');
