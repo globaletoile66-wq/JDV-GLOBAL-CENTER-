@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -31,7 +31,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  updateProfile: (updates: Partial<Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -50,30 +50,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const authRequestId = useRef(0);
   const supabase = createClient();
 
-  const loadProfile = useCallback(async (userId: string) => {
+  const loadProfile = useCallback(async (userId: string, requestId?: number) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      if (!error && data) {
-        setProfile(data as Profile);
+      if (requestId !== undefined && requestId !== authRequestId.current) return;
+      if (error || !data) {
+        setProfile(null);
+        return;
       }
+      setProfile(data as Profile);
     } catch {
-      // Profile may not exist yet
+      // Do not keep another session's profile if this request fails.
+      if (requestId === undefined || requestId === authRequestId.current) setProfile(null);
     }
   }, [supabase]);
 
-  const checkSuperAdmin = useCallback(async (_userId: string) => {
+  const checkSuperAdmin = useCallback(async (_userId: string, requestId?: number) => {
     try {
       const { data, error } = await supabase.rpc('is_super_admin');
       if (error) throw error;
+      if (requestId !== undefined && requestId !== authRequestId.current) return;
       setIsSuperAdmin(data === true);
     } catch {
-      setIsSuperAdmin(false);
+      if (requestId === undefined || requestId === authRequestId.current) setIsSuperAdmin(false);
     }
   }, [supabase]);
 
@@ -82,6 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const applySession = async (s: Session | null) => {
       if (!mounted) return;
+      const requestId = ++authRequestId.current;
       setSession(s);
       setUser(s?.user ?? null);
 
@@ -93,8 +100,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       await Promise.all([
-        loadProfile(s.user.id),
-        checkSuperAdmin(s.user.id),
+        loadProfile(s.user.id, requestId),
+        checkSuperAdmin(s.user.id, requestId),
       ]);
 
       if (mounted) setLoading(false);
@@ -146,11 +153,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user) await loadProfile(user.id);
   };
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: Partial<Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>>) => {
     if (!user) throw new Error('Not authenticated');
+
+    // Only allow user-editable profile fields. Identity, email and account status
+    // must be changed through their dedicated trusted flows, never this helper.
+    const editableFields = {
+      first_name: updates.first_name,
+      last_name: updates.last_name,
+      full_name: updates.full_name,
+      phone: updates.phone,
+      avatar_url: updates.avatar_url,
+      country_id: updates.country_id,
+      preferred_language_id: updates.preferred_language_id,
+      preferred_currency_id: updates.preferred_currency_id,
+      timezone: updates.timezone,
+      usage_type: updates.usage_type,
+      onboarding_completed: updates.onboarding_completed,
+    };
     const { error } = await supabase
       .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...editableFields, updated_at: new Date().toISOString() })
       .eq('id', user.id);
     if (error) throw error;
     await loadProfile(user.id);
