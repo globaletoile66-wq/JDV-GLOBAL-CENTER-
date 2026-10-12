@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -50,15 +50,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const authRequestId = useRef(0);
   const supabase = createClient();
 
-  const loadProfile = useCallback(async (userId: string) => {
+  const loadProfile = useCallback(async (userId: string, requestId?: number) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
+      if (requestId !== undefined && requestId !== authRequestId.current) return;
       if (error || !data) {
         setProfile(null);
         return;
@@ -66,17 +68,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setProfile(data as Profile);
     } catch {
       // Do not keep another session's profile if this request fails.
-      setProfile(null);
+      if (requestId === undefined || requestId === authRequestId.current) setProfile(null);
     }
   }, [supabase]);
 
-  const checkSuperAdmin = useCallback(async (_userId: string) => {
+  const checkSuperAdmin = useCallback(async (_userId: string, requestId?: number) => {
     try {
       const { data, error } = await supabase.rpc('is_super_admin');
       if (error) throw error;
+      if (requestId !== undefined && requestId !== authRequestId.current) return;
       setIsSuperAdmin(data === true);
     } catch {
-      setIsSuperAdmin(false);
+      if (requestId === undefined || requestId === authRequestId.current) setIsSuperAdmin(false);
     }
   }, [supabase]);
 
@@ -85,6 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const applySession = async (s: Session | null) => {
       if (!mounted) return;
+      const requestId = ++authRequestId.current;
       setSession(s);
       setUser(s?.user ?? null);
 
@@ -96,8 +100,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       await Promise.all([
-        loadProfile(s.user.id),
-        checkSuperAdmin(s.user.id),
+        loadProfile(s.user.id, requestId),
+        checkSuperAdmin(s.user.id, requestId),
       ]);
 
       if (mounted) setLoading(false);
