@@ -21,7 +21,13 @@ export default function LoginPageContent() {
   const { signIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams?.get('redirect') || '/dashboard';
+  const requestedRedirect = searchParams?.get('redirect');
+  const redirectTo = requestedRedirect &&
+    requestedRedirect.startsWith('/') &&
+    !requestedRedirect.startsWith('//') &&
+    !requestedRedirect.includes('\\')
+      ? requestedRedirect
+      : '/dashboard';
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>();
 

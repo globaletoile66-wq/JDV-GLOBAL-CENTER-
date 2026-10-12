@@ -6,6 +6,10 @@ function getProjectRef(): string {
   return url.match(/https:\/\/([^.]+)\./)?.[1] ?? '';
 }
 
+function isPathOrChild(pathname: string, basePath: string): boolean {
+  return pathname === basePath || pathname.startsWith(`${basePath}/`);
+}
+
 function injectTokenFromHeader(request: NextRequest): void {
   const token = request.headers.get('x-sb-token');
   if (!token) return;
@@ -42,7 +46,7 @@ export async function middleware(request: NextRequest) {
 
   // Protected routes — require authentication
   const protectedPaths = ['/dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain'];
-  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
+  const isProtected = protectedPaths.some((p) => isPathOrChild(pathname, p));
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
@@ -52,7 +56,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Hidden concepteur portal: authentication plus server-side authorization.
-  if (pathname.startsWith('/hidden-concepteur-gate')) {
+  if (isPathOrChild(pathname, '/hidden-concepteur-gate')) {
     if (!user) {
       if (pathname !== '/hidden-concepteur-gate/login') {
         const url = request.nextUrl.clone();
@@ -71,11 +75,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // Legacy super-admin route
-  if (pathname.startsWith('/super-admin') && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/auth/login';
-    url.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(url);
+  if (isPathOrChild(pathname, '/super-admin')) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/auth/login';
+      url.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    const { data: allowed } = await supabase.rpc('is_super_admin');
+    if (allowed !== true) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
   }
 
   // Redirect authenticated users away from auth pages
