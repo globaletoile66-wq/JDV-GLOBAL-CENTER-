@@ -9,7 +9,10 @@ import { createClient } from '@/lib/supabase/client';
 import { getCurrentBusinessId } from '@/lib/business/current-business';
 
 type SaleRow = { id: string; sale_number: string; total_amount: number | string; sale_status: string; sale_date: string; client_id: string | null };
-const saleStatusLabel = (status: string) => ({ pending: 'En attente', confirmed: 'Confirmée', paid: 'Payée', partially_paid: 'Partiellement payée', cancelled: 'Annulée', refunded: 'Remboursée' }[status] ?? status);
+const saleStatusLabel = (status: string) => {
+  const labels: Record<string, string> = { pending: 'En attente', confirmed: 'Confirmée', paid: 'Payée', partially_paid: 'Partiellement payée', cancelled: 'Annulée', refunded: 'Remboursée' };
+  return labels[status] ?? status;
+};
 export default function BusinessSalesPage() {
   const { user, loading } = useAuth(); const router = useRouter(); const supabase = createClient();
   const [rows, setRows] = useState<SaleRow[]>([]); const [busy, setBusy] = useState(true); const [error, setError] = useState('');
