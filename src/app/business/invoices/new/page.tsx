@@ -39,7 +39,7 @@ export default function NewInvoicePage() {
       finally { if (active) setLoadingData(false); }
     })();
     return () => { active = false; };
-  }, [user, loading, router]);
+  }, [user, loading, router, supabase]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError('');
@@ -48,7 +48,7 @@ export default function NewInvoicePage() {
     if (!amount.trim() || !Number.isFinite(total) || total < 0) { setError('Saisissez un montant valide supérieur ou égal à zéro.'); return; }
     setSaving(true);
     try {
-      const invoiceNumber = `FAC-${new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)}`;
+      const invoiceNumber = `FAC-${new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)}-${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
       const { error: insertError } = await supabase.from('business_invoices').insert({
         business_id: businessId, created_by: user.id, invoice_number: invoiceNumber,
         client_id: clientId || null, subtotal: total, total_amount: total,
