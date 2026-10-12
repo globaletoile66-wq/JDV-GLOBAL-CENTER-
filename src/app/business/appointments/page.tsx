@@ -9,6 +9,20 @@ import { createClient } from '@/lib/supabase/client';
 import { getCurrentBusinessId } from '@/lib/business/current-business';
 
 type AppointmentRow = { id: string; title: string; start_at: string; end_at: string | null; appointment_status: string; location: string | null };
+
+const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
+  scheduled: 'Planifié',
+  confirmed: 'Confirmé',
+  completed: 'Terminé',
+  cancelled: 'Annulé',
+  no_show: 'Absent',
+  missed: 'Absent',
+};
+
+function getAppointmentStatusLabel(status: string): string {
+  return APPOINTMENT_STATUS_LABELS[status] ?? status;
+}
+
 export default function BusinessAppointmentsPage() {
   const { user, loading } = useAuth(); const router = useRouter(); const supabase = createClient();
   const [rows, setRows] = useState<AppointmentRow[]>([]); const [busy, setBusy] = useState(true); const [error, setError] = useState('');
@@ -35,7 +49,7 @@ export default function BusinessAppointmentsPage() {
     <div className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-2xl font-bold">Rendez-vous</h1><p className="mt-1 text-sm text-white/55">{rows.length} rendez-vous affiché(s), maximum 100</p></div><Link href="/business/appointments/new" className="inline-flex items-center gap-2 rounded-xl bg-[#F97316] px-4 py-2.5 font-semibold"><Plus size={17}/>Nouveau rendez-vous</Link></div>
     {error && <p role="alert" className="mt-5 rounded-xl border border-red-400/30 bg-red-400/10 p-4 text-red-100">{error}</p>}
     <div className="mt-6 overflow-auto rounded-xl border border-white/10"><table className="w-full text-sm text-left"><thead className="bg-white/5 text-white/65"><tr><th className="p-3">Objet</th><th className="p-3">Début</th><th className="p-3">Fin</th><th className="p-3">Lieu</th><th className="p-3">Statut</th></tr></thead><tbody>
-      {rows.map(r=><tr key={r.id} className="border-t border-white/10"><td className="p-3 font-medium">{r.title}</td><td className="p-3">{new Date(r.start_at).toLocaleString('fr-FR')}</td><td className="p-3">{r.end_at?new Date(r.end_at).toLocaleString('fr-FR'):'—'}</td><td className="p-3">{r.location||'—'}</td><td className="p-3">{r.appointment_status}</td></tr>)}
+      {rows.map(r=><tr key={r.id} className="border-t border-white/10"><td className="p-3 font-medium">{r.title}</td><td className="p-3">{new Date(r.start_at).toLocaleString('fr-FR')}</td><td className="p-3">{r.end_at?new Date(r.end_at).toLocaleString('fr-FR'):'—'}</td><td className="p-3">{r.location||'—'}</td><td className="p-3">{getAppointmentStatusLabel(r.appointment_status)}</td></tr>)}
     </tbody></table>{!error && rows.length===0 && <div className="p-10 text-center text-white/55"><CalendarDays size={28} className="mx-auto mb-3 opacity-60"/><p>Aucun rendez-vous planifié.</p><Link className="inline-block mt-3 text-orange-300 hover:underline" href="/business/appointments/new">Planifier un premier rendez-vous</Link></div>}</div>
   </div></main>;
 }
