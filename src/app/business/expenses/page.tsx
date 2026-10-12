@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react'; import Link from 'next/link'; import {ArrowLeft} from 'lucide-react';
+import {useEffect,useState} from 'react'; import Link from 'next/link'; import {useRouter} from 'next/navigation'; import {ArrowLeft} from 'lucide-react';
 import {useAuth} from '@/contexts/AuthContext'; import {createClient} from '@/lib/supabase/client'; import {getCurrentBusinessId} from '@/lib/business/current-business';
 export default function Page(){const {user,loading}=useAuth();const [rows,setRows]=useState<any[]>([]);const [busy,setBusy]=useState(true);const supabase=createClient();
 useEffect(()=>{(async()=>{if(!user||loading)return;const id=await getCurrentBusinessId(supabase,user.id);if(id){const {data}=await supabase.from('business_expenses').select('*').eq('business_id',id).order('created_at',{ascending:false}).limit(100);setRows(data||[])}setBusy(false)})()},[user,loading]);
