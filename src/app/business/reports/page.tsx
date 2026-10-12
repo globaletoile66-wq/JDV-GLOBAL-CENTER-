@@ -34,7 +34,7 @@ export default function BusinessReportsPage() {
         const sales = salesResult.data || [];
         if (active) setData({
           sales: sales.length,
-          revenue: sales.filter(s => s.sale_status === 'paid').reduce((total, sale) => total + Number(sale.total_amount || 0), 0),
+          revenue: sales.filter((s: { sale_status: string | null }) => s.sale_status === 'paid').reduce((total: number, sale: { total_amount: number | string | null }) => total + Number(sale.total_amount || 0), 0),
           clients: clientsResult.count || 0,
           products: productsResult.count || 0,
         });

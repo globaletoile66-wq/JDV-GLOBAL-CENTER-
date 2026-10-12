@@ -27,6 +27,9 @@ interface Prospect {
   status: string;
     next_follow_up_at: string | null;
   prospecteur_id: string | null;
+  prospect_status?: string;
+  desired_product?: string | null;
+  requested_amount?: number | null;
 }
 
 interface Activity {
@@ -188,7 +191,7 @@ export default function ProspectDetailPage() {
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className={`text-xs px-2 py-0.5 rounded-full border ${temp.color}`}>{temp.label}</span>
                   <span className="text-xs px-2 py-0.5 rounded-full border border-white/20 text-white/60">
-                    {STATUS_LABELS[prospect.prospect_status] || prospect.prospect_status}
+                    {STATUS_LABELS[prospect.prospect_status ?? ''] || prospect.prospect_status}
                   </span>
                 </div>
               </div>

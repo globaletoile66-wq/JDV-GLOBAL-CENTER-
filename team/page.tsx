@@ -58,7 +58,7 @@ export default function BusinessTeamPage() {
 
     if (membersData) {
       const withProfiles = await Promise.all(
-        membersData.map(async (m) => {
+        membersData.map(async (m: any) => {
           const { data: profile } = await supabase
             .from('profiles')
             .select('first_name, last_name, email, avatar_url')

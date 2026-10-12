@@ -37,7 +37,7 @@ export default function BusinessInvoicesPage() {
         const { data: clientRows } = await supabase.from('business_clients').select('id,company_name,first_name,last_name').eq('business_id', businessId).limit(1000);
         if (active) {
           setRows((data || []) as InvoiceRow[]);
-          setClientNames(Object.fromEntries((clientRows || []).map((client) => [client.id, client.company_name || [client.first_name, client.last_name].filter(Boolean).join(' ') || client.id])));
+          setClientNames(Object.fromEntries((clientRows || []).map((client: { id: string; company_name: string | null; first_name: string | null; last_name: string | null }) => [client.id, client.company_name || [client.first_name, client.last_name].filter(Boolean).join(' ') || client.id])));
         }
       } catch (e) { if (active) setError(e instanceof Error ? e.message : 'Impossible de charger les factures.'); }
       finally { if (active) setBusy(false); }

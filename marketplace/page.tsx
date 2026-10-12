@@ -473,7 +473,7 @@ function ListingCard({
             )}
           </div>
           {seller?.is_verified && (
-            <Shield size={12} className="text-success" title="Vendeur vérifié" />
+            <span title="Vendeur vérifié"><Shield size={12} className="text-success" /></span>
           )}
         </div>
       </div>

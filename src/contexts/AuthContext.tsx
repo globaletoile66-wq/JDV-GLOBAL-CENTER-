@@ -123,14 +123,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     void supabase.auth.getSession()
-      .then(({ data: { session: currentSession } }) => applySession(currentSession))
+      .then(({ data: { session: currentSession } }: { data: { session: Session | null } }) => applySession(currentSession))
       .catch(() => {
         if (mounted) setLoading(false);
       });
 
     // Do not await Supabase queries inside onAuthStateChange: doing so can
     // deadlock the auth lock. Defer session work until the callback has returned.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, nextSession: Session | null) => {
       setTimeout(() => { void applySession(nextSession); }, 0);
     });
 

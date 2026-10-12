@@ -74,7 +74,7 @@ export default function CrmCollectionsPage() {
     const clientIds = Array.from(new Set(rows.map((r) => r.client_id)));
     if (clientIds.length > 0) {
       const { data: clients } = await supabase.from('business_clients').select('id, first_name, last_name, company_name').in('id', clientIds);
-      const byId = new Map((clients || []).map((c: any) => [c.id, c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Client']));
+      const byId = new Map<string, string>((clients || []).map((c: any): [string, string] => [c.id, c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Client']));
       rows.forEach((r) => { r.client_name = byId.get(r.client_id) || 'Client'; });
     }
     setSchedules(rows);
