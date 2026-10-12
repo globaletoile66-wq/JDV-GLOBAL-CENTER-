@@ -31,7 +31,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  updateProfile: (updates: Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -149,11 +149,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user) await loadProfile(user.id);
   };
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>) => {
     if (!user) throw new Error('Not authenticated');
+
+    // Only allow user-editable profile fields. Identity, email and account status
+    // must be changed through their dedicated trusted flows, never this helper.
+    const editableFields = {
+      first_name: updates.first_name,
+      last_name: updates.last_name,
+      full_name: updates.full_name,
+      phone: updates.phone,
+      avatar_url: updates.avatar_url,
+      country_id: updates.country_id,
+      preferred_language_id: updates.preferred_language_id,
+      preferred_currency_id: updates.preferred_currency_id,
+      timezone: updates.timezone,
+      usage_type: updates.usage_type,
+      onboarding_completed: updates.onboarding_completed,
+    };
     const { error } = await supabase
       .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...editableFields, updated_at: new Date().toISOString() })
       .eq('id', user.id);
     if (error) throw error;
     await loadProfile(user.id);
