@@ -38,7 +38,7 @@ export default function NewSalePage() {
       finally { if (active) setLoadingData(false); }
     })();
     return () => { active = false; };
-  }, [user, loading, router]);
+  }, [user, loading, router, supabase]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError('');
@@ -47,7 +47,7 @@ export default function NewSalePage() {
     if (!amount.trim() || !Number.isFinite(total) || total < 0) { setError('Saisissez un montant valide supérieur ou égal à zéro.'); return; }
     setSaving(true);
     try {
-      const saleNumber = `VTE-${new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)}`;
+      const saleNumber = `VTE-${new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)}-${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
       const { error: insertError } = await supabase.from('business_sales').insert({
         business_id: businessId, created_by: user.id, sale_number: saleNumber,
         client_id: clientId || null, subtotal: total, total_amount: total, notes: notes.trim() || null,
