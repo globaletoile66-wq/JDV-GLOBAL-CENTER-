@@ -23,8 +23,10 @@ type BusinessSettings = {
   postal_code: string | null;
 };
 
-const emptySettings: Omit<BusinessSettings, 'id'> = {
-  name: '', trade_name: '', tagline: '', description: '', phone: '',
+type SettingsForm = Record<Exclude<keyof BusinessSettings, 'id' | 'description'>, string>;
+
+const emptySettings: SettingsForm = {
+  name: '', trade_name: '', tagline: '', phone: '',
   email: '', website: '', address: '', city: '', region: '', postal_code: '',
 };
 

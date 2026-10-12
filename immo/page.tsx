@@ -80,7 +80,7 @@ export default function ImmoHomePage() {
   const loadFavorites = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from('immo_favorites').select('property_id').eq('user_id', user.id).not('property_id', 'is', null);
-    setFavorites(new Set((data || []).map((f) => f.property_id as string)));
+    setFavorites(new Set((data || []).map((f: { property_id: string | null }) => f.property_id as string)));
   }, [user, supabase]);
 
   useEffect(() => {
