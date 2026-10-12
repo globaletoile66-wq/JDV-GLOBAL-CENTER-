@@ -59,11 +59,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .select('*')
         .eq('id', userId)
         .single();
-      if (!error && data) {
-        setProfile(data as Profile);
+      if (error || !data) {
+        setProfile(null);
+        return;
       }
+      setProfile(data as Profile);
     } catch {
-      // Profile may not exist yet
+      // Do not keep another session's profile if this request fails.
+      setProfile(null);
     }
   }, [supabase]);
 
