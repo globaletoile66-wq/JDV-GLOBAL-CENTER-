@@ -31,8 +31,8 @@ export default function NewClientPage() {
       const { error: insertError } = await supabase.from('business_clients').insert({
         business_id: businessId,
         company_name: form.company_name.trim() || null,
-        first_name: form.first_name.trim() || null,
-        last_name: form.last_name.trim() || null,
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         is_active: true,
