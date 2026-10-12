@@ -21,6 +21,20 @@ interface Profile {
   account_status: string;
 }
 
+type EditableProfileFields = Pick<Profile,
+  | 'first_name'
+  | 'last_name'
+  | 'full_name'
+  | 'phone'
+  | 'avatar_url'
+  | 'country_id'
+  | 'preferred_language_id'
+  | 'preferred_currency_id'
+  | 'timezone'
+  | 'usage_type'
+  | 'onboarding_completed'
+>;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -31,16 +45,14 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateProfile: (updates: Partial<Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>>) => Promise<void>;
+  updateProfile: (updates: Partial<EditableProfileFields>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
 
@@ -53,72 +65,78 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const authRequestId = useRef(0);
   const supabase = createClient();
 
-  const loadProfile = useCallback(async (userId: string, requestId?: number) => {
+  const loadProfile = useCallback(async (userId: string, requestId: number) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      if (requestId !== undefined && requestId !== authRequestId.current) return;
+
+      if (requestId !== authRequestId.current) return;
       if (error || !data) {
         setProfile(null);
         return;
       }
       setProfile(data as Profile);
     } catch {
-      // Do not keep another session's profile if this request fails.
-      if (requestId === undefined || requestId === authRequestId.current) setProfile(null);
+      if (requestId === authRequestId.current) setProfile(null);
     }
   }, [supabase]);
 
-  const checkSuperAdmin = useCallback(async (_userId: string, requestId?: number) => {
+  const checkSuperAdmin = useCallback(async (requestId: number) => {
     try {
       const { data, error } = await supabase.rpc('is_super_admin');
+      if (requestId !== authRequestId.current) return;
       if (error) throw error;
-      if (requestId !== undefined && requestId !== authRequestId.current) return;
       setIsSuperAdmin(data === true);
     } catch {
-      if (requestId === undefined || requestId === authRequestId.current) setIsSuperAdmin(false);
+      if (requestId === authRequestId.current) setIsSuperAdmin(false);
     }
   }, [supabase]);
 
   useEffect(() => {
     let mounted = true;
 
-    const applySession = async (s: Session | null) => {
+    const applySession = async (nextSession: Session | null) => {
       if (!mounted) return;
       const requestId = ++authRequestId.current;
-      setSession(s);
-      setUser(s?.user ?? null);
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      // Clear session-scoped data immediately so the previous account is never
+      // displayed while the new account's profile and role are loading.
+      setProfile(null);
+      setIsSuperAdmin(false);
 
-      if (!s?.user) {
-        setProfile(null);
-        setIsSuperAdmin(false);
+      if (!nextSession?.user) {
         setLoading(false);
         return;
       }
 
+      setLoading(true);
       await Promise.all([
-        loadProfile(s.user.id, requestId),
-        checkSuperAdmin(s.user.id, requestId),
+        loadProfile(nextSession.user.id, requestId),
+        checkSuperAdmin(requestId),
       ]);
 
-      if (mounted) setLoading(false);
+      if (mounted && requestId === authRequestId.current) setLoading(false);
     };
 
-    supabase.auth.getSession()
-      .then(({ data: { session: s } }) => applySession(s))
+    void supabase.auth.getSession()
+      .then(({ data: { session: currentSession } }) => applySession(currentSession))
       .catch(() => {
         if (mounted) setLoading(false);
       });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      void applySession(s);
+    // Do not await Supabase queries inside onAuthStateChange: doing so can
+    // deadlock the auth lock. Defer session work until the callback has returned.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setTimeout(() => { void applySession(nextSession); }, 0);
     });
 
     return () => {
       mounted = false;
+      ++authRequestId.current;
       subscription.unsubscribe();
     };
   }, [loadProfile, checkSuperAdmin, supabase]);
@@ -145,38 +163,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    // The auth-state callback also clears this state; clearing immediately makes
+    // the UI safe even if the callback is deferred.
+    ++authRequestId.current;
+    setSession(null);
+    setUser(null);
     setProfile(null);
     setIsSuperAdmin(false);
+    setLoading(false);
   };
 
   const refreshProfile = async () => {
-    if (user) await loadProfile(user.id);
+    if (user) await loadProfile(user.id, authRequestId.current);
   };
 
-  const updateProfile = async (updates: Partial<Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>>) => {
-    if (!user) throw new Error('Not authenticated');
+  const updateProfile = async (updates: Partial<EditableProfileFields>) => {
+    const currentUserId = user?.id;
+    if (!currentUserId) throw new Error('Not authenticated');
+    const requestId = authRequestId.current;
 
-    // Only allow user-editable profile fields. Identity, email and account status
-    // must be changed through their dedicated trusted flows, never this helper.
-    const editableFields = {
-      first_name: updates.first_name,
-      last_name: updates.last_name,
-      full_name: updates.full_name,
-      phone: updates.phone,
-      avatar_url: updates.avatar_url,
-      country_id: updates.country_id,
-      preferred_language_id: updates.preferred_language_id,
-      preferred_currency_id: updates.preferred_currency_id,
-      timezone: updates.timezone,
-      usage_type: updates.usage_type,
-      onboarding_completed: updates.onboarding_completed,
-    };
+    // Only allow user-editable profile fields. Never update identity, email or
+    // account status through this helper.
+    const editableFields = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined)
+    ) as Partial<EditableProfileFields>;
+
+    if (Object.keys(editableFields).length === 0) return;
+
     const { error } = await supabase
       .from('profiles')
       .update({ ...editableFields, updated_at: new Date().toISOString() })
-      .eq('id', user.id);
+      .eq('id', currentUserId);
     if (error) throw error;
-    await loadProfile(user.id);
+
+    // Do not refresh a profile if the active account changed during the update.
+    if (requestId === authRequestId.current) {
+      await loadProfile(currentUserId, requestId);
+    }
   };
 
   return (
