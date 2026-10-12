@@ -31,7 +31,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateProfile: (updates: Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>) => Promise<void>;
+  updateProfile: (updates: Partial<Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user) await loadProfile(user.id);
   };
 
-  const updateProfile = async (updates: Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>) => {
+  const updateProfile = async (updates: Partial<Pick<Profile, 'first_name' | 'last_name' | 'full_name' | 'phone' | 'avatar_url' | 'country_id' | 'preferred_language_id' | 'preferred_currency_id' | 'timezone' | 'usage_type' | 'onboarding_completed'>>) => {
     if (!user) throw new Error('Not authenticated');
 
     // Only allow user-editable profile fields. Identity, email and account status
