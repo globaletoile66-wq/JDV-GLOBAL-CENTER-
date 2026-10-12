@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,9 +22,11 @@ export default function PayPage() {
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
+  const requestId = useRef(0);
   const supabase = createClient();
 
   const load = useCallback(async () => {
+    const currentRequestId = ++requestId.current;
     if (!user) {
       setRows([]);
       setError('');
@@ -44,17 +46,20 @@ export default function PayPage() {
         .limit(100);
 
       if (queryError) throw queryError;
-      setRows((data ?? []) as Wallet[]);
+      if (currentRequestId === requestId.current) setRows((data ?? []) as Wallet[]);
     } catch (cause) {
-      setRows([]);
-      setError(cause instanceof Error ? cause.message : 'Impossible de charger les portefeuilles.');
+      if (currentRequestId === requestId.current) {
+        setRows([]);
+        setError(cause instanceof Error ? cause.message : 'Impossible de charger les portefeuilles.');
+      }
     } finally {
-      setBusy(false);
+      if (currentRequestId === requestId.current) setBusy(false);
     }
   }, [supabase, user]);
 
   useEffect(() => {
     if (!loading) void load();
+    return () => { requestId.current += 1; };
   }, [loading, load]);
 
   const filtered = rows.filter((row) =>
