@@ -1,0 +1,69 @@
+name: Résoudre les conflits de fusion
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  resoudre:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/rocket-fusion-2026-10-15
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Résolution (la version du dépôt est conservée)
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee "$RUNNER_TEMP/rapport.txt"
+          import re, pathlib
+          pat = re.compile(r'<<<<<<< depot\n(.*?)=======\n(.*?)>>>>>>> fusion\n?', re.S)
+          base = pathlib.Path('_fusion-a-fusionner/src')
+          for f in sorted(p for p in base.rglob('*') if p.is_file()):
+              dest = pathlib.Path('src') / f.relative_to(base)
+              t = f.read_text(encoding='utf-8')
+              n = len(pat.findall(t))
+              if n == 0:
+                  print(f'IGNORE  {dest} (aucun marqueur : version du dépôt conservée)'); continue
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              dest.write_text(pat.sub(lambda m: m.group(1), t), encoding='utf-8')
+              print(f'DEPOT   {dest} ({n} conflit(s) : version du dépôt gardée)')
+          # branchement 2FA + abonnements dans le middleware du dépôt
+          mw = pathlib.Path('src/middleware.ts'); s = mw.read_text(encoding='utf-8')
+          if "'/abonnements'" not in s:
+              s = s.replace("'/business', '/terrain']", "'/business', '/terrain', '/abonnements']", 1)
+          guard = "  if (user && isProtected) {\n    const r = await mfaRedirect(supabase, request);\n    if (r) return r;\n  }\n"
+          anchor = "    return NextResponse.redirect(url);\n  }\n"
+          i = s.find("if (!user && isProtected)")
+          j = s.find(anchor, i) + len(anchor) if i >= 0 else -1
+          if 'mfaRedirect(supabase' not in s and j > 0:
+              s = s[:j] + "\n" + guard + s[j:]
+          if "from '@/lib/auth/middlewareGuards'" not in s:
+              s = "import { mfaRedirect } from '@/lib/auth/middlewareGuards';\n" + s
+          mw.write_text(s, encoding='utf-8')
+          print('MIDDLEWARE : abonnements protégé =', "'/abonnements'" in s, '| garde 2FA =', 'mfaRedirect(supabase' in s)
+          PY
+          git rm -rq _fusion-a-fusionner
+          git add -A
+          git config user.name "jdv-bot"; git config user.email "jdv-bot@users.noreply.github.com"
+          git commit -q -m "Résout les conflits de fusion (version du dépôt conservée) et branche la 2FA et les abonnements"
+          git push origin HEAD:integration/rocket-fusion-2026-10-15
+      - name: Build (informatif)
+        continue-on-error: true
+        shell: bash
+        run: |
+          npm install --no-audit --no-fund > npm.log 2>&1 || true
+          npx tsc --noEmit > tsc.log 2>&1 || true
+          npx next build > build.log 2>&1 || true
+      - name: Résumé
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Résolution"; echo '```'; cat "$RUNNER_TEMP/rapport.txt" 2>/dev/null; echo '```'
+            echo "## Erreurs TypeScript : $(grep -c 'error TS' tsc.log 2>/dev/null || echo '?')"
+            echo '```'; grep 'error TS' tsc.log 2>/dev/null | head -30; echo '```'
+            echo "## Build"; echo '```'; tail -15 build.log 2>/dev/null; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
