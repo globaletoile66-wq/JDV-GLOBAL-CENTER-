@@ -11,7 +11,7 @@ export default function RegisterPage() {
   const [email,setEmail]=useState(''); const [password,setPassword]=useState('');
   const [error,setError]=useState<string|null>(null); const [loading,setLoading]=useState(false);
   async function submit(e: FormEvent) { e.preventDefault(); setError(null); setLoading(true);
-    try { const result=await signUp(email,password); router.replace(result.session ? '/dashboard' : '/auth/login?registered=1'); }
+    try { const result=await signUp(email,password); router.replace(result.session ? '/dashboard' : `/auth/verify-email?email=${encodeURIComponent(email)}`); }
     catch(err){ setError(err instanceof Error ? err.message : 'Inscription impossible.'); } finally { setLoading(false); }
   }
   return <main className="min-h-screen bg-background flex items-center justify-center px-4 py-10"><section className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">

@@ -1,299 +1,79 @@
 'use client';
-
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import {
-  ArrowLeft, Loader2, Search, Filter, ChevronDown,
-  ArrowUpRight, ArrowDownLeft, RefreshCw, Send, Download,
-  Repeat2, Zap, TrendingUp, CreditCard, FileText
-} from 'lucide-react';
+import { Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
-import AppLogo from '@/components/ui/AppLogo';
+import PayHeader from '@/components/pay/PayHeader';
+import { IN_TYPES, STATUS_LABEL, TYPE_LABEL, money, type PayTx } from '@/lib/pay/types';
+import { txToCsv } from '@/lib/pay/csv';
 
-interface Transaction {
-  id: string;
-  transaction_type: string;
-  amount: number;
-  balance_after: number;
-  transaction_status: string;
-  description: string | null;
-  reference: string | null;
-  created_at: string;
-  currencies: { code: string; symbol: string };
-}
+const PAGE = 20;
+type Dir = 'all' | 'in' | 'out';
 
-interface Wallet {
-  id: string;
-  currencies: { code: string; symbol: string; name: string };
-}
-
-const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; isCredit: boolean }> = {
-  deposit: { label: 'Dépôt', icon: <ArrowDownLeft size={14} />, isCredit: true },
-  withdrawal: { label: 'Retrait', icon: <ArrowUpRight size={14} />, isCredit: false },
-  payment: { label: 'Paiement', icon: <CreditCard size={14} />, isCredit: false },
-  transfer_out: { label: 'Transfert envoyé', icon: <Send size={14} />, isCredit: false },
-  transfer_in: { label: 'Transfert reçu', icon: <Download size={14} />, isCredit: true },
-  refund: { label: 'Remboursement', icon: <RefreshCw size={14} />, isCredit: true },
-  exchange: { label: 'Conversion', icon: <Repeat2 size={14} />, isCredit: false },
-  fee: { label: 'Frais', icon: <Zap size={14} />, isCredit: false },
-  cashback: { label: 'Cashback', icon: <TrendingUp size={14} />, isCredit: true },
-  adjustment: { label: 'Ajustement', icon: <RefreshCw size={14} />, isCredit: false },
-};
-
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  pending: { label: 'En attente', color: 'text-warning bg-warning/10 border-warning/20' },
-  processing: { label: 'En cours', color: 'text-info bg-info/10 border-info/20' },
-  completed: { label: 'Complété', color: 'text-success bg-success/10 border-success/20' },
-  failed: { label: 'Échoué', color: 'text-danger bg-danger/10 border-danger/20' },
-  cancelled: { label: 'Annulé', color: 'text-muted-foreground bg-muted/20 border-border' },
-  reversed: { label: 'Inversé', color: 'text-warning bg-warning/10 border-warning/20' },
-  refunded: { label: 'Remboursé', color: 'text-success bg-success/10 border-success/20' },
-};
-
-function formatAmount(amount: number, symbol: string, code: string): string {
-  return `${new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: code === 'XOF' ? 0 : 2,
-    maximumFractionDigits: code === 'XOF' ? 0 : 2,
-  }).format(amount)} ${symbol}`;
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function groupByDate(transactions: Transaction[]): Record<string, Transaction[]> {
-  return transactions.reduce((acc, tx) => {
-    const date = formatDate(tx.created_at);
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(tx);
-    return acc;
-  }, {} as Record<string, Transaction[]>);
-}
-
-export default function TransactionHistoryPage() {
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const [page, setPage] = useState(0);
-  const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const { user } = useAuth();
+export default function HistoryPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const supabase = createClient();
-  const PAGE_SIZE = 20;
+  const sb = useMemo(() => createClient(), []);
+  const [rows, setRows] = useState<PayTx[]>([]);
+  const [dir, setDir] = useState<Dir>('all');
+  const [period, setPeriod] = useState(30);
+  const [more, setMore] = useState(false);
+  const [busy, setBusy] = useState(true);
 
-  const loadWallets = useCallback(async () => {
+  useEffect(() => { if (!loading && !user) router.push('/auth/login?redirect=/pay/history'); }, [loading, user, router]);
+
+  const query = useCallback((from: number, to: number) => {
+    let q = sb.from('wallet_transactions').select('id,transaction_type,amount,fee_amount,transaction_status,description,reference,created_at,balance_after,currencies:currency_id(code)').order('created_at', { ascending: false }).range(from, to);
+    if (dir === 'in') q = q.in('transaction_type', IN_TYPES); else if (dir === 'out') q = q.not('transaction_type', 'in', `(${IN_TYPES.join(',')})`);
+    if (period > 0) q = q.gte('created_at', new Date(Date.now() - period * 86400000).toISOString());
+    return q;
+  }, [sb, dir, period]);
+
+  useEffect(() => {
     if (!user) return;
-    const { data } = await supabase
-      .from('wallets')
-      .select('*, currencies(code, symbol, name)')
-      .eq('user_id', user.id)
-      .eq('wallet_status', 'active');
-    const ws = data || [];
-    setWallets(ws);
-    const primary = ws.find((w: Wallet) => w.currencies?.code === 'XOF') || ws[0] || null;
-    setSelectedWallet(primary);
-    return primary;
-  }, [user, supabase]);
+    setBusy(true);
+    query(0, PAGE - 1).then(({ data }) => { const d = (data ?? []) as unknown as PayTx[]; setRows(d); setMore(d.length === PAGE); setBusy(false); });
+  }, [user, query]);
 
-  const loadTransactions = useCallback(async (wallet: Wallet | null, pageNum: number, append = false) => {
-    if (!wallet) return;
-    if (append) setIsLoadingMore(true);
-    else setIsLoading(true);
-
-    try {
-      let query = supabase
-        .from('wallet_transactions')
-        .select('*, currencies(code, symbol)')
-        .eq('wallet_id', wallet.id)
-        .order('created_at', { ascending: false })
-        .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
-
-      if (filterType !== 'all') query = query.eq('transaction_type', filterType);
-      if (filterStatus !== 'all') query = query.eq('transaction_status', filterStatus);
-
-      const { data } = await query;
-      const txs = data || [];
-      setHasMore(txs.length === PAGE_SIZE);
-      if (append) setTransactions(prev => [...prev, ...txs]);
-      else setTransactions(txs);
-    } catch {
-      // Silent fail
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [supabase, filterType, filterStatus]);
-
-  useEffect(() => {
-    if (!user) { router.push('/auth/login?redirect=/pay/history'); return; }
-    loadWallets().then(wallet => loadTransactions(wallet, 0));
-  }, [user, router]);
-
-  useEffect(() => {
-    if (selectedWallet) {
-      setPage(0);
-      loadTransactions(selectedWallet, 0);
-    }
-  }, [selectedWallet, filterType, filterStatus]);
-
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    loadTransactions(selectedWallet, nextPage, true);
-  };
-
-  const filteredTransactions = searchQuery
-    ? transactions.filter(tx =>
-        tx.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tx.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : transactions;
-
-  const grouped = groupByDate(filteredTransactions);
+  async function loadMore() {
+    const { data } = await query(rows.length, rows.length + PAGE - 1);
+    const d = (data ?? []) as unknown as PayTx[]; setRows([...rows, ...d]); setMore(d.length === PAGE);
+  }
+  async function exportCsv() {
+    const all: PayTx[] = []; let from = 0;
+    for (let i = 0; i < 50; i++) { const { data } = await query(from, from + 199); const d = (data ?? []) as unknown as PayTx[]; all.push(...d); if (d.length < 200) break; from += 200; }
+    const url = URL.createObjectURL(new Blob([txToCsv(all)], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = `jdv-pay-historique-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-4 gap-3 sticky top-0 z-20">
-        <Link href="/pay" className="btn-ghost p-2"><ArrowLeft size={18} /></Link>
-        <AppLogo size={24} />
-        <div className="flex-1">
-          <p className="text-xs text-muted-foreground">JDV PAY</p>
-          <p className="text-sm font-semibold text-foreground">Historique des transactions</p>
-        </div>
-      </header>
-
-      <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {/* Wallet selector */}
-        {wallets.length > 1 && (
-          <div className="relative">
-            <select
-              className="jdv-input w-full appearance-none pr-8"
-              value={selectedWallet?.id || ''}
-              onChange={(e) => setSelectedWallet(wallets.find(w => w.id === e.target.value) || null)}
-            >
-              {wallets.map(w => (
-                <option key={w.id} value={w.id}>{w.currencies?.code} — {w.currencies?.name}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+    <main className="mx-auto max-w-3xl px-4 py-6">
+      <PayHeader title="Historique" active="/pay/history" />
+      <div className="jdv-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div role="tablist" aria-label="Sens" className="flex gap-1 text-xs">
+            {([['all', 'Tout'], ['in', 'Entrées'], ['out', 'Sorties']] as [Dir, string][]).map(([k, l]) => <button key={k} role="tab" aria-selected={dir === k} onClick={() => setDir(k)} className={`rounded-full px-3 py-1 ${dir === k ? 'bg-accent text-accent-foreground' : 'bg-muted text-foreground'}`}>{l}</button>)}
           </div>
+          <div className="flex items-center gap-2">
+            <label className="sr-only" htmlFor="period">Période</label>
+            <select id="period" value={period} onChange={(e) => setPeriod(Number(e.target.value))} className="rounded-lg border border-border bg-card px-2 py-1 text-xs text-foreground"><option value={7}>7 jours</option><option value={30}>30 jours</option><option value={90}>90 jours</option><option value={0}>Tout</option></select>
+            <button type="button" onClick={exportCsv} className="btn-ghost flex items-center gap-1 px-3 py-1 text-xs"><Download size={13} />CSV</button>
+          </div>
+        </div>
+        {busy ? <p className="mt-4 text-sm text-muted-foreground">Chargement…</p> : rows.length === 0 ? <p className="mt-4 text-sm text-muted-foreground">Aucune opération sur cette période.</p> : (
+          <ul className="mt-3 divide-y divide-border">
+            {rows.map((t) => { const inn = IN_TYPES.includes(t.transaction_type); return (
+              <li key={t.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <div className="min-w-0"><p className="font-medium text-foreground">{TYPE_LABEL[t.transaction_type] ?? 'Opération'}{t.transaction_status !== 'completed' && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{STATUS_LABEL[t.transaction_status] ?? t.transaction_status}</span>}</p>
+                  <p className="truncate text-xs text-muted-foreground">{t.description ?? t.reference} · {new Date(t.created_at).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}</p></div>
+                <div className="shrink-0 text-right"><p className={`font-semibold ${inn ? 'text-success' : 'text-foreground'}`}>{inn ? '+' : '−'}{money(Number(t.amount), t.currencies.code)}</p>
+                  {Number(t.fee_amount) > 0 && <p className="text-xs text-muted-foreground">frais {money(Number(t.fee_amount), t.currencies.code)}</p>}</div>
+              </li>); })}
+          </ul>
         )}
-
-        {/* Search */}
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Rechercher par référence ou description..."
-            className="jdv-input pl-9 w-full"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <div className="relative flex-shrink-0">
-            <select
-              className="jdv-input appearance-none pr-7 text-xs py-1.5 h-auto"
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-            >
-              <option value="all">Tous les types</option>
-              {Object.entries(TYPE_CONFIG).map(([key, val]) => (
-                <option key={key} value={key}>{val.label}</option>
-              ))}
-            </select>
-            <Filter size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          </div>
-          <div className="relative flex-shrink-0">
-            <select
-              className="jdv-input appearance-none pr-7 text-xs py-1.5 h-auto"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">Tous les statuts</option>
-              {Object.entries(STATUS_CONFIG).map(([key, val]) => (
-                <option key={key} value={key}>{val.label}</option>
-              ))}
-            </select>
-            <Filter size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Transactions */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 size={24} className="animate-spin text-accent" />
-          </div>
-        ) : filteredTransactions.length === 0 ? (
-          <div className="jdv-card p-8 text-center">
-            <FileText size={40} className="mx-auto text-muted-foreground mb-4" />
-            <p className="text-sm font-medium text-foreground mb-1">Aucune transaction</p>
-            <p className="text-xs text-muted-foreground">
-              {searchQuery || filterType !== 'all' || filterStatus !== 'all' ?'Aucun résultat pour ces filtres.' :'Vos transactions apparaîtront ici.'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {Object.entries(grouped).map(([date, txs]) => (
-              <div key={date}>
-                <p className="text-xs font-semibold text-muted-foreground mb-2 px-1">{date}</p>
-                <div className="jdv-card divide-y divide-border">
-                  {txs.map((tx) => {
-                    const typeConf = TYPE_CONFIG[tx.transaction_type] || { label: tx.transaction_type, icon: <RefreshCw size={14} />, isCredit: false };
-                    const statusConf = STATUS_CONFIG[tx.transaction_status] || STATUS_CONFIG.pending;
-                    return (
-                      <div key={tx.id} className="flex items-center gap-4 px-4 py-3.5 hover:bg-muted/10 transition-colors">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${typeConf.isCredit ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
-                          {typeConf.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">{typeConf.label}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {tx.description || tx.reference || formatTime(tx.created_at)}
-                          </p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className={`text-sm font-semibold font-tabular ${typeConf.isCredit ? 'text-success' : 'text-danger'}`}>
-                            {typeConf.isCredit ? '+' : '-'}{formatAmount(tx.amount, tx.currencies?.symbol || '', tx.currencies?.code || '')}
-                          </p>
-                          <span className={`text-xs px-1.5 py-0.5 rounded border ${statusConf.color}`}>
-                            {statusConf.label}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            {hasMore && (
-              <button
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                className="btn-secondary w-full flex items-center justify-center gap-2"
-              >
-                {isLoadingMore ? <><Loader2 size={14} className="animate-spin" /> Chargement...</> : 'Charger plus'}
-              </button>
-            )}
-          </div>
-        )}
+        {more && !busy && <button type="button" onClick={loadMore} className="mt-3 w-full rounded-lg border border-border py-2 text-sm text-foreground hover:bg-muted">Voir plus</button>}
       </div>
-    </div>
+    </main>
   );
 }

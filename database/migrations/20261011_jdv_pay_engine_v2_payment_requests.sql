@@ -1,0 +1,11 @@
+-- APPLIQUÉ en production le 2026-10-11 (jdv_pay_engine_v2_payment_requests). Testé (écritures annulées), 25 contrôles.
+-- Le SQL complet est dans Supabase (supabase db pull) ; ce fichier en résume la structure.
+--
+-- pay_quote_transfer(wallet, montant)          devis : frais, total, solde suffisant, plafonds (portefeuille de l'appelant uniquement)
+-- pay_beneficiary_is_member(beneficiaire)      vrai si le bénéficiaire est un utilisateur JDV avec email/téléphone confirmé (sans révéler qui)
+-- pay_get_payment_request(demande)             lecture par le payeur : montant, devise, description, nom abrégé du demandeur (« Awa K. »), statut
+-- pay_settle_payment_request(demande, wallet, montant)
+--     paie une demande en une seule opération : mêmes règles que le transfert interne (frais, plafonds, solde, anti-doublon),
+--     refuse : sa propre demande, une demande payée / annulée / expirée, une mauvaise devise, le portefeuille d'un autre.
+--     Si le paiement échoue (ex. solde insuffisant), la demande reste « pending » et rien n'est débité.
+--     Montant libre : le payeur indique le montant. Notifie le demandeur. Les frais (1 %) sont payés par le payeur.

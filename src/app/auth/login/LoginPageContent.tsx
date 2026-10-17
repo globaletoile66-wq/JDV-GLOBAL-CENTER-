@@ -8,6 +8,8 @@ import { Eye, EyeOff, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
+import { createClient } from '@/lib/supabase/client';
+import { needsMfaChallenge, safeRedirect } from '@/lib/auth/mfa';
 
 interface LoginFormData {
   email: string;
@@ -37,7 +39,11 @@ export default function LoginPageContent() {
     try {
       await signIn(data.email, data.password);
       toast.success('Connexion réussie — Bienvenue sur JDV GLOBAL CENTER');
-      router.push(redirectTo);
+      if (await needsMfaChallenge(createClient())) {
+        router.push(`/auth/mfa?redirect=${encodeURIComponent(redirectTo)}`);
+        return;
+      }
+      router.push(safeRedirect(redirectTo));
     } catch (err: any) {
       const msg = err?.message || 'Erreur de connexion';
       if (msg.includes('Invalid login credentials')) {

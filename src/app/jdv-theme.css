@@ -1,0 +1,9 @@
+/* Valeurs par défaut du thème (fond blanc). Importer une fois dans app/layout.tsx : import './jdv-theme.css'; */
+:root {
+  --jdv-bg: #ffffff; --jdv-fg: #0f172a; --jdv-muted: #475569;
+  --jdv-primary: #003366; --jdv-on-primary: #ffffff; --jdv-primary-text: #003366;
+  --jdv-primary-soft: #f0f3f7; --jdv-border: #c7d3e0;
+  --jdv-accent: #ff6b35; --jdv-on-accent: #111827; --jdv-accent-soft: #fff0eb;
+}
+/* Le fond blanc s'applique à l'accueil JDV GLOBAL ; les portails (CRM, entrepôt...) gardent leur style tant que la classe n'y est pas ajoutée. */
+.jdv-home { background: var(--jdv-bg); color: var(--jdv-fg); }

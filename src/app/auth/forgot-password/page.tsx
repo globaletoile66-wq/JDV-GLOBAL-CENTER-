@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const supabase=createClient(); const [email,setEmail]=useState(''); const [loading,setLoading]=useState(false); const [sent,setSent]=useState(false); const [error,setError]=useState<string|null>(null);
-  async function submit(e:FormEvent){ e.preventDefault(); setLoading(true); setError(null); const result=await supabase.auth.resetPasswordForEmail(email,{redirectTo:typeof window!=='undefined'?window.location.origin+'/auth/reset-password':undefined}); if(result.error)setError(result.error.message);else setSent(true); setLoading(false); }
+  async function submit(e:FormEvent){ e.preventDefault(); setLoading(true); setError(null); const result=await supabase.auth.resetPasswordForEmail(email,{redirectTo:typeof window!=='undefined'?window.location.origin+'/auth/callback?next=/auth/reset-password':undefined}); if(result.error)setError(result.error.message);else setSent(true); setLoading(false); }
   return <main className="min-h-screen bg-background flex items-center justify-center px-4"><section className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
     <div className="flex items-center gap-3 mb-8"><AppLogo size={44}/><div><h1 className="font-extrabold">Mot de passe oublié</h1><p className="text-xs text-muted-foreground">JDV GLOBAL CENTER</p></div></div>
     {sent ? <div className="space-y-5"><p className="text-sm text-muted-foreground">Si cette adresse est enregistrée, un lien de réinitialisation a été envoyé.</p><Link href="/auth/login" className="btn-primary w-full justify-center">Retour à la connexion</Link></div> :

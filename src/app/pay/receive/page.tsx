@@ -1,265 +1,131 @@
 'use client';
-
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, Download, Copy, QrCode, CheckCircle2, Loader2 } from 'lucide-react';
+import { Check, Copy, Share2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
-import AppLogo from '@/components/ui/AppLogo';
-import { toast } from 'sonner';
+import { usePayWallets } from '@/hooks/usePayWallets';
+import PayHeader from '@/components/pay/PayHeader';
+import WalletPicker from '@/components/pay/WalletPicker';
+import QrBox from '@/components/pay/QrBox';
+import { STATUS_LABEL, money, payError } from '@/lib/pay/types';
 
-interface Wallet {
-  id: string;
-  currencies: { code: string; symbol: string; name: string };
-}
+type Req = { id: string; reference: string; amount: number | null; description: string | null; request_status: string; expires_at: string | null; created_at: string; currencies: { code: string } | null };
+const DURATIONS: [string, number][] = [['24 heures', 1], ['7 jours', 7], ['30 jours', 30]];
 
 export default function ReceivePage() {
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [requestRef, setRequestRef] = useState('');
-  const [copied, setCopied] = useState(false);
-  const { user, profile } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const supabase = createClient();
+  const sb = useMemo(() => createClient(), []);
+  const { wallets, refresh: refreshWallets } = usePayWallets();
+  const [walletId, setWalletId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [desc, setDesc] = useState('');
+  const [days, setDays] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [list, setList] = useState<Req[]>([]);
+  const [shown, setShown] = useState<Req | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const loadWallets = useCallback(async () => {
-    if (!user) return;
-    setIsLoading(true);
-    try {
-      const { data } = await supabase
-        .from('wallets')
-        .select('*, currencies(code, symbol, name)')
-        .eq('user_id', user.id)
-        .eq('wallet_status', 'active');
-      const ws = data || [];
-      setWallets(ws);
-      setSelectedWallet(ws.find((w: Wallet) => w.currencies?.code === 'XOF') || ws[0] || null);
-    } catch {
-      // Silent fail
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, supabase]);
+  useEffect(() => { if (!loading && !user) router.push('/auth/login?redirect=/pay/receive'); }, [loading, user, router]);
+  useEffect(() => { if (wallets && !walletId) setWalletId((wallets.find((w) => w.currencies.code === 'XOF' && w.wallet_status === 'active') ?? wallets.find((w) => w.wallet_status === 'active'))?.id ?? ''); }, [wallets, walletId]);
 
+  const load = useCallback(async () => {
+    const { data } = await sb.from('payment_requests').select('id,reference,amount,description,request_status,expires_at,created_at,currencies:currency_id(code)').order('created_at', { ascending: false }).limit(12);
+    setList((data ?? []) as unknown as Req[]);
+  }, [sb]);
+  useEffect(() => { if (user) load(); }, [user, load]);
+
+  // Suivi en direct de la demande affichée : passe à « Payée » dès le paiement
   useEffect(() => {
-    if (!user) { router.push('/auth/login?redirect=/pay/receive'); return; }
-    loadWallets();
-  }, [user, loadWallets, router]);
+    if (!shown || shown.request_status !== 'pending') return;
+    const t = setInterval(async () => {
+      const { data } = await sb.from('payment_requests').select('request_status').eq('id', shown.id).maybeSingle();
+      if (data && data.request_status !== 'pending') { setShown({ ...shown, request_status: data.request_status }); load(); refreshWallets(); if (data.request_status === 'paid') toast.success('Paiement reçu !'); }
+    }, 6000);
+    return () => clearInterval(t);
+  }, [shown, sb, load, refreshWallets]);
 
-  const handleCreateRequest = async () => {
-    if (!user || !selectedWallet) return;
-    setIsCreating(true);
-    try {
-      const currencyRes = await supabase.from('currencies').select('id').eq('code', selectedWallet.currencies.code).single();
-      const currencyId = currencyRes.data?.id;
+  const wallet = wallets?.find((w) => w.id === walletId);
+  const n = amount ? Number(amount.replace(',', '.')) : null;
+  const link = shown && typeof window !== 'undefined' ? `${window.location.origin}/pay/p/${shown.id}` : '';
 
-      const { data, error } = await supabase.from('payment_requests').insert({
-        requester_user_id: user.id,
-        requester_wallet_id: selectedWallet.id,
-        amount: amount ? parseFloat(amount.replace(',', '.')) : null,
-        currency_id: currencyId,
-        description: description || null,
-        request_status: 'pending',
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      }).select('reference').single();
-
-      if (error) throw error;
-      setRequestRef(data?.reference || '');
-      toast.success('Demande de paiement créée');
-    } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors de la création');
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      toast.success('Copié dans le presse-papiers');
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  const displayName = profile?.full_name || profile?.first_name || user?.email?.split('@')[0] || 'Utilisateur';
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-accent" />
-      </div>
-    );
+  async function create() {
+    if (!user || !wallet) return;
+    if (amount && !(n && n > 0)) { toast.error('Montant invalide.'); return; }
+    setBusy(true);
+    const { data, error } = await sb.from('payment_requests').insert({
+      requester_user_id: user.id, requester_wallet_id: wallet.id, amount: n, currency_id: wallet.currency_id,
+      description: desc || null, expires_at: new Date(Date.now() + days * 86400000).toISOString(),
+    }).select('id,reference,amount,description,request_status,expires_at,created_at').single();
+    setBusy(false);
+    if (error || !data) { toast.error(payError(error?.message)); return; }
+    setShown({ ...(data as Req), currencies: { code: wallet.currencies.code } }); setAmount(''); setDesc(''); load();
   }
+  async function cancel(id: string) {
+    const { error } = await sb.from('payment_requests').update({ request_status: 'cancelled' }).eq('id', id);
+    if (error) toast.error('Annulation impossible.'); else { toast.success('Demande annulée.'); if (shown?.id === id) setShown(null); load(); }
+  }
+  async function copy() { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+  async function share() { if (navigator.share) { try { await navigator.share({ title: 'Demande de paiement JDV PAY', text: shown?.description ?? 'Payez-moi avec JDV PAY', url: link }); } catch { /* annulé */ } } else copy(); }
+  const eff = (r: Req) => (r.request_status === 'pending' && r.expires_at && new Date(r.expires_at) <= new Date() ? 'expired' : r.request_status);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-4 gap-3">
-        <Link href="/pay" className="btn-ghost p-2"><ArrowLeft size={18} /></Link>
-        <AppLogo size={24} />
-        <div>
-          <p className="text-xs text-muted-foreground">JDV PAY</p>
-          <p className="text-sm font-semibold text-foreground">Recevoir de l'argent</p>
-        </div>
-      </header>
+    <main className="mx-auto max-w-3xl px-4 py-6">
+      <PayHeader title="Recevoir un paiement" active="/pay/receive" />
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
-        {!requestRef ? (
-          <>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground mb-1">Créer une demande de paiement</h2>
-              <p className="text-sm text-muted-foreground">Générez un lien ou QR code pour recevoir un paiement.</p>
-            </div>
-
-            {/* Wallet selector */}
-            {wallets.length > 0 ? (
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Portefeuille de réception</label>
-                <select
-                  className="jdv-input w-full"
-                  value={selectedWallet?.id || ''}
-                  onChange={(e) => setSelectedWallet(wallets.find(w => w.id === e.target.value) || null)}
-                >
-                  {wallets.map(w => (
-                    <option key={w.id} value={w.id}>{w.currencies?.code} — {w.currencies?.name}</option>
-                  ))}
-                </select>
+      {shown ? (
+        <section aria-labelledby="share-title" className="jdv-card p-6 text-center">
+          <h2 id="share-title" className="font-bold text-foreground">{shown.request_status === 'paid' ? 'Demande payée ✅' : shown.request_status === 'pending' ? 'Partagez ce lien ou ce QR code' : `Demande ${STATUS_LABEL[shown.request_status]?.toLowerCase() ?? shown.request_status}`}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{shown.amount ? money(Number(shown.amount), shown.currencies?.code ?? 'XOF') : 'Montant libre'}{shown.description ? ` · ${shown.description}` : ''} · {shown.reference}</p>
+          {shown.request_status === 'pending' && (
+            <>
+              <div className="mt-4"><QrBox value={link} /></div>
+              <p className="mx-auto mt-3 max-w-md break-all text-xs text-muted-foreground">{link}</p>
+              <div className="mt-3 flex justify-center gap-2">
+                <button type="button" onClick={copy} className="btn-ghost flex items-center gap-2 px-4 py-2">{copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Copié' : 'Copier le lien'}</button>
+                <button type="button" onClick={share} className="btn-primary flex items-center gap-2 px-4 py-2"><Share2 size={14} />Partager</button>
               </div>
-            ) : (
-              <div className="jdv-card p-6 text-center">
-                <Download size={32} className="mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground">Aucun portefeuille actif trouvé.</p>
-              </div>
-            )}
+              <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">En attente du paiement… cette page se met à jour toute seule.</p>
+            </>
+          )}
+          <button type="button" onClick={() => setShown(null)} className="mt-4 text-sm text-accent underline">Créer une autre demande</button>
+        </section>
+      ) : (
+        <section aria-labelledby="new-title" className="jdv-card space-y-4 p-5">
+          <h2 id="new-title" className="font-bold text-foreground">Nouvelle demande</h2>
+          {wallets && <WalletPicker wallets={wallets} value={walletId} onChange={setWalletId} label="Recevoir dans le portefeuille" />}
+          <label className="block text-sm"><span className="text-foreground">Montant{wallet ? ` (${wallet.currencies.code})` : ''} <span className="text-muted-foreground">: laissez vide pour un montant libre</span></span>
+            <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ''))} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-lg text-foreground" />
+          </label>
+          <label className="block text-sm"><span className="text-foreground">Description (facultatif)</span>
+            <input value={desc} maxLength={140} onChange={(e) => setDesc(e.target.value)} placeholder="Ex. Commande n° 12" className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-foreground" />
+          </label>
+          <label className="block text-sm"><span className="text-foreground">Valable</span>
+            <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-foreground">{DURATIONS.map(([l, d]) => <option key={d} value={d}>{l}</option>)}</select>
+          </label>
+          <p className="text-xs text-muted-foreground">Les frais de transfert sont payés par la personne qui vous règle.</p>
+          <button type="button" onClick={create} disabled={busy || !wallet} className="btn-primary w-full px-4 py-2.5 disabled:opacity-60">{busy ? 'Création…' : 'Créer le lien et le QR code'}</button>
+        </section>
+      )}
 
-            {/* Amount (optional) */}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Montant (optionnel)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  placeholder="Laisser vide pour montant libre"
-                  className="jdv-input w-full pr-16"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  min="0"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  {selectedWallet?.currencies?.code || 'XOF'}
-                </span>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Description (optionnel)</label>
-              <input
-                type="text"
-                placeholder="Motif du paiement..."
-                className="jdv-input w-full"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                maxLength={200}
-              />
-            </div>
-
-            <button
-              onClick={handleCreateRequest}
-              disabled={isCreating || !selectedWallet}
-              className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isCreating ? <><Loader2 size={14} className="animate-spin" /> Création...</> : <><Download size={14} /> Créer la demande</>}
-            </button>
-
-            {/* Info about direct reception */}
-            <div className="jdv-card p-4">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Vos coordonnées de réception</h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Nom</span>
-                  <span className="text-xs font-medium text-foreground">{displayName}</span>
+      <section aria-labelledby="my-title" className="jdv-card mt-6 p-5">
+        <h2 id="my-title" className="font-bold text-foreground">Mes demandes</h2>
+        {list.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">Aucune demande pour le moment.</p> : (
+          <ul className="mt-3 divide-y divide-border">
+            {list.map((r) => { const s = eff(r); return (
+              <li key={r.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <div className="min-w-0"><p className="truncate font-medium text-foreground">{r.amount ? money(Number(r.amount), r.currencies?.code ?? 'XOF') : 'Montant libre'}{r.description ? ` · ${r.description}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{r.reference} · {new Date(r.created_at).toLocaleDateString('fr-FR')}</p></div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs ${s === 'paid' ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'}`}>{STATUS_LABEL[s] ?? s}</span>
+                  {s === 'pending' && <><button type="button" onClick={() => setShown(r)} className="text-xs font-medium text-accent hover:underline">QR</button><button type="button" onClick={() => cancel(r.id)} className="text-xs text-danger hover:underline">Annuler</button></>}
                 </div>
-                {user?.email && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Email</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-foreground">{user.email}</span>
-                      <button onClick={() => handleCopy(user.email!)} className="btn-ghost p-1">
-                        <Copy size={12} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          /* Success state */
-          <div className="text-center space-y-6">
-            <div className="w-20 h-20 rounded-full bg-success/10 border-2 border-success/30 flex items-center justify-center mx-auto">
-              <CheckCircle2 size={40} className="text-success" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-foreground mb-2">Demande créée</h2>
-              <p className="text-sm text-muted-foreground">Partagez la référence ci-dessous pour recevoir votre paiement.</p>
-            </div>
-
-            <div className="jdv-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Référence</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-bold text-foreground">{requestRef}</span>
-                  <button
-                    onClick={() => handleCopy(requestRef)}
-                    className={`btn-ghost p-1.5 ${copied ? 'text-success' : ''}`}
-                  >
-                    {copied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-                  </button>
-                </div>
-              </div>
-              {amount && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Montant demandé</span>
-                  <span className="text-sm font-semibold text-foreground">
-                    {parseFloat(amount).toLocaleString('fr-FR')} {selectedWallet?.currencies?.code}
-                  </span>
-                </div>
-              )}
-              {description && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Motif</span>
-                  <span className="text-sm text-foreground">{description}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleCopy(requestRef)}
-                className="btn-secondary flex-1 flex items-center justify-center gap-2"
-              >
-                <Copy size={14} /> Copier la référence
-              </button>
-              <Link href="/pay/qr" className="btn-primary flex-1 flex items-center justify-center gap-2">
-                <QrCode size={14} /> QR Code
-              </Link>
-            </div>
-
-            <button
-              onClick={() => { setRequestRef(''); setAmount(''); setDescription(''); }}
-              className="text-sm text-accent hover:text-accent-dark font-medium"
-            >
-              Créer une nouvelle demande
-            </button>
-          </div>
+              </li>); })}
+          </ul>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

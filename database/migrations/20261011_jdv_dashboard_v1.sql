@@ -1,0 +1,20 @@
+-- APPLIQUÉ en production le 2026-10-11 (jdv_dashboard_v1). Testé (écritures annulées) : profil, portefeuilles, statistiques 30 jours,
+-- activité, notifications, abonnements, organisations, branches, checklist, marquage « lu », isolation entre utilisateurs, visiteur refusé.
+-- Le SQL complet est dans Supabase (supabase db pull) ; ce fichier en résume la structure.
+--
+-- dashboard_overview() : UNE seule fonction (security definer, limitée à auth.uid()) qui renvoie un objet JSON :
+--   profile        nom, e-mail, avatar, complétude sur 9 champs et champs manquants
+--   security       e-mail confirmé, 2FA active, niveau et statut KYC
+--   kpis           branches accessibles, organisations, notifications non lues, complétude du profil
+--   checklist      e-mail, profil, 2FA, identité (KYC), première recharge
+--   wallets        un portefeuille par devise (solde, disponible, statut)
+--   stats          30 jours dans la devise principale : entrées, sorties, nombre d'opérations, série quotidienne
+--                  (opérations terminées uniquement ; une opération en attente n'est jamais comptée)
+--   activity       15 dernières lignes : opérations, connexions (sessions), journal personnel
+--   notifications  non lues + 8 dernières
+--   subscriptions  abonnements personnels et d'organisation (via billing_my_subscriptions)
+--   organizations  appartenances avec rôle
+--   branches       toutes les branches, avec accès (jdv_can_use_module), favori, dernière utilisation
+-- dashboard_touch_module(code)              enregistre l'utilisation d'une branche (10 récentes conservées, sans doublon)
+-- dashboard_toggle_favorite(code)           ajoute ou retire un favori (renvoie l'état)
+-- dashboard_mark_notifications_read(ids)    marque lues les notifications de l'utilisateur (toutes si ids est vide)
