@@ -1,0 +1,36 @@
+name: Verifier le build
+on:
+  push:
+    branches: ['integration/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://lncgghdbnkehdcyhqdfo.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: cle-factice-pour-le-build
+      NEXT_PUBLIC_SITE_URL: http://localhost:4028
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installer, typer, construire
+        shell: bash
+        run: |
+          set +e
+          npm install --no-audit --no-fund > npm.log 2>&1; npm_rc=$?
+          npx tsc --noEmit > tsc.log 2>&1; tsc_rc=$?
+          npx next build > build.log 2>&1; build_rc=$?
+          {
+            echo "## Résultat : npm=$npm_rc | tsc=$tsc_rc | build=$build_rc (0 = OK)"
+            echo "## Erreurs TypeScript : $(grep -c 'error TS' tsc.log)"
+            echo "### Par dossier"; echo '```'
+            grep 'error TS' tsc.log | cut -d'(' -f1 | awk -F/ '{ if ($1=="src") print $1"/"$2"/"$3; else print $1 }' | sort | uniq -c | sort -rn | head -15
+            echo '```'
+            echo "### 40 premières erreurs"; echo '```'; grep 'error TS' tsc.log | head -40; echo '```'
+            echo "### Fin du build"; echo '```'; tail -30 build.log; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ $npm_rc -eq 0 ] && [ $tsc_rc -eq 0 ] && [ $build_rc -eq 0 ]
