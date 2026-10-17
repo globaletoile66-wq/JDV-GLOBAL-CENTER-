@@ -1,0 +1,23 @@
+/* Passage au fond blanc de toute l'application Rocket.
+   À importer APRÈS src/styles/tailwind.css (dans app/layout.tsx). Les variables --jdv-* viennent du thème personnalisable
+   (jdv-interface-v2 / app/jdv-theme.css) : choisir une couleur dans la palette change donc aussi le tableau de bord.
+   Couleurs d'état choisies pour un contraste AA sur fond blanc. */
+:root {
+  --background: var(--jdv-bg, #ffffff);
+  --foreground: var(--jdv-fg, #0f172a);
+  --card: #ffffff;
+  --card-foreground: var(--jdv-fg, #0f172a);
+  --border: var(--jdv-border, #c7d3e0);
+  --muted: var(--jdv-primary-soft, #f0f3f7);
+  --muted-foreground: var(--jdv-muted, #475569);
+  --primary: var(--jdv-primary, #003366);
+  --primary-foreground: var(--jdv-on-primary, #ffffff);
+  --accent: var(--jdv-accent, #ff6b35);
+  --accent-dark: var(--jdv-accent, #ff6b35);
+  --accent-light: var(--jdv-accent, #ff6b35);
+  --accent-foreground: var(--jdv-on-accent, #111827);
+  --success: #047857;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --info: #1d4ed8;
+}

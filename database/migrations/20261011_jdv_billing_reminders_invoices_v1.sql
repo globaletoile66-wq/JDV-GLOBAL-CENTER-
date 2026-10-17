@@ -1,0 +1,15 @@
+-- APPLIQUÉ en production le 2026-10-11 (jdv_billing_reminders_invoices_v1). Testé (écritures annulées).
+-- Le SQL complet est dans Supabase (supabase db pull) ; ce fichier en résume la structure.
+--
+-- RAPPELS : table billing_reminders_sent (un rappel par abonnement, type et échéance) ;
+--   billing_send_renewal_reminders() : service uniquement, planifiée toutes les heures (pg_cron : jdv-billing-reminders).
+--   Types : d7 (forfaits > 14 j), d3 (> 7 j), d1 (>= 2 j), trial_d1 (fin d'essai), expired (3 jours après la fin).
+--   Aucun rappel : forfait d'un jour, rappels désactivés, résiliation demandée. Abonnement d'organisation : propriétaires et administrateurs.
+--   Les rappels se réarment après un renouvellement (nouvelle échéance). Notifications internes (type 'warning').
+--
+-- FACTURES : billing_settings (identité du vendeur, taux de taxe, une seule ligne, super admin) ;
+--   billing_invoice_counters (numérotation séquentielle par année, sans trou) ;
+--   billing_invoices : émise automatiquement par trigger à chaque subscription_payments réussi, immuable (aucune modification ni suppression,
+--   sauf compléter le vendeur s'il était vide), visible par l'abonné, par les administrateurs de l'organisation et par les super admins.
+--   Numéro : JDV-AAAA-NNNNNN. Taxe : prix TTC ; tax = montant - montant / (1 + taux/100) ; taux 0 par défaut.
+--   billing_backfill_invoice_seller() : super admin, complète le vendeur des factures émises avant la saisie des paramètres.

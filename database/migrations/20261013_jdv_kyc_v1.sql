@@ -1,0 +1,16 @@
+-- APPLIQUÉ en production le 2026-10-13 (jdv_kyc_v1 + jdv_kyc_storage_quota_fix_v1). Testé (écritures annulées), 30 contrôles.
+-- Le SQL complet est dans Supabase (supabase db pull) ; ce fichier en résume la structure.
+--
+-- STOCKAGE : bucket privé « kyc-documents » (5 Mo, JPG/PNG/WebP/PDF). Chaque utilisateur dépose uniquement dans son dossier <user_id>/ ;
+--   quota de 20 fichiers (fonction kyc_object_count) ; lecture : son dossier, ou super admin. Aucune modification ni suppression par l'utilisateur.
+-- FONCTIONS :
+--   kyc_register_document(type, chemin)   enregistre une pièce téléversée (types : id_front, id_back, selfie, proof_of_address) ;
+--                                         refuse un chemin hors de son dossier, un fichier absent, 12 dépôts / 24 h ; remplace la pièce précédente du même type
+--   kyc_submit()                          exige id_front + selfie ; passe en « under_review » ; prévient l'utilisateur et les super admins actifs
+--   kyc_my_status()                       statut réel (une vérification périmée apparaît « expired »), motif de refus, pièces, pièces manquantes
+--   kyc_admin_queue(statut)               super admin : dossiers par statut avec chemins des pièces
+--   kyc_admin_log_view(piece)             super admin : enregistre la consultation d'une pièce dans le journal d'audit (avant l'accès)
+--   kyc_review(user, approve|reject, niveau, motif, années)   super admin : validation (niveau basic / verified / enhanced, validité 1 à 10 ans, 2 par défaut)
+--                                         ou refus (motif obligatoire, visible par l'utilisateur) ; notifie ; journalise
+--   pay_check_limits : les plafonds ignorent une vérification expirée (retour au niveau « unverified »)
+-- Un utilisateur ne peut jamais modifier lui-même son niveau ni son statut (garde sur kyc_profiles, vérifiée).

@@ -1,129 +1,75 @@
 'use client';
-
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, RefreshCw, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Send, Download, History, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { usePayWallets } from '@/hooks/usePayWallets';
+import PayHeader from '@/components/pay/PayHeader';
+import { IN_TYPES, STATUS_LABEL, TYPE_LABEL, money, type PayTx } from '@/lib/pay/types';
 
-interface Wallet {
-  id: string;
-  user_id: string;
-  wallets?: string | null;
-  available_balance?: number | string | null;
-  balance?: number | string | null;
-  description?: string | null;
-  created_at?: string | null;
-}
-
-export default function PayPage() {
+export default function PayHome() {
   const { user, loading } = useAuth();
-  const [rows, setRows] = useState<Wallet[]>([]);
-  const [query, setQuery] = useState('');
-  const [busy, setBusy] = useState(true);
-  const [error, setError] = useState('');
-  const requestId = useRef(0);
-  const supabase = createClient();
+  const router = useRouter();
+  const { wallets } = usePayWallets();
+  const [txs, setTxs] = useState<PayTx[] | null>(null);
+  const [all, setAll] = useState(false);
 
-  const load = useCallback(async () => {
-    const currentRequestId = ++requestId.current;
-    if (!user) {
-      setRows([]);
-      setError('');
-      setBusy(false);
-      return;
-    }
-
-    setBusy(true);
-    setError('');
-    try {
-      // Scope the request to the signed-in user as defense in depth.
-      // Database RLS remains the authoritative access-control boundary.
-      const { data, error: queryError } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .limit(100);
-
-      if (queryError) throw queryError;
-      if (currentRequestId === requestId.current) setRows((data ?? []) as Wallet[]);
-    } catch (cause) {
-      if (currentRequestId === requestId.current) {
-        setRows([]);
-        setError(cause instanceof Error ? cause.message : 'Impossible de charger les portefeuilles.');
-      }
-    } finally {
-      if (currentRequestId === requestId.current) setBusy(false);
-    }
-  }, [supabase, user]);
-
+  useEffect(() => { if (!loading && !user) router.push('/auth/login?redirect=/pay'); }, [loading, user, router]);
   useEffect(() => {
-    if (!loading) void load();
-    return () => { requestId.current += 1; };
-  }, [loading, load]);
+    if (!user) return;
+    createClient().from('wallet_transactions')
+      .select('id,transaction_type,amount,fee_amount,transaction_status,description,reference,created_at,balance_after,currencies:currency_id(code)')
+      .order('created_at', { ascending: false }).limit(6).then(({ data }) => setTxs((data ?? []) as unknown as PayTx[]));
+  }, [user]);
 
-  const filtered = rows.filter((row) =>
-    JSON.stringify(row).toLowerCase().includes(query.toLowerCase())
-  );
+  const shown = (wallets ?? []).filter((w) => all || w.balance > 0 || w.currencies.code === 'XOF');
+  const actions = [['/pay/send', 'Envoyer', Send], ['/pay/receive', 'Recevoir', Download], ['/pay/history', 'Historique', History], ['/pay/beneficiaries', 'Bénéficiaires', Users]] as const;
 
   return (
-    <main className="min-h-screen bg-[#0B1B3D] p-5 text-white sm:p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="flex justify-between">
-          <Link href="/" className="inline-flex gap-2 text-white/60 hover:text-white">
-            <ArrowLeft size={16} />Accueil
-          </Link>
-          <button onClick={() => void load()} disabled={busy || loading} className="inline-flex gap-2 rounded-xl border border-white/10 px-4 py-2 disabled:opacity-50">
-            <RefreshCw size={16} className={busy ? 'animate-spin' : ''} />Actualiser
-          </button>
-        </div>
+    <main className="mx-auto max-w-3xl px-4 py-6">
+      <PayHeader title="JDV PAY" active="/pay" back="/dashboard" />
+      <section aria-labelledby="w-title" className="jdv-card p-5">
+        <h2 id="w-title" className="font-bold text-foreground">Mes portefeuilles</h2>
+        {wallets === null ? <p className="mt-3 text-sm text-muted-foreground">Chargement…</p> : (
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+            {shown.map((w) => (
+              <li key={w.id} className="rounded-xl border border-border p-4">
+                <p className="text-xs text-muted-foreground">{w.currencies.code}</p>
+                <p className="mt-1 text-2xl font-extrabold text-foreground">{money(w.balance, w.currencies.code)}</p>
+                {w.available_balance !== w.balance && <p className="text-xs text-muted-foreground">Disponible : {money(w.available_balance, w.currencies.code)}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+        {wallets && wallets.length > shown.length && <button type="button" onClick={() => setAll(true)} className="mt-3 text-xs font-medium text-accent hover:underline">Voir les {wallets.length} devises</button>}
+        <p className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">La recharge par Mobile Money ou carte sera disponible prochainement. En attendant, vous pouvez recevoir de l’argent d’un autre utilisateur JDV.</p>
+      </section>
 
-        <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6">
-          <div className="flex flex-col gap-5 md:flex-row md:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p>
-              <h1 className="mt-2 text-3xl font-black">JDV PAY</h1>
-              <p className="mt-2 text-white/60">Portefeuille, demandes de paiement et services financiers</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 px-5 py-3">
-              <div className="text-xs text-white/40">Portefeuilles</div>
-              <div className="text-2xl font-bold">{rows.length}</div>
-            </div>
-          </div>
+      <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Actions rapides">
+        {actions.map(([href, label, Icon]) => (
+          <li key={href}><Link href={href} className="jdv-card flex flex-col items-center gap-2 p-4 text-center text-sm font-medium text-foreground hover:border-accent/40"><Icon size={20} className="text-accent" />{label}</Link></li>
+        ))}
+      </ul>
 
-          <div className="mt-7 flex items-center gap-3 rounded-2xl border border-white/10 px-4 py-3">
-            <Search size={17} className="text-white/40" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher dans mes portefeuilles…" className="w-full bg-transparent outline-none placeholder:text-white/30" />
-          </div>
-
-          {error ? (
-            <div role="alert" className="mt-5 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-red-200">{error}</div>
-          ) : busy ? (
-            <p role="status" className="mt-5 text-white/60">Chargement des portefeuilles…</p>
-          ) : (
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((row) => (
-                <article key={row.id} className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
-                  <div className="flex justify-between gap-3">
-                    <h2 className="truncate font-bold">{String(row.wallets ?? 'Portefeuille')}</h2>
-                    <span className="rounded-full bg-[#F28C28]/10 px-2.5 py-1 text-xs text-[#F28C28]">{String(row.available_balance ?? '—')}</span>
-                  </div>
-                  <p className="mt-2 text-sm text-white/55">{String(row.balance ?? '')}</p>
-                  <p className="mt-4 line-clamp-3 text-sm text-white/60">{String(row.description ?? '')}</p>
-                  <div className="mt-4 border-t border-white/10 pt-3 text-[11px] text-white/30">
-                    {row.created_at ? new Date(row.created_at).toLocaleString('fr-FR') : row.id}
-                  </div>
-                </article>
-              ))}
-              {filtered.length === 0 && (
-                <div className="col-span-full rounded-2xl border border-dashed border-white/15 p-10 text-center text-white/45">
-                  Aucun portefeuille trouvé.
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-      </div>
+      <section aria-labelledby="r-title" className="jdv-card mt-6 p-5">
+        <div className="flex items-center justify-between"><h2 id="r-title" className="font-bold text-foreground">Dernières opérations</h2><Link href="/pay/history" className="text-xs font-medium text-accent hover:underline">Tout voir</Link></div>
+        {txs === null ? <p className="mt-3 text-sm text-muted-foreground">Chargement…</p> : txs.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">Aucune opération pour le moment.</p> : (
+          <ul className="mt-3 divide-y divide-border">
+            {txs.map((t) => {
+              const inn = IN_TYPES.includes(t.transaction_type);
+              return (
+                <li key={t.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                  <div><p className="font-medium text-foreground">{TYPE_LABEL[t.transaction_type] ?? 'Opération'}{t.transaction_status !== 'completed' ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{STATUS_LABEL[t.transaction_status] ?? t.transaction_status}</span> : null}</p>
+                    <p className="text-xs text-muted-foreground">{t.description ?? t.reference} · {new Date(t.created_at).toLocaleDateString('fr-FR')}</p></div>
+                  <p className={`font-semibold ${inn ? 'text-success' : 'text-foreground'}`}>{inn ? '+' : '−'}{money(Number(t.amount), t.currencies.code)}</p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }

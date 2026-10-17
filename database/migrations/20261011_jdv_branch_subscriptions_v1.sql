@@ -1,0 +1,26 @@
+-- APPLIQUÉ en production le 2026-10-11 (jdv_branch_subscriptions_v1 + jdv_billing_authz_null_fix_v1).
+-- Abonnements PAR BRANCHE : plusieurs durées par branche, un abonnement par branche et par abonné (organisation OU utilisateur).
+-- Testé (écritures annulées) : tarifs publics, essai unique par abonné et par branche, essais CRM et PUB indépendants,
+-- activation idempotente, renouvellement (+30 j), changement de formule, résiliation à échéance, contrôle d'accès par branche,
+-- expiration, isolation du CRM, refus d'un membre simple / d'un extérieur / d'une insertion directe.
+-- Le SQL complet est disponible dans Supabase (supabase db pull) ; ce fichier en résume la structure.
+
+-- 1) subscription_plans : + module_code (NOT NULL, CRM rétro-rempli), sort_order, is_featured, trial_days, highlights
+-- 2) organization_subscriptions : + user_id, module_code, cancelled_at, cancel_reason ; organization_id nullable ;
+--    un seul abonné par ligne ; unique (abonné, branche) parmi les statuts vivants (remplace uq_jdvcrm_org_active_subscription)
+-- 3) subscription_payments / subscription_events : + user_id, plan_id, checkout_id, module_code ; organization_id nullable
+-- 4) billing_checkouts : intentions de paiement (écrites par les Edge Functions uniquement)
+-- 5) Fonctions :
+--    public_branch_plans(p_module_code)            lecture publique des tarifs actifs d'une branche (remplace public_subscription_plans)
+--    billing_my_subscriptions()                      mes abonnements (personnels + organisations dont je suis membre) avec can_manage
+--    billing_start_trial(p_plan_code, p_organization_id)   essai gratuit, une fois par abonné et par branche
+--    billing_cancel_subscription(id, reason, immediate)   résiliation (à échéance, ou immédiate pour un essai)
+--    billing_set_auto_renew(id, value)               rappels de renouvellement
+--    billing_activate_subscription(...)              SERVICE UNIQUEMENT, idempotent : active / renouvelle / change de formule après paiement
+--    billing_expire_due_subscriptions()              SERVICE UNIQUEMENT, planifiée toutes les 30 min (pg_cron : jdv-billing-expire)
+--    jdv_can_use_module(code)                        applique l'abonnement quand modules.requires_subscription = true
+--    jdvcrm_get_current_subscription_v1 / jdvcrm_get_business_access_v1   inchangées, filtrées sur module_code = 'jdv_crm'
+-- 6) Brouillon JDV PUB, INACTIF : pub_day 10 USD/1 j, pub_month 120/30 j, pub_6months 600/180 j, pub_year 1000/365 j
+
+-- Correctif d'autorisation (jdv_billing_authz_null_fix_v1) : pour un abonnement d'organisation user_id est NULL ;
+-- les conditions de contrôle sont évaluées avec coalesce(..., false) pour qu'un membre simple soit bien refusé.
