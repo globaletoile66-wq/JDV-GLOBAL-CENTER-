@@ -42,7 +42,7 @@ Ils doivent être exécutés dans un environnement de test isolé avec des utili
 
 ## Limites et prérequis de recette
 
-Le parcours d'approbation est maintenant proposé dans la migration, mais il doit être testé sur une base isolée avec de vrais rôles de test. L'approbation positive exige un profil `kyc_profiles.kyc_status='approved'`, au moins un document d'identité approuvé, l'acceptation des règles et l'acceptation du contrat pour la même version. Aucun écran ne doit permettre de contourner la RPC.
+Le parcours d'approbation est maintenant proposé dans la migration, mais il doit être testé sur une base isolée avec de vrais rôles de test. L'approbation positive exige un profil `kyc_profiles.kyc_status='approved'`, au moins les documents KYC obligatoires `id_front` et `selfie` approuvés, l'acceptation des règles et l'acceptation du contrat pour la même version. Aucun écran ne doit permettre de contourner la RPC.
 
 La validation juridique du contrat, la configuration de stockage KYC, la revue des grants/RLS effectifs et les essais du worker restent des prérequis avant toute mise en production. Les migrations de cette PR n'ont pas été appliquées à Supabase.
 
@@ -64,7 +64,7 @@ La validation juridique du contrat, la configuration de stockage KYC, la revue d
 
 11. **Validation KYC et activation**
     - l'approbation positive échoue si le profil KYC n'est pas approuvé;
-    - elle échoue si aucun document d'identité approuvé n'existe;
+    - elle échoue si les documents `id_front` et `selfie` ne sont pas tous deux approuvés;
     - elle échoue si l'acceptation contractuelle est absente ou si sa version diffère de celle des règles;
     - l'auto-approbation est interdite;
     - une fois validé par un responsable autorisé, le membre devient actif et la méthode d'identité indique une vérification KYC revue.
