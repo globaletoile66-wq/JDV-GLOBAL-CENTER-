@@ -131,74 +131,40 @@ export default function CheckoutPage() {
     }
   };
 
+  const checkoutAttemptKey = useRef<string | null>(null);
+
   const placeOrder = async () => {
-    if (!user || !selectedAddress || cartItems.length === 0) return;
+    if (!user || !selectedAddress || cartItems.length === 0 || placing) return;
     setPlacing(true);
     setError(null);
     try {
-      // Group items by seller
+      if (!checkoutAttemptKey.current) checkoutAttemptKey.current = `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       const bySeller: Record<string, CartItem[]> = {};
       cartItems.forEach((item) => {
         const sellerId = item.marketplace_listings?.seller_id;
-        if (sellerId) {
-          if (!bySeller[sellerId]) bySeller[sellerId] = [];
-          bySeller[sellerId].push(item);
-        }
+        if (sellerId && item.marketplace_listings?.id) (bySeller[sellerId] ||= []).push(item);
       });
-
+      const entries = Object.entries(bySeller);
+      if (!entries.length) throw new Error('Le panier ne contient aucun produit valide.');
       const orderIds: string[] = [];
-
-      for (const [sellerId, items] of Object.entries(bySeller)) {
-        const subtotal = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
-        const orderNumber = `MKT-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-
-        const { data: order, error: orderErr } = await supabase
-          .from('marketplace_orders')
-          .insert({
-            order_number: orderNumber,
-            buyer_id: user.id,
-            seller_id: sellerId,
-            delivery_address_id: selectedAddress,
-            order_status: 'awaiting_payment',
-            subtotal,
-            shipping_cost: 0,
-            discount_amount: 0,
-            commission_amount: subtotal * 0.05,
-            total_amount: subtotal,
-            idempotency_key: `${user.id}-${sellerId}-${Date.now()}`,
-          })
-          .select('id')
-          .single();
-
-        if (orderErr) throw orderErr;
-
-        // Insert order items
-        const orderItems = items.map((item) => ({
-          order_id: order.id,
-          listing_id: item.marketplace_listings!.id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.unit_price * item.quantity,
-          listing_snapshot: {
-            title: item.marketplace_listings?.title,
-            image: item.marketplace_listings?.marketplace_listing_media?.find((m) => m.is_primary)?.url,
-          },
-        }));
-
-        await supabase.from('marketplace_order_items').insert(orderItems);
-        orderIds.push(order.id);
+      for (const [sellerId, items] of entries) {
+        const { data: orderId, error: orderError } = await supabase.rpc('marketplace_create_order', {
+          p_seller_id: sellerId,
+          p_items: items.map(item => ({ listing_id: item.marketplace_listings!.id, quantity: item.quantity })),
+          p_delivery_address_id: selectedAddress,
+          p_idempotency_key: `${checkoutAttemptKey.current}-${sellerId}`,
+          p_notes: null,
+        });
+        if (orderError) throw orderError;
+        if (typeof orderId !== 'string' || !orderId) throw new Error('La commande n’a pas reçu de référence valide.');
+        orderIds.push(orderId);
       }
-
-      // Clear cart
-      const cartRes = await supabase.from('marketplace_carts').select('id').eq('user_id', user.id).single();
-      if (cartRes.data) {
-        await supabase.from('marketplace_cart_items').delete().eq('cart_id', cartRes.data.id);
-      }
-
+      const cartRes = await supabase.from('marketplace_carts').select('id').eq('user_id', user.id).maybeSingle();
+      if (cartRes.data) await supabase.from('marketplace_cart_items').delete().eq('cart_id', cartRes.data.id);
       setOrderSuccess(orderIds[0]);
       setStep('confirm');
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la commande');
+      setError(err?.message || 'Impossible de créer la commande. Vérifiez le stock et réessayez.');
     } finally {
       setPlacing(false);
     }
