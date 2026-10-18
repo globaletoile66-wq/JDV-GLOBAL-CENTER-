@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Clock3, Plus, RefreshCw, ClipboardList, AlertCircle } from 'lucide-react';
@@ -27,7 +27,7 @@ export default function AcademyCoursePage() {
   const params = useParams<{ id: string }>();
   const courseId = params.id;
   const { user, loading: authLoading, isSuperAdmin } = useAuth();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [course, setCourse] = useState<Course | null>(null);
   const [programName, setProgramName] = useState('');
   const [lessons, setLessons] = useState<Lesson[]>([]);
