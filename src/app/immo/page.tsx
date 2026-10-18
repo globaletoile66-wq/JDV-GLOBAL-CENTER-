@@ -65,7 +65,7 @@ export default function ImmoPage() {
       propertyQuery = propertyQuery.or('title.ilike.%' + term + '%,city.ilike.%' + term + '%,district.ilike.%' + term + '%');
     }
     const [propertyResult, typeResult, currencyResult, countryResult, favoriteResult, appointmentResult] = await Promise.all([
-      user ? propertyQuery.or('property_status.eq.published,owner_user_id.eq.' + user.id) : propertyQuery.eq('property_status', 'published'),
+      user ? propertyQuery : propertyQuery.eq('property_status', 'published'),
       supabase.from('immo_property_types').select('id,name,code').eq('is_active', true).order('sort_order'),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
       supabase.from('countries').select('id,name').eq('is_active', true).order('name').limit(250),
