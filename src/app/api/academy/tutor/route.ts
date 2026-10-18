@@ -6,6 +6,14 @@ export const runtime = 'nodejs';
 
 type HistoryMessage = { role: 'user' | 'assistant'; content: string };
 
+export async function GET() {
+  const configured = Boolean(process.env.OPENAI_BASE_URL);
+  return NextResponse.json({
+    configured,
+    model: configured ? (process.env.JDV_ACADEMY_TUTOR_MODEL || 'gpt-5-mini') : null,
+  });
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
