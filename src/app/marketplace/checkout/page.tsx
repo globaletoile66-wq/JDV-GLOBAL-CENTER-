@@ -90,7 +90,7 @@ export default function CheckoutPage() {
           .single(),
       ]);
 
-      const items = (cartRes.data?.marketplace_cart_items ?? []) as CartItem[];
+     const items = (cartRes.data?.marketplace_cart_items ?? []) as unknown as CartItem[];
       setCartItems(items);
       setAddresses((addrRes.data as unknown as Address[]) || []);
       if (walletRes.data) setWallet(walletRes.data as unknown as Wallet);
