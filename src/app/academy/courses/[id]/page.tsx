@@ -10,6 +10,8 @@ import { createClient } from '@/lib/supabase/client';
 type Course = { id: string; program_id: string; title: string; description: string | null; starts_at: string | null; ends_at: string | null; status: string };
 type Lesson = { id: string; title: string; lesson_order: number; content: string | null; duration_minutes: number | null; content_type: 'text' | 'video' | 'document' | 'external_link'; media_url: string | null; resource_links: { label: string; url: string }[] };
 type Assessment = { id: string; title: string; max_score: number; created_at: string };
+type AssessmentQuestion = { id: string; assessment_id: string; question_order: number; question_type: 'single_choice' | 'true_false' | 'short_answer' | 'essay'; prompt: string; options: string[]; points: number };
+type AssessmentSubmission = { id: string; assessment_id: string; student_user_id: string; attempt_number: number; answers: Record<string, string>; submission_status: 'submitted' | 'graded'; submitted_at: string };
 type Enrollment = { enrollment_status: string };
 type LessonProgress = { lesson_id: string; progress_status: 'in_progress' | 'completed'; last_position_seconds: number; completed_at: string | null };
 
@@ -26,6 +28,11 @@ export default function AcademyCoursePage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [lessonProgress, setLessonProgress] = useState<LessonProgress[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [assessmentQuestions, setAssessmentQuestions] = useState<AssessmentQuestion[]>([]);
+  const [assessmentSubmissions, setAssessmentSubmissions] = useState<AssessmentSubmission[]>([]);
+  const [studentAnswers, setStudentAnswers] = useState<Record<string, string>>({});
+  const [questionFormOpenFor, setQuestionFormOpenFor] = useState<string | null>(null);
+  const [questionForm, setQuestionForm] = useState({ prompt: '', question_type: 'short_answer' as AssessmentQuestion['question_type'], options: '', points: '1', correct_answer: '' });
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,6 +63,19 @@ export default function AcademyCoursePage() {
     setLessons((lessonResult.data || []) as Lesson[]);
     setAssessments((assessmentResult.data || []) as Assessment[]);
     if (lessonResult.error || assessmentResult.error) setError((lessonResult.error || assessmentResult.error)?.message || 'Erreur de chargement du contenu.');
+    const assessmentIds = ((assessmentResult.data || []) as Assessment[]).map((assessment) => assessment.id);
+    if (user && assessmentIds.length) {
+      const [questionResult, submissionResult] = await Promise.all([
+        supabase.from('academy_assessment_questions').select('id,assessment_id,question_order,question_type,prompt,options,points').in('assessment_id', assessmentIds).order('question_order'),
+        supabase.from('academy_assessment_submissions').select('id,assessment_id,student_user_id,attempt_number,answers,submission_status,submitted_at').in('assessment_id', assessmentIds).order('submitted_at', { ascending: false }),
+      ]);
+      setAssessmentQuestions((questionResult.data || []) as AssessmentQuestion[]);
+      setAssessmentSubmissions((submissionResult.data || []) as AssessmentSubmission[]);
+      if (questionResult.error || submissionResult.error) setError((current) => current || (questionResult.error || submissionResult.error)?.message || 'Erreur de chargement des évaluations.');
+    } else {
+      setAssessmentQuestions([]);
+      setAssessmentSubmissions([]);
+    }
     if (user) {
       const { data: enrollmentData, error: enrollmentError } = await supabase.from('academy_enrollments').select('enrollment_status').eq('course_id', courseId).eq('student_user_id', user.id).maybeSingle();
       setEnrollment((enrollmentData || null) as Enrollment | null);
@@ -134,6 +154,83 @@ export default function AcademyCoursePage() {
     setSaving(false);
   };
 
+  const saveAssessmentQuestion = async (event: FormEvent<HTMLFormElement>, assessment: Assessment) => {
+    event.preventDefault();
+    if (!questionForm.prompt.trim()) return;
+    const options = questionForm.options.split('\n').map((value) => value.trim()).filter(Boolean);
+    if (questionForm.question_type === 'single_choice' && options.length < 2) {
+      setError('Une question à choix unique doit proposer au moins deux réponses.');
+      return;
+    }
+    if (['single_choice', 'true_false'].includes(questionForm.question_type) && !questionForm.correct_answer.trim()) {
+      setError('Renseigne la réponse attendue pour cette question.');
+      return;
+    }
+    setSaving(true); setError(''); setNotice('');
+    const { data: question, error: questionError } = await supabase.from('academy_assessment_questions').insert({
+      assessment_id: assessment.id,
+      question_order: assessmentQuestions.filter((item) => item.assessment_id === assessment.id).length + 1,
+      question_type: questionForm.question_type,
+      prompt: questionForm.prompt.trim(),
+      options: questionForm.question_type === 'single_choice' ? options : [],
+      points: Number(questionForm.points),
+    }).select('id').single();
+    if (questionError || !question) {
+      setError(questionError?.message || 'La question n’a pas pu être créée.');
+      setSaving(false);
+      return;
+    }
+    if (['single_choice', 'true_false'].includes(questionForm.question_type)) {
+      const { error: keyError } = await supabase.from('academy_assessment_answer_keys').insert({
+        question_id: question.id,
+        correct_answer: questionForm.correct_answer.trim(),
+      });
+      if (keyError) setError('La question existe, mais la réponse attendue n’a pas été enregistrée : ' + keyError.message);
+    }
+    setQuestionForm({ prompt: '', question_type: 'short_answer', options: '', points: '1', correct_answer: '' });
+    setQuestionFormOpenFor(null);
+    if (!questionError) setNotice('Question ajoutée. Les réponses attendues sont conservées séparément des questions visibles aux apprenants.');
+    await load();
+    setSaving(false);
+  };
+
+  const submitAssessment = async (event: FormEvent<HTMLFormElement>, assessment: Assessment) => {
+    event.preventDefault();
+    if (!user || !enrollment || !['confirmed', 'completed'].includes(enrollment.enrollment_status)) {
+      setError('Une inscription confirmée est nécessaire pour soumettre une évaluation.');
+      return;
+    }
+    const questions = assessmentQuestions.filter((question) => question.assessment_id === assessment.id);
+    if (!questions.length) {
+      setError('Cette évaluation ne contient pas encore de questions.');
+      return;
+    }
+    const missing = questions.find((question) => !studentAnswers[question.id]?.trim());
+    if (missing) {
+      setError('Réponds à toutes les questions avant de soumettre ton évaluation.');
+      return;
+    }
+    const ownAttempts = assessmentSubmissions.filter((submission) => submission.assessment_id === assessment.id && submission.student_user_id === user.id);
+    setSaving(true); setError(''); setNotice('');
+    const { error: submitError } = await supabase.from('academy_assessment_submissions').insert({
+      assessment_id: assessment.id,
+      student_user_id: user.id,
+      attempt_number: ownAttempts.length + 1,
+      answers: Object.fromEntries(questions.map((question) => [question.id, studentAnswers[question.id].trim()])),
+    });
+    if (submitError) setError(submitError.message);
+    else {
+      setNotice('Ta copie a été envoyée. Le résultat sera affiché après correction.');
+      setStudentAnswers((current) => {
+        const next = { ...current };
+        questions.forEach((question) => delete next[question.id]);
+        return next;
+      });
+      await load();
+    }
+    setSaving(false);
+  };
+
   const saveAssessment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!course || !assessmentForm.title.trim()) return;
@@ -144,7 +241,7 @@ export default function AcademyCoursePage() {
       max_score: Number(assessmentForm.max_score),
     });
     if (saveError) setError(saveError.message);
-    else { setNotice('Évaluation créée. La saisie et la validation des notes nécessitent une étape de développement distincte.'); setAssessmentForm({ title: '', max_score: '100' }); setAssessmentFormOpen(false); await load(); }
+    else { setNotice('Évaluation créée. Ajoute maintenant ses questions pour ouvrir les soumissions.'); setAssessmentForm({ title: '', max_score: '100' }); setAssessmentFormOpen(false); await load(); }
     setSaving(false);
   };
 
@@ -179,7 +276,28 @@ export default function AcademyCoursePage() {
             <section className="rounded-3xl border border-white/10 bg-white/[.04] p-5 sm:p-6">
               <div className="flex items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 text-xl font-bold"><ClipboardList size={20} className="text-[#F28C28]"/> Évaluations</h2><p className="mt-1 text-sm text-white/45">{assessments.length} évaluation(s)</p></div><button onClick={() => { setAssessmentFormOpen(!assessmentFormOpen); setLessonFormOpen(false); }} className="rounded-xl border border-white/10 p-2.5" aria-label="Ajouter une évaluation"><Plus size={18}/></button></div>
               {assessmentFormOpen && <form onSubmit={saveAssessment} className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4"><input className={fieldClass} required maxLength={160} placeholder="Titre de l’évaluation" value={assessmentForm.title} onChange={(e)=>setAssessmentForm({...assessmentForm,title:e.target.value})}/><label className="block text-xs text-white/50">Note maximale<input className={fieldClass+' mt-1'} required type="number" min="1" step="0.5" value={assessmentForm.max_score} onChange={(e)=>setAssessmentForm({...assessmentForm,max_score:e.target.value})}/></label><button disabled={saving} className={actionClass+' w-full'}>{saving?'Enregistrement…':'Créer l’évaluation'}</button></form>}
-              <div className="mt-5 space-y-3">{assessments.map((assessment)=><article key={assessment.id} className="rounded-2xl border border-white/10 p-4"><h3 className="font-semibold">{assessment.title}</h3><p className="mt-2 text-sm text-white/50">Barème : {assessment.max_score} points</p></article>)}{assessments.length===0 && <p className="rounded-2xl border border-dashed border-white/10 p-7 text-center text-sm text-white/45">Aucune évaluation accessible pour ce cours.</p>}</div>
+              <div className="mt-5 space-y-3">{assessments.map((assessment)=>{
+                const questions = assessmentQuestions.filter((question) => question.assessment_id === assessment.id);
+                const visibleSubmissions = assessmentSubmissions.filter((submission) => submission.assessment_id === assessment.id);
+                const ownSubmissions = visibleSubmissions.filter((submission) => submission.student_user_id === user?.id);
+                const canSubmit = Boolean(user && enrollment && ['confirmed', 'completed'].includes(enrollment.enrollment_status));
+                return <article key={assessment.id} className="rounded-2xl border border-white/10 p-4">
+                  <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{assessment.title}</h3><p className="mt-2 text-sm text-white/50">Barème : {assessment.max_score} points · {questions.length} question(s)</p></div><button type="button" onClick={() => { setQuestionFormOpenFor(questionFormOpenFor === assessment.id ? null : assessment.id); setQuestionForm({ prompt: '', question_type: 'short_answer', options: '', points: '1', correct_answer: '' }); }} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-white/80">Ajouter une question</button></div>
+                  {questionFormOpenFor === assessment.id && <form onSubmit={(event) => void saveAssessmentQuestion(event, assessment)} className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4">
+                    <textarea className={fieldClass} required rows={3} maxLength={3000} placeholder="Énoncé de la question" value={questionForm.prompt} onChange={(e)=>setQuestionForm({...questionForm,prompt:e.target.value})}/>
+                    <label className="block text-xs text-white/50">Type de question<select className={fieldClass+' mt-1'} value={questionForm.question_type} onChange={(e)=>setQuestionForm({...questionForm,question_type:e.target.value as AssessmentQuestion['question_type']})}><option value="single_choice">Choix unique</option><option value="true_false">Vrai / Faux</option><option value="short_answer">Réponse courte</option><option value="essay">Réponse développée</option></select></label>
+                    {questionForm.question_type === 'single_choice' && <label className="block text-xs text-white/50">Choix possibles (un par ligne)<textarea className={fieldClass+' mt-1'} required rows={4} value={questionForm.options} onChange={(e)=>setQuestionForm({...questionForm,options:e.target.value})}/></label>}
+                    {['single_choice','true_false'].includes(questionForm.question_type) && <label className="block text-xs text-white/50">Réponse attendue (privée)<input className={fieldClass+' mt-1'} required maxLength={500} value={questionForm.correct_answer} onChange={(e)=>setQuestionForm({...questionForm,correct_answer:e.target.value})}/></label>}
+                    <label className="block text-xs text-white/50">Points<input className={fieldClass+' mt-1'} type="number" min="0.5" step="0.5" required value={questionForm.points} onChange={(e)=>setQuestionForm({...questionForm,points:e.target.value})}/></label>
+                    <button disabled={saving} className={actionClass+' w-full'}>{saving?'Enregistrement…':'Enregistrer la question'}</button>
+                  </form>}
+                  {questions.length > 0 && <div className="mt-4 space-y-3">{questions.map((question)=><div key={question.id} className="rounded-xl border border-white/10 bg-white/[.02] p-3"><p className="text-sm font-medium">{question.question_order}. {question.prompt} <span className="text-xs text-white/40">({question.points} pt)</span></p>{canSubmit && <div className="mt-2">{question.question_type === 'single_choice' ? <select className={fieldClass} required value={studentAnswers[question.id] || ''} onChange={(e)=>setStudentAnswers({...studentAnswers,[question.id]:e.target.value})}><option value="">Choisir une réponse</option>{question.options.map((option)=><option key={option} value={option}>{option}</option>)}</select> : question.question_type === 'true_false' ? <select className={fieldClass} required value={studentAnswers[question.id] || ''} onChange={(e)=>setStudentAnswers({...studentAnswers,[question.id]:e.target.value})}><option value="">Choisir</option><option value="true">Vrai</option><option value="false">Faux</option></select> : <textarea className={fieldClass} required rows={question.question_type === 'essay' ? 5 : 2} maxLength={10000} placeholder="Ta réponse" value={studentAnswers[question.id] || ''} onChange={(e)=>setStudentAnswers({...studentAnswers,[question.id]:e.target.value})}/>}</div>}</div>)}</div>}
+                  {canSubmit && questions.length > 0 && <form onSubmit={(event) => void submitAssessment(event, assessment)} className="mt-4"><button disabled={saving} className={actionClass+' w-full'}>{saving?'Envoi…':'Soumettre ma copie'}</button></form>}
+                  {ownSubmissions.length > 0 && <p className="mt-3 text-xs text-emerald-100/80">Tes copies : {ownSubmissions.length} · dernière soumission : {ownSubmissions[0].submission_status === 'graded' ? 'corrigée' : 'en attente de correction'}</p>}
+                  {user && visibleSubmissions.some((submission) => submission.student_user_id !== user.id) && <div className="mt-4 rounded-xl border border-white/10 p-3"><p className="text-xs font-semibold text-white/60">Copies à examiner</p><ul className="mt-2 space-y-1 text-xs text-white/50">{visibleSubmissions.filter((submission) => submission.student_user_id !== user.id).map((submission)=><li key={submission.id}>Copie reçue · {new Date(submission.submitted_at).toLocaleString('fr-FR')} · {submission.submission_status === 'graded' ? 'corrigée' : 'en attente'}</li>)}</ul></div>}
+                  {questions.length === 0 && <p className="mt-4 text-sm text-white/45">Aucune question pour le moment.</p>}
+                </article>;
+              })}{assessments.length===0 && <p className="rounded-2xl border border-dashed border-white/10 p-7 text-center text-sm text-white/45">Aucune évaluation accessible pour ce cours.</p>}</div>
             </section>
           </div>
         </>}
