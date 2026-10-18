@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 type PartnerRequest = { id: string; request_type: string; description: string | null; request_status: string; created_at: string };
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10';
 const labelClass = 'mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500';
-const statusLabels: Record<string, string> = { open: 'À examiner', assigned: 'Transmise à l’équipe', in_progress: 'En cours d’examen', completed: 'Traitée', rejected: 'Non retenue', cancelled: 'Annulée' };
+const statusLabels: Record<string, string> = { open: 'À examiner', quoted: 'Réponse proposée', converted: 'Partenariat converti', closed: 'Clôturée', cancelled: 'Annulée' };
 
 export default function TransportPartnersPage() {
   const { user, loading } = useAuth();
