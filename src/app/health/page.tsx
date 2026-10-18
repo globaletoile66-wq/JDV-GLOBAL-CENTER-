@@ -11,6 +11,7 @@ type HealthService = {
   professional_id: string | null; business_id: string | null; price: number | null;
   currency_id: string | null; duration_minutes: number | null; is_active: boolean;
 };
+type Currency = { id: string; code: string; symbol: string };
 type Appointment = {
   id: string; service_id: string | null; scheduled_at: string; appointment_status: string;
   price: number | null; created_at: string;
@@ -33,6 +34,7 @@ export default function HealthPage() {
   const supabase = useMemo(() => createClient(), []);
   const [services, setServices] = useState<HealthService[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [query, setQuery] = useState('');
   const [scheduledAt, setScheduledAt] = useState(() => {
     const date = new Date();
@@ -48,9 +50,10 @@ export default function HealthPage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
-    const [serviceResult, appointmentResult] = await Promise.all([
+    const [serviceResult, appointmentResult, currencyResult] = await Promise.all([
       supabase.from('health_services').select('id,name,service_type,description,professional_id,business_id,price,currency_id,duration_minutes,is_active').eq('is_active', true).order('name').limit(100),
       user ? supabase.from('health_appointments').select('id,service_id,scheduled_at,appointment_status,price,created_at').eq('patient_user_id', user.id).order('scheduled_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
+      supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
     ]);
     if (serviceResult.error) setError(serviceResult.error.message);
     else setServices((serviceResult.data ?? []) as HealthService[]);
@@ -119,7 +122,7 @@ export default function HealthPage() {
             {filtered.map((service) => <article key={service.id} className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
               <div className="flex items-start justify-between gap-3"><h2 className="font-bold">{service.name}</h2><span className="rounded-full bg-[#F28C28]/10 px-2.5 py-1 text-xs text-[#F28C28]">{service.service_type}</span></div>
               {service.description && <p className="mt-3 line-clamp-3 text-sm leading-6 text-white/55">{service.description}</p>}
-              <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-4"><div><div className="text-sm font-semibold">{formatMoney(service.price, null)}</div><div className="mt-1 text-xs text-white/40">{service.duration_minutes ? service.duration_minutes + ' minutes' : 'Durée à confirmer'}</div></div><ShieldCheck size={18} className="text-white/30" /></div>
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-4"><div><div className="text-sm font-semibold">{formatMoney(service.price, currencies.find((currency) => currency.id === service.currency_id)?.code || null)}</div><div className="mt-1 text-xs text-white/40">{service.duration_minutes ? service.duration_minutes + ' minutes' : 'Durée à confirmer'}</div></div><ShieldCheck size={18} className="text-white/30" /></div>
               <button type="button" disabled={booking === service.id || (!user) || !service.professional_id || !service.business_id || service.price == null || !service.currency_id} onClick={() => void book(service)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F28C28] px-4 py-2.5 font-bold text-[#0B1B3D] disabled:cursor-not-allowed disabled:opacity-40"><CalendarDays size={16} />{booking === service.id ? 'Enregistrement…' : !user ? 'Connectez-vous pour réserver' : 'Demander un rendez-vous'}</button>
             </article>)}
             {!busy && filtered.length === 0 && <div className="col-span-full rounded-2xl border border-dashed border-white/15 p-10 text-center text-white/45">Aucun service actif ne correspond à cette recherche.</div>}
