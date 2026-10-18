@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
 type Course = { id: string; program_id: string; title: string; description: string | null; starts_at: string | null; ends_at: string | null; status: string };
-type Lesson = { id: string; title: string; lesson_order: number; content: string | null; duration_minutes: number | null };
+type Lesson = { id: string; title: string; lesson_order: number; content: string | null; duration_minutes: number | null; content_type: 'text' | 'video' | 'document' | 'external_link'; media_url: string | null; resource_links: { label: string; url: string }[] };
 type Assessment = { id: string; title: string; max_score: number; created_at: string };
 type Enrollment = { enrollment_status: string };
 type LessonProgress = { lesson_id: string; progress_status: 'in_progress' | 'completed'; last_position_seconds: number; completed_at: string | null };
@@ -33,7 +33,7 @@ export default function AcademyCoursePage() {
   const [notice, setNotice] = useState('');
   const [lessonFormOpen, setLessonFormOpen] = useState(false);
   const [assessmentFormOpen, setAssessmentFormOpen] = useState(false);
-  const [lessonForm, setLessonForm] = useState({ title: '', content: '', duration_minutes: '' });
+  const [lessonForm, setLessonForm] = useState({ title: '', content: '', duration_minutes: '', content_type: 'text' as 'text' | 'video' | 'document' | 'external_link', media_url: '' });
   const [assessmentForm, setAssessmentForm] = useState({ title: '', max_score: '100' });
 
   const load = useCallback(async () => {
@@ -49,7 +49,7 @@ export default function AcademyCoursePage() {
     setCourse(currentCourse);
     const [programResult, lessonResult, assessmentResult] = await Promise.all([
       supabase.from('academy_programs').select('name').eq('id', currentCourse.program_id).maybeSingle(),
-      supabase.from('academy_lessons').select('id,title,lesson_order,content,duration_minutes').eq('course_id', courseId).order('lesson_order'),
+      supabase.from('academy_lessons').select('id,title,lesson_order,content,duration_minutes,content_type,media_url,resource_links').eq('course_id', courseId).order('lesson_order'),
       supabase.from('academy_assessments').select('id,title,max_score,created_at').eq('course_id', courseId).order('created_at'),
     ]);
     setProgramName(programResult.data?.name || '');
@@ -84,6 +84,16 @@ export default function AcademyCoursePage() {
   const saveLesson = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!course || !lessonForm.title.trim()) return;
+    const mediaUrl = lessonForm.media_url.trim();
+    if (mediaUrl) {
+      try {
+        const parsed = new URL(mediaUrl);
+        if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('URL invalide');
+      } catch {
+        setError('Le lien du support doit être une URL HTTP ou HTTPS valide.');
+        return;
+      }
+    }
     setSaving(true); setError(''); setNotice('');
     const { error: saveError } = await supabase.from('academy_lessons').insert({
       course_id: course.id,
@@ -91,9 +101,12 @@ export default function AcademyCoursePage() {
       content: lessonForm.content.trim() || null,
       lesson_order: lessons.length + 1,
       duration_minutes: lessonForm.duration_minutes ? Number(lessonForm.duration_minutes) : null,
+      content_type: lessonForm.content_type,
+      media_url: mediaUrl || null,
+      resource_links: [],
     });
     if (saveError) setError(saveError.message);
-    else { setNotice('Leçon ajoutée.'); setLessonForm({ title: '', content: '', duration_minutes: '' }); setLessonFormOpen(false); await load(); }
+    else { setNotice('Leçon ajoutée. Le support externe reste accessible selon les règles de partage du fournisseur.'); setLessonForm({ title: '', content: '', duration_minutes: '', content_type: 'text', media_url: '' }); setLessonFormOpen(false); await load(); }
     setSaving(false);
   };
 
@@ -155,12 +168,12 @@ export default function AcademyCoursePage() {
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <section className="rounded-3xl border border-white/10 bg-white/[.04] p-5 sm:p-6">
               <div className="flex items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 text-xl font-bold"><BookOpen size={20} className="text-[#F28C28]"/> Leçons</h2><p className="mt-1 text-sm text-white/45">{lessons.length} leçon(s) · {lessons.filter((lesson) => lessonProgress.some((item) => item.lesson_id === lesson.id && item.progress_status === 'completed')).length} terminée(s)</p></div><button onClick={() => { setLessonFormOpen(!lessonFormOpen); setAssessmentFormOpen(false); }} className="rounded-xl border border-white/10 p-2.5" aria-label="Ajouter une leçon"><Plus size={18}/></button></div>
-              {lessonFormOpen && <form onSubmit={saveLesson} className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4"><input className={fieldClass} required maxLength={160} placeholder="Titre de la leçon" value={lessonForm.title} onChange={(e)=>setLessonForm({...lessonForm,title:e.target.value})}/><textarea className={fieldClass} rows={5} maxLength={20000} placeholder="Contenu de la leçon" value={lessonForm.content} onChange={(e)=>setLessonForm({...lessonForm,content:e.target.value})}/><label className="block text-xs text-white/50">Durée (minutes)<input className={fieldClass+' mt-1'} type="number" min="0" value={lessonForm.duration_minutes} onChange={(e)=>setLessonForm({...lessonForm,duration_minutes:e.target.value})}/></label><button disabled={saving} className={actionClass+' w-full'}>{saving?'Enregistrement…':'Enregistrer la leçon'}</button></form>}
+              {lessonFormOpen && <form onSubmit={saveLesson} className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4"><input className={fieldClass} required maxLength={160} placeholder="Titre de la leçon" value={lessonForm.title} onChange={(e)=>setLessonForm({...lessonForm,title:e.target.value})}/><textarea className={fieldClass} rows={5} maxLength={20000} placeholder="Contenu de la leçon" value={lessonForm.content} onChange={(e)=>setLessonForm({...lessonForm,content:e.target.value})}/><label className="block text-xs text-white/50">Type de support<select className={fieldClass+' mt-1'} value={lessonForm.content_type} onChange={(e)=>setLessonForm({...lessonForm,content_type:e.target.value as typeof lessonForm.content_type})}><option value="text">Texte</option><option value="video">Vidéo (lien direct MP4/WebM)</option><option value="document">Document</option><option value="external_link">Lien externe</option></select></label><label className="block text-xs text-white/50">URL du support (facultative)<input className={fieldClass+' mt-1'} type="url" maxLength={2048} placeholder="https://…" value={lessonForm.media_url} onChange={(e)=>setLessonForm({...lessonForm,media_url:e.target.value})}/></label><label className="block text-xs text-white/50">Durée (minutes)<input className={fieldClass+' mt-1'} type="number" min="0" value={lessonForm.duration_minutes} onChange={(e)=>setLessonForm({...lessonForm,duration_minutes:e.target.value})}/></label><p className="text-xs text-white/40">N’ajoute que des liens que les apprenants inscrits ont le droit de consulter. Les liens externes ne sont pas rendus privés par JDV Academy.</p><button disabled={saving} className={actionClass+' w-full'}>{saving?'Enregistrement…':'Enregistrer la leçon'}</button></form>}
               <div className="mt-5 space-y-3">{lessons.map((lesson)=>{
                 const progress = lessonProgress.find((item) => item.lesson_id === lesson.id);
                 const isCompleted = progress?.progress_status === 'completed';
                 const canTrackProgress = Boolean(user && enrollment && ['confirmed', 'completed'].includes(enrollment.enrollment_status));
-                return <article key={lesson.id} className="rounded-2xl border border-white/10 p-4"><div className="flex items-start gap-3"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#F28C28]/10 text-sm font-bold text-[#F28C28]">{lesson.lesson_order}</div><div className="min-w-0 flex-1"><h3 className="font-semibold">{lesson.title}</h3>{lesson.content && <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/60">{lesson.content}</p>}{lesson.duration_minutes !== null && <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/40"><Clock3 size={13}/>{lesson.duration_minutes} minutes</p>}{canTrackProgress && <div className="mt-4">{isCompleted ? <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs text-emerald-100"><CheckCircle2 size={14}/> Leçon terminée</span> : <button type="button" disabled={saving} onClick={() => void updateLessonProgress(lesson, Boolean(progress))} className={actionClass}>{saving ? 'Enregistrement…' : progress ? 'Marquer comme terminée' : 'Commencer la leçon'}</button>}</div>}</div></div></article>;
+                return <article key={lesson.id} className="rounded-2xl border border-white/10 p-4"><div className="flex items-start gap-3"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#F28C28]/10 text-sm font-bold text-[#F28C28]">{lesson.lesson_order}</div><div className="min-w-0 flex-1"><h3 className="font-semibold">{lesson.title}</h3>{lesson.content && <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/60">{lesson.content}</p>}{lesson.media_url && lesson.content_type === 'video' && <video className="mt-4 w-full rounded-xl border border-white/10" controls preload="metadata" src={lesson.media_url}>Ton navigateur ne peut pas lire cette vidéo.</video>}{lesson.media_url && lesson.content_type !== 'video' && <a href={lesson.media_url} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-[#F28C28] hover:bg-white/5">{lesson.content_type === 'document' ? 'Ouvrir le document' : lesson.content_type === 'external_link' ? 'Ouvrir la ressource' : 'Ouvrir le support'}</a>}{lesson.duration_minutes !== null && <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/40"><Clock3 size={13}/>{lesson.duration_minutes} minutes</p>}{canTrackProgress && <div className="mt-4">{isCompleted ? <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs text-emerald-100"><CheckCircle2 size={14}/> Leçon terminée</span> : <button type="button" disabled={saving} onClick={() => void updateLessonProgress(lesson, Boolean(progress))} className={actionClass}>{saving ? 'Enregistrement…' : progress ? 'Marquer comme terminée' : 'Commencer la leçon'}</button>}</div>}</div></div></article>;
               })}{lessons.length===0 && <p className="rounded-2xl border border-dashed border-white/10 p-7 text-center text-sm text-white/45">Aucune leçon accessible. Les contenus étudiants sont visibles après confirmation de l’inscription.</p>}</div>
             </section>
             <section className="rounded-3xl border border-white/10 bg-white/[.04] p-5 sm:p-6">
