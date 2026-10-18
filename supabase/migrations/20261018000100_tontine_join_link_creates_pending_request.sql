@@ -51,6 +51,11 @@ BEGIN
 
   IF coalesce(v_phone, '') = '' THEN RAISE EXCEPTION 'PHONE_REQUIRED_FOR_TONTINE_IDENTITY'; END IF;
   IF v_phone_confirmed IS NULL THEN RAISE EXCEPTION 'PHONE_IDENTITY_NOT_CONFIRMED'; END IF;
+  IF v_link.invited_phone IS NOT NULL
+     AND regexp_replace(v_link.invited_phone, '\\D', '', 'g')
+         IS DISTINCT FROM regexp_replace(v_phone, '\\D', '', 'g') THEN
+    RAISE EXCEPTION 'INVITED_PHONE_MISMATCH';
+  END IF;
 
   SELECT EXISTS (
     SELECT 1 FROM public.tontine_members
@@ -129,7 +134,7 @@ BEGIN
         SELECT membership_status FROM public.tontine_members WHERE id = v_member
       ),
       'phone_confirmed', true,
-      'identity_verified', false,
+      'identity_verified_by_join_link', false,
       'rules_accepted', true,
       'rules_version', v_link.rules_version,
       'shared_group_link', true
