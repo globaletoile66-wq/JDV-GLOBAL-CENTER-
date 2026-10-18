@@ -64,7 +64,8 @@ export default function AcademyDemoPage() {
             .then((response) => {
               const finalUrl = new URL(response.url, window.location.origin);
               const finalPath = finalUrl.pathname.length > 1 && finalUrl.pathname.endsWith('/') ? finalUrl.pathname.slice(0, -1) : finalUrl.pathname;
-              const expectedPath = new URL(targetRoute as string, window.location.origin).pathname.replace(/\\/$/, '') || '/';
+              const expectedPathRaw = new URL(targetRoute as string, window.location.origin).pathname;
+              const expectedPath = expectedPathRaw.length > 1 && expectedPathRaw.endsWith('/') ? expectedPathRaw.slice(0, -1) : expectedPathRaw;
               const redirectedAway = response.redirected && finalPath !== expectedPath;
               return { ok: response.status >= 200 && response.status < 400 && !redirectedAway, blocked: false, redirectedAway, status: response.status, finalPath };
             })
