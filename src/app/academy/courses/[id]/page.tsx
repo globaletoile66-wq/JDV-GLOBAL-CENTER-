@@ -7,7 +7,8 @@ import { ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Clock3, Plus, RefreshC
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
-type Course = { id: string; program_id: string; title: string; description: string | null; starts_at: string | null; ends_at: string | null; status: string };
+type Course = { id: string; program_id: string; instructor_user_id: string | null; title: string; description: string | null; starts_at: string | null; ends_at: string | null; status: string };
+type LiveSession = { id: string; title: string; description: string | null; session_type: 'online' | 'in_person' | 'hybrid'; starts_at: string; ends_at: string; meeting_url: string | null; location_text: string | null; live_status: 'scheduled' | 'live' | 'completed' | 'cancelled' };
 type Lesson = { id: string; title: string; lesson_order: number; content: string | null; duration_minutes: number | null; content_type: 'text' | 'video' | 'document' | 'external_link'; media_url: string | null; resource_links: { label: string; url: string }[] };
 type Assessment = { id: string; title: string; max_score: number; created_at: string };
 type AssessmentQuestion = { id: string; assessment_id: string; question_order: number; question_type: 'single_choice' | 'true_false' | 'short_answer' | 'essay'; prompt: string; options: string[]; points: number };
@@ -25,7 +26,7 @@ const actionClass = 'inline-flex items-center justify-center gap-2 rounded-xl bg
 export default function AcademyCoursePage() {
   const params = useParams<{ id: string }>();
   const courseId = params.id;
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isSuperAdmin } = useAuth();
   const supabase = createClient();
   const [course, setCourse] = useState<Course | null>(null);
   const [programName, setProgramName] = useState('');
@@ -36,6 +37,10 @@ export default function AcademyCoursePage() {
   const [assessmentSubmissions, setAssessmentSubmissions] = useState<AssessmentSubmission[]>([]);
   const [assessmentResults, setAssessmentResults] = useState<AssessmentResult[]>([]);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
+  const [canManageLive, setCanManageLive] = useState(false);
+  const [liveFormOpen, setLiveFormOpen] = useState(false);
+  const [liveForm, setLiveForm] = useState({ title: '', description: '', session_type: 'online' as LiveSession['session_type'], starts_at: '', ends_at: '', meeting_url: '', location_text: '' });
   const [studentAnswers, setStudentAnswers] = useState<Record<string, string>>({});
   const [questionFormOpenFor, setQuestionFormOpenFor] = useState<string | null>(null);
   const [questionForm, setQuestionForm] = useState({ prompt: '', question_type: 'short_answer' as AssessmentQuestion['question_type'], options: '', points: '1', correct_answer: '' });
@@ -51,17 +56,17 @@ export default function AcademyCoursePage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    const { data: courseData, error: courseError } = await supabase.from('academy_courses').select('id,program_id,title,description,starts_at,ends_at,status').eq('id', courseId).maybeSingle();
+    const { data: courseData, error: courseError } = await supabase.from('academy_courses').select('id,program_id,instructor_user_id,title,description,starts_at,ends_at,status').eq('id', courseId).maybeSingle();
     if (courseError) setError(courseError.message);
     if (!courseData) {
-      setCourse(null); setLessons([]); setLessonProgress([]); setAssessments([]); setCertificate(null); setBusy(false);
+      setCourse(null); setLessons([]); setLessonProgress([]); setAssessments([]); setCertificate(null); setLiveSessions([]); setCanManageLive(false); setBusy(false);
       if (!courseError) setError('Ce cours est introuvable ou ton compte ne dispose pas des droits de consultation.');
       return;
     }
     const currentCourse = courseData as Course;
     setCourse(currentCourse);
     const [programResult, lessonResult, assessmentResult] = await Promise.all([
-      supabase.from('academy_programs').select('name').eq('id', currentCourse.program_id).maybeSingle(),
+      supabase.from('academy_programs').select('name,organization_id').eq('id', currentCourse.program_id).maybeSingle(),
       supabase.from('academy_lessons').select('id,title,lesson_order,content,duration_minutes,content_type,media_url,resource_links').eq('course_id', courseId).order('lesson_order'),
       supabase.from('academy_assessments').select('id,title,max_score,created_at').eq('course_id', courseId).order('created_at'),
     ]);
@@ -115,6 +120,28 @@ export default function AcademyCoursePage() {
         .maybeSingle();
       setCertificate((certificateData || null) as Certificate | null);
       if (certificateError) setError((current) => current || certificateError.message);
+      const { data: liveData, error: liveError } = await supabase
+        .from('academy_live_sessions')
+        .select('id,title,description,session_type,starts_at,ends_at,meeting_url,location_text,live_status')
+        .eq('course_id', courseId)
+        .order('starts_at');
+      setLiveSessions((liveData || []) as LiveSession[]);
+      if (liveError) setError((current) => current || liveError.message);
+
+      let mayManage = isSuperAdmin || currentCourse.instructor_user_id === user.id;
+      const organizationId = programResult.data?.organization_id || null;
+      if (!mayManage && organizationId) {
+        const { data: membership } = await supabase.from('organization_members').select('role_id').eq('organization_id', organizationId).eq('user_id', user.id).eq('member_status', 'active').maybeSingle();
+        if (membership?.role_id) {
+          const { data: role } = await supabase.from('roles').select('code').eq('id', membership.role_id).maybeSingle();
+          mayManage = role?.code === 'admin';
+        }
+      }
+      setCanManageLive(Boolean(mayManage));
+    } else {
+      setCertificate(null);
+      setLiveSessions([]);
+      setCanManageLive(false);
     }
     setBusy(false);
   }, [courseId, supabase, user]);
@@ -263,6 +290,48 @@ export default function AcademyCoursePage() {
     setSaving(false);
   };
 
+  const saveLiveSession = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user || !course || !liveForm.title.trim() || !liveForm.starts_at || !liveForm.ends_at) return;
+    const startsAt = new Date(liveForm.starts_at);
+    const endsAt = new Date(liveForm.ends_at);
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) {
+      setError('La date de fin doit être postérieure à la date de début.');
+      return;
+    }
+    const meetingUrl = liveForm.meeting_url.trim();
+    if (meetingUrl) {
+      try {
+        const parsed = new URL(meetingUrl);
+        if (parsed.protocol !== 'https:') throw new Error('HTTPS requis');
+      } catch {
+        setError('Le lien de visioconférence doit être une URL HTTPS valide.');
+        return;
+      }
+    }
+    setSaving(true); setError(''); setNotice('');
+    const { error: saveError } = await supabase.from('academy_live_sessions').insert({
+      course_id: course.id,
+      title: liveForm.title.trim(),
+      description: liveForm.description.trim() || null,
+      session_type: liveForm.session_type,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      meeting_url: meetingUrl || null,
+      location_text: liveForm.location_text.trim() || null,
+      live_status: 'scheduled',
+      created_by: user.id,
+    });
+    if (saveError) setError(saveError.message);
+    else {
+      setNotice('Séance enregistrée. Le lien reste visible uniquement aux participants autorisés.');
+      setLiveForm({ title: '', description: '', session_type: 'online', starts_at: '', ends_at: '', meeting_url: '', location_text: '' });
+      setLiveFormOpen(false);
+      await load();
+    }
+    setSaving(false);
+  };
+
   const issueCertificate = async () => {
     if (!user) { setError('Connecte-toi pour demander ton attestation.'); return; }
     setSaving(true); setError(''); setNotice('');
@@ -363,6 +432,23 @@ export default function AcademyCoursePage() {
             </section>
           </div>
         </>}
+        <section className="mt-6 rounded-3xl border border-white/10 bg-white/[.04] p-5 sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><h2 className="flex items-center gap-2 text-xl font-bold"><CalendarDays size={20} className="text-[#F28C28]"/> JDV Academy Live</h2><p className="mt-2 text-sm text-white/55">Planifie des séances en direct avec un lien de visioconférence externe ou un lieu physique. Le streaming n’est pas hébergé par JDV Academy.</p></div>
+            {canManageLive && <button type="button" onClick={() => setLiveFormOpen((open) => !open)} className={actionClass}>{liveFormOpen ? 'Fermer' : 'Planifier une séance'}</button>}
+          </div>
+          {liveFormOpen && canManageLive && <form onSubmit={(event) => void saveLiveSession(event)} className="mt-5 grid gap-3 rounded-2xl border border-white/10 bg-black/10 p-4 sm:grid-cols-2">
+            <input className={fieldClass} required maxLength={160} placeholder="Titre de la séance" value={liveForm.title} onChange={(e) => setLiveForm({...liveForm, title:e.target.value})}/>
+            <select className={fieldClass} value={liveForm.session_type} onChange={(e) => setLiveForm({...liveForm, session_type:e.target.value as LiveSession['session_type']})}><option value="online">En ligne</option><option value="hybrid">Hybride</option><option value="in_person">Présentiel</option></select>
+            <textarea className={fieldClass+' sm:col-span-2'} rows={2} maxLength={2000} placeholder="Description et consignes" value={liveForm.description} onChange={(e) => setLiveForm({...liveForm, description:e.target.value})}/>
+            <label className="text-xs text-white/55">Début<input className={fieldClass+' mt-1'} type="datetime-local" required value={liveForm.starts_at} onChange={(e) => setLiveForm({...liveForm, starts_at:e.target.value})}/></label>
+            <label className="text-xs text-white/55">Fin<input className={fieldClass+' mt-1'} type="datetime-local" required value={liveForm.ends_at} onChange={(e) => setLiveForm({...liveForm, ends_at:e.target.value})}/></label>
+            <input className={fieldClass} type="url" placeholder="Lien HTTPS de visioconférence (optionnel)" value={liveForm.meeting_url} onChange={(e) => setLiveForm({...liveForm, meeting_url:e.target.value})}/>
+            <input className={fieldClass} placeholder="Lieu (si présentiel)" maxLength={240} value={liveForm.location_text} onChange={(e) => setLiveForm({...liveForm, location_text:e.target.value})}/>
+            <button disabled={saving} className={actionClass+' sm:col-span-2'}>{saving ? 'Enregistrement…' : 'Enregistrer la séance'}</button>
+          </form>}
+          <div className="mt-5 space-y-3">{liveSessions.map((session) => <article key={session.id} className="rounded-2xl border border-white/10 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{session.title}</h3><p className="mt-1 text-xs text-white/50">{session.session_type === 'online' ? 'En ligne' : session.session_type === 'hybrid' ? 'Hybride' : 'Présentiel'} · {session.live_status === 'scheduled' ? 'Programmée' : session.live_status === 'live' ? 'En direct' : session.live_status === 'completed' ? 'Terminée' : 'Annulée'}</p></div><p className="text-xs text-white/55">{new Date(session.starts_at).toLocaleString('fr-FR')} – {new Date(session.ends_at).toLocaleString('fr-FR')}</p></div>{session.description && <p className="mt-3 whitespace-pre-wrap text-sm text-white/60">{session.description}</p>}{session.location_text && <p className="mt-2 text-sm text-white/60">Lieu : {session.location_text}</p>}{session.meeting_url && <a href={session.meeting_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-xl border border-white/10 px-3 py-2 text-sm text-[#F28C28] hover:bg-white/5">Rejoindre la séance ↗</a>}</article>)}{liveSessions.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-white/45">Aucune séance programmée ou accessible pour ce compte.</p>}</div>
+        </section>
         <section className="mt-6 rounded-3xl border border-white/10 bg-white/[.04] p-5 sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
