@@ -648,7 +648,7 @@ BEGIN
     ELSE false END;
   IF NOT v_ok THEN RAISE EXCEPTION 'INVALID_TRANSITION'; END IF;
 
-  IF p_status='open' AND t.status='draft' THEN
+  IF p_status='open' THEN
     SELECT count(*) INTO v_members FROM public.tontine_members WHERE tontine_id=t.id AND membership_status='active';
     IF t.tontine_type='individual' THEN
       IF v_members <> 1 THEN RAISE EXCEPTION 'INDIVIDUAL_REQUIRES_ONE_ACTIVE_OWNER'; END IF;
