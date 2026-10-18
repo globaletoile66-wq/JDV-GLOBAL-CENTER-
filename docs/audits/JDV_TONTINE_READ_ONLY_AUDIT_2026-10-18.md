@@ -106,6 +106,19 @@ Les ACL PostgreSQL indiquent que plusieurs fonctions `SECURITY DEFINER` sont ex�
 
 **Mesure recommandée :** définir un mode de décaissement unique par rotation, imposer une contrainte/transition d'état commune et tester l'exclusion mutuelle entre les deux parcours.
 
+
+### F-07 — L'ordre des bénéficiaires peut être reprogrammé avant le premier paiement (priorité élevée)
+
+`public.tontine_program_collection(uuid, jsonb)` vérifie le rôle président/super-administrateur, le statut du cycle et l'absence de paiement déjà créé, puis met à jour l'ordre et les dates des rotations. L'action est journalisée dans `audit_logs`, mais la fonction ne matérialise pas à elle seule un tirage final immuable avec horodatage de publication visible aux membres. Tant qu'aucun paiement n'existe, le plan peut être réécrit.
+
+**Mesure recommandée :** séparer « brouillon du plan » et « tirage final publié ». À la publication, enregistrer l'acteur, l'heure serveur, la méthode/seed ou la procédure de tirage, le résultat complet et l'empreinte du résultat ; verrouiller ensuite les modifications. Toute correction exceptionnelle doit produire une nouvelle version explicite, un motif, une notification à tous les membres et une approbation indépendante lorsque le contrat l'exige.
+
+### F-08 — Le parcours de cycle repose sur le statut actif, sans vérification explicite de l'ensemble des prérequis d'admission (priorité élevée)
+
+`public.tontine_open_cycle(uuid, date, date)` crée des échéances et des rotations pour les membres dont `membership_status='active'`. Puisque la fonction d'invitation peut actuellement mettre un membre directement à l'état actif après la seule confirmation du téléphone et l'acceptation des règles, les prérequis contractuels/documentaires ne sont pas garantis en amont.
+
+**Mesure recommandée :** faire dépendre l'éligibilité à l'activation et à la création du cycle d'un état d'admission vérifié, pas du seul libellé `active`. Le modèle doit empêcher qu'une adhésion incomplète entre dans les échéances et les rotations.
+
 ## 4.3 Tests ciblés avant toute modification
 
 - Appeler `tontine_join_by_link` dans un environnement de test avec téléphone confirmé mais sans preuve documentaire/contrat : le nouveau comportement attendu doit être « en attente », pas `active`.
