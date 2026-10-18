@@ -35,6 +35,7 @@ export default function TontineDetailPage() {
   const supabase = useMemo(() => createClient(), []);
   const [tontine, setTontine] = useState<TontineRow | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [myMembershipStatus, setMyMembershipStatus] = useState<string | null>(null);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(() => {
     const date = new Date(); date.setMonth(date.getMonth() + 24); return date.toISOString().slice(0, 10);
@@ -48,15 +49,20 @@ export default function TontineDetailPage() {
     if (!user || !id) { setBusy(false); return; }
     setBusy(true);
     setError('');
-    const [t, o] = await Promise.all([
+    const [t, o, membership] = await Promise.all([
       supabase.from('tontines').select('id,name,description,tontine_type,status,contribution_amount,currency_id,frequency,cycle_periods,member_limit,starts_on,late_fee_amount,president_member_id').eq('id', id).single(),
       supabase.rpc('tontine_overview', { p_tontine_id: id }),
+      supabase.from('tontine_members').select('membership_status').eq('tontine_id', id).eq('user_id', user.id).maybeSingle(),
     ]);
     if (t.error) setError('Lecture de la tontine impossible : ' + t.error.message);
     else setTontine(t.data as TontineRow);
+    if (membership.data) setMyMembershipStatus(membership.data.membership_status);
+    else setMyMembershipStatus(null);
     if (o.error) {
       setOverview(null);
-      setError((current) => current || 'Vue détaillée non autorisée ou indisponible : ' + o.error.message);
+      if (membership.data?.membership_status !== 'pending') {
+        setError((current) => current || 'Vue détaillée non autorisée ou indisponible : ' + o.error.message);
+      }
     } else setOverview(o.data as Overview);
     setBusy(false);
   }, [id, supabase, user]);
@@ -125,6 +131,7 @@ export default function TontineDetailPage() {
       </header>
       {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-4 text-sm text-red-100">{error}</div>}
       {notice && <div role="status" className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">{notice}</div>}
+      {myMembershipStatus === 'pending' && <div className="mt-5 rounded-xl border border-amber-200/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100/90">Votre adhésion est en attente. Le téléphone confirmé ne suffit pas : complétez le dossier KYC avec votre pièce d’identité et votre selfie, puis attendez la validation d’un responsable. <Link href="/pay/kyc" className="ml-1 underline">Ouvrir la vérification d’identité</Link>.</div>}
 
       {canManage && <section className="mt-6 grid gap-5 lg:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
