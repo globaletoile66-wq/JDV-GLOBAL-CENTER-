@@ -159,7 +159,7 @@ export default function TransportPage() {
       <div className="border-b border-white/10 bg-[#0b2537] text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/70 transition hover:text-white"><ArrowLeft size={16} /> Accueil JDV</Link>
-          <div className="flex items-center gap-2 text-xs font-semibold text-white/70"><Globe2 size={15} className="text-teal-300" /> Pensé pour les mobilités africaines</div>
+          <div className="flex items-center gap-2"><div className="hidden items-center gap-2 text-xs font-semibold text-white/70 sm:flex"><Globe2 size={15} className="text-teal-300" /> Pensé pour les mobilités africaines</div><Link href="/transport/partenaires" className="rounded-xl bg-teal-500 px-3 py-2 text-xs font-extrabold text-[#0b2537] transition hover:bg-teal-300">Devenir partenaire</Link></div>
           <button onClick={() => void load()} disabled={busy} aria-label="Actualiser les données" className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-sm transition hover:bg-white/10 disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /><span className="hidden sm:inline">Actualiser</span></button>
         </div>
       </div>
