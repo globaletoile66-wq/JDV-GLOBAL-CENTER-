@@ -11,7 +11,7 @@ type Currency = { id: string; code: string; symbol: string };
 
 type TontineRow = {
   id: string; name: string; organization_id: string; contribution_amount: number;
-  frequency: string; cycle_periods: number; member_limit: number; status: string;
+  frequency: string; cycle_periods: number; member_limit: number; status: string; tontine_type: 'group' | 'individual';
 };
 
 const frequencyLabels: Record<string, string> = {
@@ -34,6 +34,9 @@ export default function TontineConcepteurPage() {
   const [periods, setPeriods] = useState('12');
   const [memberLimit, setMemberLimit] = useState('20');
   const [lateFee, setLateFee] = useState('0');
+  const [tontineType, setTontineType] = useState<'group' | 'individual'>('group');
+  const [acceptRules, setAcceptRules] = useState(false);
+  const [acceptContract, setAcceptContract] = useState(false);
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -46,7 +49,7 @@ export default function TontineConcepteurPage() {
     const [orgResult, currencyResult, tontineResult] = await Promise.all([
       supabase.from('organizations').select('id,name,org_status').order('name').limit(500),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).order('code').limit(100),
-      supabase.from('tontines').select('id,name,organization_id,contribution_amount,frequency,cycle_periods,member_limit,status').order('created_at', { ascending: false }).limit(100),
+      supabase.from('tontines').select('id,name,organization_id,contribution_amount,frequency,cycle_periods,member_limit,status,tontine_type').order('created_at', { ascending: false }).limit(100),
     ]);
     if (orgResult.error) setError('Chargement des organisations impossible : ' + orgResult.error.message);
     else {
@@ -78,34 +81,75 @@ export default function TontineConcepteurPage() {
       setError('Choisis une organisation et une devise avant de continuer.');
       return;
     }
-    if (!name.trim() || Number(amount) <= 0 || !Number.isInteger(Number(periods)) || Number(periods) < 1 || !Number.isInteger(Number(memberLimit)) || Number(memberLimit) < 2 || Number(lateFee) < 0) {
-      setError('Vérifie le nom, la cotisation, le nombre de périodes, la limite de membres et les frais de retard.');
+    if (!name.trim() || Number(amount) <= 0 || !Number.isInteger(Number(periods)) || Number(periods) < 1 || Number(periods) > 366 ||
+        (tontineType === 'group' && (!Number.isInteger(Number(memberLimit)) || Number(memberLimit) < 2 || Number(memberLimit) > 10000)) ||
+        Number(lateFee) < 0) {
+      setError('Vérifie le nom, la cotisation, la fréquence, la durée, la limite de membres et les frais de retard.');
       return;
     }
+    if (!acceptRules || !acceptContract) {
+      setError('L’acceptation des règles et du contrat de participation est requise pour enregistrer le brouillon.');
+      return;
+    }
+
     setSaving(true);
-    const { data, error: insertError } = await supabase.from('tontines').insert({
-      organization_id: organizationId,
-      currency_id: currencyId,
-      name: name.trim(),
-      description: description.trim() || null,
-      contribution_amount: Number(amount),
-      frequency,
-      cycle_periods: Number(periods),
-      member_limit: Number(memberLimit),
-      late_fee_amount: Number(lateFee),
-      created_by: user.id,
-      status: 'draft',
-      rules: { created_from: 'concepteur', version: 1, review_required_before_activation: true },
-      payout_mode: 'wallet',
-    }).select('id,name').single();
+    let created: { id: string; name: string; tontine_type?: string; status?: string; membership_status?: string } | null = null;
+    let createError: { message: string } | null = null;
+
+    if (tontineType === 'individual') {
+      const result = await supabase.rpc('tontine_create_individual_draft', {
+        p_organization_id: organizationId,
+        p_currency_id: currencyId,
+        p_name: name.trim(),
+        p_description: description.trim() || null,
+        p_contribution_amount: Number(amount),
+        p_frequency: frequency,
+        p_cycle_periods: Number(periods),
+        p_late_fee_amount: Number(lateFee),
+        p_accept_rules: acceptRules,
+        p_accept_contract: acceptContract,
+      });
+      if (result.error) createError = result.error;
+      else created = result.data as typeof created;
+    } else {
+      const result = await supabase.from('tontines').insert({
+        organization_id: organizationId,
+        currency_id: currencyId,
+        name: name.trim(),
+        description: description.trim() || null,
+        contribution_amount: Number(amount),
+        frequency,
+        cycle_periods: Number(periods),
+        member_limit: Number(memberLimit),
+        late_fee_amount: Number(lateFee),
+        created_by: user.id,
+        status: 'draft',
+        tontine_type: 'group',
+        rules: {
+          created_from: 'concepteur',
+          version: '1.0',
+          review_required_before_activation: true,
+          rules_accepted_by_creator: acceptRules,
+          contract_accepted_by_creator: acceptContract,
+        },
+        payout_mode: 'wallet',
+      }).select('id,name,tontine_type,status').single();
+      if (result.error) createError = result.error;
+      else created = result.data as typeof created;
+    }
+
     setSaving(false);
-    if (insertError) {
-      setError('La création a été refusée par la base de données : ' + insertError.message + '. Aucune cotisation ni aucun paiement n’a été lancé.');
+    if (createError || !created) {
+      setError('La création a été refusée par la base de données : ' + (createError?.message || 'réponse vide') + '. Aucune cotisation ni aucun paiement n’a été lancé.');
       return;
     }
-    setSuccess('Tontine « ' + data.name + ' » créée en brouillon. Elle n’est pas activée et aucun paiement n’a été déclenché.');
+    setSuccess(tontineType === 'individual'
+      ? 'Tontine individuelle « ' + created.name + ' » créée en brouillon. Votre adhésion reste en attente de vérification KYC et contractuelle ; aucun paiement n’a été déclenché.'
+      : 'Tontine de groupe « ' + created.name + ' » créée en brouillon. Elle n’est pas activée et aucun paiement n’a été déclenché.');
     setName('');
     setDescription('');
+    setAcceptRules(false);
+    setAcceptContract(false);
     await load();
   }
 
@@ -127,11 +171,13 @@ export default function TontineConcepteurPage() {
         <form onSubmit={createDraft} className="space-y-5 rounded-2xl border border-white/10 bg-white/[.04] p-5 sm:p-7">
           <div className="flex items-center gap-2"><PlusCircle className="text-[#F28C28]" size={21}/><h2 className="text-xl font-bold">Créer une tontine (brouillon)</h2></div>
           <div><label className="mb-2 block text-sm text-white/70">Organisation propriétaire *</label><select required value={organizationId} onChange={(e) => setOrganizationId(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"><option value="">Choisir une organisation</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.name} · {org.org_status}</option>)}</select></div>
+          <div><label className="mb-2 block text-sm text-white/70">Type de tontine *</label><select required value={tontineType} onChange={(e) => setTontineType(e.target.value as 'group' | 'individual')} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"><option value="group">Tontine de groupe — adhésions et rotation</option><option value="individual">Tontine individuelle — épargne personnelle</option></select><p className="mt-2 text-xs leading-5 text-white/50">{tontineType === 'individual' ? 'Un seul titulaire, sans lien d’invitation ni rotation de bénéficiaires. Le dossier reste en attente jusqu’à la validation KYC et contractuelle.' : 'Plusieurs membres, invitation contrôlée, calendrier partagé et ordre de bénéficiaires.'}</p></div>
           <div><label className="mb-2 block text-sm text-white/70">Nom de la tontine *</label><input required minLength={3} maxLength={120} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Tontine solidarité quartier" className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div>
           <div><label className="mb-2 block text-sm text-white/70">Description / objectif</label><textarea maxLength={1000} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Objectif, conditions et public concerné…" className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div>
           <div className="grid gap-4 sm:grid-cols-2"><div><label className="mb-2 block text-sm text-white/70">Cotisation par période *</label><input required type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div><div><label className="mb-2 block text-sm text-white/70">Devise *</label><select required value={currencyId} onChange={(e) => setCurrencyId(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm">{currencies.map((currency) => <option key={currency.id} value={currency.id}>{currency.code} ({currency.symbol})</option>)}</select></div></div>
           <div className="grid gap-4 sm:grid-cols-2"><div><label className="mb-2 block text-sm text-white/70">Fréquence *</label><select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm">{Object.entries(frequencyLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div><div><label className="mb-2 block text-sm text-white/70">Nombre de périodes *</label><input required type="number" min="1" max="500" step="1" value={periods} onChange={(e) => setPeriods(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div></div>
-          <div className="grid gap-4 sm:grid-cols-2"><div><label className="mb-2 block text-sm text-white/70">Nombre maximal de membres *</label><input required type="number" min="2" max="10000" step="1" value={memberLimit} onChange={(e) => setMemberLimit(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div><div><label className="mb-2 block text-sm text-white/70">Frais de retard par période</label><input type="number" min="0" step="0.01" value={lateFee} onChange={(e) => setLateFee(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div></div>
+          <div className="grid gap-4 sm:grid-cols-2">{tontineType === 'group' ? <div><label className="mb-2 block text-sm text-white/70">Nombre maximal de membres *</label><input required type="number" min="2" max="10000" step="1" value={memberLimit} onChange={(e) => setMemberLimit(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div> : <div className="rounded-xl border border-white/10 p-3 text-sm text-white/60"><span className="block text-xs text-white/40">Titulaire</span>1 personne — limite fixée par le système</div>}<div><label className="mb-2 block text-sm text-white/70">Frais de retard par période</label><input type="number" min="0" step="0.01" value={lateFee} onChange={(e) => setLateFee(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div></div>
+          <div className="space-y-3 rounded-xl border border-white/10 p-4 text-sm"><label className="flex items-start gap-3"><input type="checkbox" checked={acceptRules} onChange={(e) => setAcceptRules(e.target.checked)} className="mt-1 accent-orange-400"/><span>J’ai lu et j’accepte les règles de la tontine, version 1.0.</span></label><label className="flex items-start gap-3"><input type="checkbox" checked={acceptContract} onChange={(e) => setAcceptContract(e.target.checked)} className="mt-1 accent-orange-400"/><span>J’accepte le contrat de participation et comprends que l’activation attend la vérification des justificatifs requis.</span></label></div>
           <div className="rounded-xl border border-amber-200/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100/80">Sécurité : cette action crée uniquement un brouillon. L’activation, l’adhésion des membres, la génération des échéances et les mouvements financiers doivent être vérifiés dans leurs étapes dédiées.</div>
           <button type="submit" disabled={saving || organizations.length === 0 || currencies.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F28C28] px-5 py-3 font-bold text-[#0B1B3D] disabled:opacity-50">{saving ? <LoaderCircle size={18} className="animate-spin"/> : <PlusCircle size={18}/>} {saving ? 'Création du brouillon…' : 'Créer le brouillon'}</button>
         </form>
