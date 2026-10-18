@@ -114,9 +114,10 @@ begin
       where p.id = a.entity_id and p.archived_at is null
         and p.status not in ('converted', 'lost', 'closed', 'archived')
         and (
-          p.next_follow_up_at <= now()
+          (a.alert_type = 'prospect_followup' and p.next_follow_up_at <= now())
           or (
-            coalesce(p.last_contact_at, p.created_at) <= now() - interval '7 days'
+            a.alert_type = 'prospect_stale'
+            and coalesce(p.last_contact_at, p.created_at) <= now() - interval '7 days'
             and (p.next_follow_up_at is null or p.next_follow_up_at <= now())
           )
         )
