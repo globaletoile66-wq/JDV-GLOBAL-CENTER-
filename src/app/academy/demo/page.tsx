@@ -12,7 +12,7 @@ const sectors = [
   { id: 'catalogue', name: 'Catalogue & programmes', tables: ['academy_programs', 'academy_courses'], route: '/academy', detail: 'Lecture du catalogue et disponibilité des programmes publiés.' },
   { id: 'learning', name: 'Cours & progression', tables: ['academy_lessons', 'academy_lesson_progress'], route: '/academy', detail: 'Structure des leçons et sauvegarde de la progression.' },
   { id: 'enrollments', name: 'Inscriptions', tables: ['academy_enrollments'], route: '/academy', detail: 'Demandes d’inscription et suivi du statut.' },
-  { id: 'assessments', name: 'Évaluations & résultats', tables: ['academy_assessments', 'academy_results'], route: '/academy', detail: 'Disponibilité des évaluations et des résultats.' },
+  { id: 'assessments', name: 'Évaluations & résultats', tables: ['academy_assessments', 'academy_assessment_questions', 'academy_assessment_submissions', 'academy_results'], route: '/academy', detail: 'Disponibilité des évaluations, questions, soumissions et résultats.' },
   { id: 'certificates', name: 'Attestations', tables: ['academy_certificates'], route: '/academy', detail: 'Présence de la table des attestations; aucune attestation réelle n’est créée.' },
   { id: 'live', name: 'JDV Academy Live', tables: ['academy_live_sessions'], route: '/academy/live', detail: 'Accès à la page Live et structure des séances.' },
   { id: 'tutor', name: 'Tuteur IA', tables: ['ai_conversations', 'ai_messages'], route: '/academy/ai', detail: 'Structure des conversations et messages; aucun appel IA n’est déclenché.' },
@@ -45,15 +45,32 @@ export default function AcademyDemoPage() {
 
     const checked = await Promise.all(sectors.map(async (sector): Promise<CheckResult> => {
       const routeCheck = await fetch(sector.route, { method: 'GET', cache: 'no-store', redirect: 'follow' })
-        .then((response) => ({ ok: response.status < 500, status: response.status }))
-        .catch(() => ({ ok: false, status: 0 }));
+        .then((response) => {
+          const rawFinalPath = new URL(response.url, window.location.origin).pathname;
+          const finalPath = rawFinalPath.length > 1 && rawFinalPath.endsWith('/') ? rawFinalPath.slice(0, -1) : rawFinalPath;
+          const rawExpectedPath = sector.route;
+          const expectedPath = rawExpectedPath.length > 1 && rawExpectedPath.endsWith('/') ? rawExpectedPath.slice(0, -1) : rawExpectedPath;
+          const redirectedAway = response.redirected && finalPath !== expectedPath;
+          return {
+            ok: response.status >= 200 && response.status < 400 && !redirectedAway,
+            redirectedAway,
+            status: response.status,
+            finalPath,
+          };
+        })
+        .catch(() => ({ ok: false, redirectedAway: false, status: 0, finalPath: '' }));
       const tableChecks = await Promise.all(sector.tables.map(async (table) => {
         const { error } = await supabase.from(table).select('*', { count: 'exact', head: true }).limit(1);
         return { table, ok: !error, error: error?.message };
       }));
 
       const failedTables = tableChecks.filter((item) => !item.ok);
-      if (!routeCheck.ok) return { id: sector.id, sector: sector.name, detail: sector.detail, status: 'failed', result: `Page inaccessible ou erreur serveur (HTTP ${routeCheck.status || 'réseau'}).` };
+      if (!routeCheck.ok) {
+        const detail = routeCheck.redirectedAway
+          ? `Redirection détectée vers ${routeCheck.finalPath} (authentification ou route différente).`
+          : `Page inaccessible ou réponse HTTP invalide (HTTP ${routeCheck.status || 'réseau'}).`;
+        return { id: sector.id, sector: sector.name, detail: sector.detail, status: 'failed', result: detail };
+      }
       if (failedTables.length) {
         const messages = failedTables.map((item) => `${item.table}: ${item.error || 'indisponible'}`).join(' · ');
         return { id: sector.id, sector: sector.name, detail: sector.detail, status: 'blocked', result: `Page accessible; vérification Supabase bloquée : ${messages}` };
