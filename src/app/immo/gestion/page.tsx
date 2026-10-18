@@ -195,7 +195,11 @@ export default function ImmoManagementPage() {
         {tab === 'leases' && <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <form onSubmit={submitLeaseEvent} className="rounded-2xl border border-white/10 p-5"><h2 className="text-lg font-bold">Ajouter un événement au bail</h2>
             <label className={labelClass} htmlFor="event-lease">Bail *</label><select id="event-lease" className={inputClass} value={leaseId} onChange={(e) => setLeaseId(e.target.value)} required><option value="">Choisir un bail</option>{leases.map((l) => <option key={l.id} value={l.id}>Bail {l.id.slice(0,8)} · {l.lease_status}</option>)}</select>
+ integration/jdv-immo-buildcheck-2026-10-18
+            <label className={labelClass} htmlFor="event-type">Événement *</label><select id="event-type" className={inputClass} value={eventType} onChange={(e) => setEventType(e.target.value)}><option value="note">Note de suivi</option><option value="renewal_requested">Renouvellement demandé</option><option value="termination_requested">Résiliation demandée</option><option value="document_added">Document ajouté</option><option value="inspection_completed">État des lieux terminé</option></select>
+=======
             <label className={labelClass} htmlFor="event-type">Événement *</label><select id="event-type" className={inputClass} value={eventType} onChange={(e) => setEventType(e.target.value)}><option value="note">Note de suivi</option><option value="renewal_requested">Renouvellement demandé</option><option value="termination_requested">Résiliation demandée</option><option value="document_added">Document ajouté</option></select>
+ supabase-sync-2026-09-24
             <label className={labelClass} htmlFor="event-details">Détails</label><textarea id="event-details" className={inputClass} value={eventDetails} onChange={(e) => setEventDetails(e.target.value)} maxLength={4000} rows={4} />
             <button disabled={saving || !leases.length} className="mt-4 w-full rounded-xl bg-[#F28C28] px-4 py-3 font-bold text-[#0B1B3D] disabled:opacity-50">{saving ? 'Enregistrement…' : 'Ajouter à l’historique'}</button>
           </form>
