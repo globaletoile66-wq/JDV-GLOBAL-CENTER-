@@ -18,7 +18,7 @@ const actionClass = 'inline-flex items-center justify-center gap-2 rounded-xl bg
 export default function AcademyCoursePage() {
   const params = useParams<{ id: string }>();
   const courseId = params.id;
-  const { user, loading: authLoading, isSuperAdmin } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
   const [course, setCourse] = useState<Course | null>(null);
   const [programName, setProgramName] = useState('');
@@ -92,8 +92,6 @@ export default function AcademyCoursePage() {
     else { setNotice('Évaluation créée. La saisie et la validation des notes nécessitent une étape de développement distincte.'); setAssessmentForm({ title: '', max_score: '100' }); setAssessmentFormOpen(false); await load(); }
     setSaving(false);
   };
-
-  const canManage = Boolean(isSuperAdmin || (user && course && course.program_id && false));
 
   if (authLoading || busy) return <main className="grid min-h-screen place-items-center bg-[#0B1B3D] text-white"><RefreshCw className="animate-spin" /> Chargement du cours…</main>;
 
