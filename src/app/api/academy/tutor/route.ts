@@ -6,12 +6,18 @@ export const runtime = 'nodejs';
 
 type HistoryMessage = { role: 'user' | 'assistant'; content: string };
 
+function isTutorConfigured() {
+  // The OpenAI SDK needs both the gateway endpoint and a server-side API key.
+  // Never return either value to the client; expose only readiness and model.
+  return Boolean(process.env.OPENAI_BASE_URL?.trim() && process.env.OPENAI_API_KEY?.trim());
+}
+
 export async function GET() {
-  const configured = Boolean(process.env.OPENAI_BASE_URL);
+  const configured = isTutorConfigured();
   return NextResponse.json({
     configured,
     model: configured ? (process.env.JDV_ACADEMY_TUTOR_MODEL || 'gpt-5-mini') : null,
-  });
+  }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(request: Request) {
@@ -23,10 +29,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Connexion requise.' }, { status: 401 });
   }
 
-  if (!process.env.OPENAI_BASE_URL) {
+  if (!isTutorConfigured()) {
     return NextResponse.json({
-      error: 'Le tuteur IA est prêt, mais Netlify AI Gateway n’est pas actif sur ce déploiement. Vérifie que les fonctions Netlify AI sont activées et qu’un déploiement de production a été effectué.',
-      code: 'AI_GATEWAY_NOT_ACTIVE',
+      error: 'Le tuteur IA n’est pas configuré sur ce déploiement. Vérifie côté serveur OPENAI_BASE_URL et OPENAI_API_KEY ; aucune clé ne doit être exposée au navigateur.',
+      code: 'AI_GATEWAY_NOT_CONFIGURED',
     }, { status: 503 });
   }
 
