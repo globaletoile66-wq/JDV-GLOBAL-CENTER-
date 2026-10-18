@@ -63,7 +63,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const authRequestId = useRef(0);
-  // Keep one Supabase client for this provider's lifetime. A new client on every\n  // render would retrigger auth effects and repeatedly recreate subscriptions.\n  const supabase = useMemo(() => createClient(), []);
+  // Keep one Supabase client for this provider's lifetime. A new client on every
+  // render would retrigger auth effects and repeatedly recreate subscriptions.
+  const supabase = useMemo(() => createClient(), []);
 
   const loadProfile = useCallback(async (userId: string, requestId: number) => {
     try {
