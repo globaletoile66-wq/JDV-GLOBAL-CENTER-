@@ -229,6 +229,7 @@ export default function SellerDashboardPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             {seller.is_verified && <Shield size={14} className="text-success" />}
             <Link href="/marketplace/seller/settings" className="btn-ghost p-2"><Settings size={16} /></Link>
+            <Link href={`/marketplace/store/${seller.shop_slug}`} className="btn-ghost px-2 py-1.5 text-xs">Voir boutique</Link>
             <Link href="/marketplace/seller/listings/new" className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1">
               <Plus size={13} /> Produit
             </Link>
@@ -254,7 +255,7 @@ export default function SellerDashboardPage() {
             {[
               { label: 'Produits publiés', value: `${stats.publishedListings}/${stats.totalListings}`, icon: <Package size={18} className="text-accent" />, sub: 'annonces actives' },
               { label: 'Commandes en cours', value: stats.pendingOrders, icon: <ShoppingCart size={18} className="text-warning" />, sub: 'à traiter' },
-              { label: 'Revenus totaux', value: formatAmount(stats.totalRevenue), icon: <DollarSign size={18} className="text-success" />, sub: 'commandes payées' },
+              { label: 'Revenus récents', value: formatAmount(stats.totalRevenue), icon: <DollarSign size={18} className="text-success" />, sub: 'commandes payées' },
               { label: 'Note boutique', value: seller.rating_average > 0 ? seller.rating_average.toFixed(1) : '—', icon: <Star size={18} className="text-yellow-400" />, sub: `${seller.rating_count} avis` },
             ].map((kpi, i) => (
               <div key={i} className="bg-card border border-border rounded-2xl p-4">
@@ -351,6 +352,7 @@ export default function SellerDashboardPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{listing.title}</p>
                           <p className="text-xs text-muted-foreground">{listing.sale_count} ventes · {listing.view_count} vues</p>
+                          <Link href={`/marketplace/seller/listings/${listing.id}/variants`} className="mt-1 inline-flex text-xs font-semibold text-accent hover:underline">Gérer les variantes</Link>
                         </div>
                         <div className="flex flex-col items-end gap-1 flex-shrink-0">
                           <span className="text-sm font-bold text-accent">{formatAmount(listing.price, listing.currencies?.symbol)}</span>
