@@ -3,7 +3,8 @@ import Link from 'next/link';
 import {
   CreditCard, Building2, ShoppingBag, Home, Plane,
   Truck, Ship, Heart, Shield, Leaf, Zap, GraduationCap,
-  PiggyBank, Megaphone, Tv, Users, Bot, BarChart3
+  PiggyBank, Megaphone, Tv, Users, Bot, BarChart3, Wrench, CalendarDays,
+  BriefcaseBusiness, Scale, Calculator, UserRoundCog, ClipboardList, Package
 } from 'lucide-react';
 
 const modules = [
@@ -205,7 +206,106 @@ const modules = [
     accent: 'rgba(6, 182, 212, 0.1)',
     border: 'rgba(6, 182, 212, 0.25)',
   },
-];
+  {
+    id: 'mod-community',
+    code: 'jdv_community',
+    name: 'JDV COMMUNITY',
+    description: 'Espaces communautaires et animation des communautés JDV',
+    icon: Users,
+    status: 'planned',
+    color: '#7C3AED',
+    accent: 'rgba(124, 58, 237, 0.1)',
+    border: 'rgba(124, 58, 237, 0.25)',
+  },
+  {
+    id: 'mod-services',
+    code: 'jdv_services',
+    name: 'JDV SERVICES',
+    description: 'Catalogue de services et demandes de prestations',
+    icon: Wrench,
+    status: 'planned',
+    color: '#0F766E',
+    accent: 'rgba(15, 118, 110, 0.1)',
+    border: 'rgba(15, 118, 110, 0.25)',
+  },
+  {
+    id: 'mod-events',
+    code: 'jdv_events',
+    name: 'JDV EVENTS',
+    description: 'Organisation et gestion d’événements',
+    icon: CalendarDays,
+    status: 'planned',
+    color: '#DB2777',
+    accent: 'rgba(219, 39, 119, 0.1)',
+    border: 'rgba(219, 39, 119, 0.25)',
+  },
+  {
+    id: 'mod-jobs',
+    code: 'jdv_jobs',
+    name: 'JDV JOBS',
+    description: 'Offres d’emploi, candidatures et recrutement',
+    icon: BriefcaseBusiness,
+    status: 'planned',
+    color: '#1D4ED8',
+    accent: 'rgba(29, 78, 216, 0.1)',
+    border: 'rgba(29, 78, 216, 0.25)',
+  },
+  {
+    id: 'mod-legal',
+    code: 'jdv_legal',
+    name: 'JDV LEGAL',
+    description: 'Services et ressources juridiques',
+    icon: Scale,
+    status: 'planned',
+    color: '#92400E',
+    accent: 'rgba(146, 64, 14, 0.1)',
+    border: 'rgba(146, 64, 14, 0.25)',
+  },
+  {
+    id: 'mod-accounting',
+    code: 'jdv_accounting',
+    name: 'JDV ACCOUNTING',
+    description: 'Comptabilité, écritures et clôtures financières',
+    icon: Calculator,
+    status: 'planned',
+    color: '#047857',
+    accent: 'rgba(4, 120, 87, 0.1)',
+    border: 'rgba(4, 120, 87, 0.25)',
+  },
+  {
+    id: 'mod-hr',
+    code: 'jdv_hr',
+    name: 'JDV HR',
+    description: 'Gestion des ressources humaines',
+    icon: UserRoundCog,
+    status: 'planned',
+    color: '#6D28D9',
+    accent: 'rgba(109, 40, 217, 0.1)',
+    border: 'rgba(109, 40, 217, 0.25)',
+  },
+  {
+    id: 'mod-procurement',
+    code: 'jdv_procurement',
+    name: 'JDV PROCUREMENT',
+    description: 'Achats, demandes et validations fournisseurs',
+    icon: ClipboardList,
+    status: 'planned',
+    color: '#B45309',
+    accent: 'rgba(180, 83, 9, 0.1)',
+    border: 'rgba(180, 83, 9, 0.25)',
+  },
+  {
+    id: 'mod-inventory',
+    code: 'jdv_inventory',
+    name: 'JDV INVENTORY',
+    description: 'Stocks, mouvements et traçabilité des articles',
+    icon: Package,
+    status: 'planned',
+    color: '#0369A1',
+    accent: 'rgba(3, 105, 161, 0.1)',
+    border: 'rgba(3, 105, 161, 0.25)',
+  },
+]; 
 
 const moduleRoutes: Record<string, string> = {
   jdv_pay: '/pay',
@@ -274,7 +374,7 @@ export default function ModulesGrid() {
           {modules.map((mod) => (
             <Link
               key={mod.id}
-              href={moduleRoutes[mod.code] ?? '/coming-soon'}
+              href={moduleRoutes[mod.code] ?? `/coming-soon?name=${encodeURIComponent(mod.name)}`}
               aria-label={`Ouvrir ${mod.name}`}
               className="jdv-card group cursor-pointer relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               style={{
