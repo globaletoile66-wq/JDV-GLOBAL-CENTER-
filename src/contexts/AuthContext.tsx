@@ -186,8 +186,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Only allow user-editable profile fields. Never update identity, email or
     // account status through this helper.
+    const allowedProfileFields = new Set<keyof EditableProfileFields>([
+      'first_name',
+      'last_name',
+      'full_name',
+      'phone',
+      'avatar_url',
+      'country_id',
+      'preferred_language_id',
+      'preferred_currency_id',
+      'timezone',
+      'usage_type',
+      'onboarding_completed',
+    ]);
     const editableFields = Object.fromEntries(
-      Object.entries(updates).filter(([, value]) => value !== undefined)
+      Object.entries(updates).filter(
+        ([key, value]) => allowedProfileFields.has(key as keyof EditableProfileFields) && value !== undefined
+      )
     ) as Partial<EditableProfileFields>;
 
     if (Object.keys(editableFields).length === 0) return;
