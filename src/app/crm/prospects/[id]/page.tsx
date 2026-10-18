@@ -18,6 +18,7 @@ interface Prospect {
   first_name: string;
   last_name: string | null;
   phone: string | null;
+  whatsapp?: string | null;
   email: string | null;
   address: string | null;
   city: string | null;
