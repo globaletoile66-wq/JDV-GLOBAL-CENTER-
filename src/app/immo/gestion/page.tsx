@@ -57,9 +57,16 @@ export default function ImmoManagementPage() {
       supabase.from('immo_property_inspections').select('id,property_id,inspection_type,status,scheduled_at,created_at').order('created_at', { ascending: false }).limit(100),
       supabase.from('immo_lease_events').select('id,lease_id,event_type,event_at,details').order('event_at', { ascending: false }).limit(100),
     ]);
-    if (propertyResult.error) setError(propertyResult.error.message); else setProperties((propertyResult.data ?? []) as Property[]);
+    if (propertyResult.error) setError(propertyResult.error.message);
     if (projectResult.error) setError((v) => v || projectResult.error!.message); else setProjects((projectResult.data ?? []) as Project[]);
-    if (leaseResult.error) setError((v) => v || leaseResult.error!.message); else setLeases((leaseResult.data ?? []) as Lease[]);
+    if (leaseResult.error) setError((v) => v || leaseResult.error!.message); else {
+      const loadedLeases = (leaseResult.data ?? []) as Lease[];
+      setLeases(loadedLeases);
+      const loadedProperties = (propertyResult.data ?? []) as Property[];
+      const knownPropertyIds = new Set(loadedProperties.map((item) => item.id));
+      const leaseOnlyProperties = loadedLeases.filter((item) => !knownPropertyIds.has(item.property_id)).map((item) => ({ id: item.property_id, title: 'Bien lié au bail ' + item.id.slice(0, 8), business_id: null, property_status: 'leased' }));
+      setProperties([...loadedProperties, ...leaseOnlyProperties]);
+    }
     if (requestResult.error) setError((v) => v || requestResult.error!.message); else setRequests((requestResult.data ?? []) as MaintenanceRequest[]);
     if (costResult.error) setError((v) => v || costResult.error!.message); else setCostItems((costResult.data ?? []) as CostItem[]);
     if (inspectionResult.error) setError((v) => v || inspectionResult.error!.message); else setInspections((inspectionResult.data ?? []) as Inspection[]);
