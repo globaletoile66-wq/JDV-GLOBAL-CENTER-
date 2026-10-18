@@ -138,7 +138,7 @@ export default function CheckoutPage() {
     setPlacing(true);
     setError(null);
     try {
-      if (!checkoutAttemptKey.current) checkoutAttemptKey.current = `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      if (!checkoutAttemptKey.current) { const storageKey = `jdv-marketplace-checkout-attempt:${user.id}`; checkoutAttemptKey.current = window.sessionStorage.getItem(storageKey) || `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; window.sessionStorage.setItem(storageKey, checkoutAttemptKey.current); }
       const bySeller: Record<string, CartItem[]> = {};
       cartItems.forEach((item) => {
         const sellerId = item.marketplace_listings?.seller_id;
@@ -161,6 +161,7 @@ export default function CheckoutPage() {
       }
       const cartRes = await supabase.from('marketplace_carts').select('id').eq('user_id', user.id).maybeSingle();
       if (cartRes.data) await supabase.from('marketplace_cart_items').delete().eq('cart_id', cartRes.data.id);
+      window.sessionStorage.removeItem(`jdv-marketplace-checkout-attempt:${user.id}`);
       setOrderSuccess(orderIds[0]);
       setStep('confirm');
     } catch (err: any) {
