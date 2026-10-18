@@ -116,8 +116,8 @@ export default function CrmAlertsPage() {
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/70">{alert.message}</p>
                 <p className="mt-3 text-xs text-white/35">Dernière détection : {formatDate(alert.last_triggered_at || alert.created_at)}</p>
-                {alert.action_url && alert.action_url.startsWith('/') && (
-                  <Link href={alert.action_url} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#F97316] px-3 py-2 text-sm font-medium hover:bg-[#F97316]/90">
+                {(alert.alert_type === 'client_stale' ? '/business/clients' : alert.action_url) && (alert.alert_type === 'client_stale' || (alert.action_url && alert.action_url.startsWith('/'))) && (
+                  <Link href={alert.alert_type === 'client_stale' ? '/business/clients' : (alert.action_url || '/crm/alerts')} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#F97316] px-3 py-2 text-sm font-medium hover:bg-[#F97316]/90">
                     Ouvrir <ExternalLink size={14} />
                   </Link>
                 )}
