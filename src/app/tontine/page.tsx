@@ -6,7 +6,7 @@ import { ArrowLeft, CalendarClock, CircleDollarSign, RefreshCw, Search, Users } 
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
-type Tontine = { id: string; name: string; description: string | null; contribution_amount: number; frequency: string; cycle_periods: number; member_limit: number; late_fee_amount: number; status: string; starts_on: string | null; currency_id: string };
+type Tontine = { id: string; name: string; description: string | null; contribution_amount: number; frequency: string; cycle_periods: number; member_limit: number; late_fee_amount: number; status: string; starts_on: string | null; currency_id: string; tontine_type: 'group' | 'individual' };
 type Membership = { id: string; tontine_id: string; role: string; membership_status: string; contribution_count: number };
 type Schedule = { id: string; member_id: string; due_on: string; expected_amount: number; status: string; late_fee_amount: number; penalty_status: string };
 type Currency = { id: string; code: string; symbol: string };
@@ -23,8 +23,6 @@ export default function TontinePage() {
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [joiningId, setJoiningId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -34,7 +32,7 @@ export default function TontinePage() {
       setBusy(false); return;
     }
     const [tontineResult, membershipResult, currencyResult] = await Promise.all([
-      supabase.from('tontines').select('id,name,description,contribution_amount,frequency,cycle_periods,member_limit,late_fee_amount,status,starts_on,currency_id').order('created_at', { ascending: false }).limit(100),
+      supabase.from('tontines').select('id,name,description,contribution_amount,frequency,cycle_periods,member_limit,late_fee_amount,status,starts_on,currency_id,tontine_type').order('created_at', { ascending: false }).limit(100),
       supabase.from('tontine_members').select('id,tontine_id,role,membership_status,contribution_count').eq('user_id', user.id).limit(100),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
     ]);
@@ -52,28 +50,6 @@ export default function TontinePage() {
     } else setSchedules([]);
     setBusy(false);
   }, [supabase, user]);
-
-  const requestMembership = useCallback(async (tontineId: string) => {
-    if (!user || joiningId) return;
-    setJoiningId(tontineId);
-    setError('');
-    setSuccess('');
-    const { error: insertError } = await supabase.from('tontine_members').insert({
-      tontine_id: tontineId,
-      user_id: user.id,
-      role: 'member',
-      membership_status: 'pending',
-    });
-    if (insertError) {
-      setError(insertError.code === '23505'
-        ? 'Une demande ou une adhésion existe déjà pour cette tontine.'
-        : 'Impossible d’envoyer la demande. Vérifiez que vous appartenez à l’organisation de cette tontine, puis réessayez.');
-    } else {
-      setSuccess('Votre demande d’adhésion a été envoyée. Elle reste en attente de validation par un responsable.');
-      await load();
-    }
-    setJoiningId(null);
-  }, [joiningId, load, supabase, user]);
 
   useEffect(() => { if (!loading) void load(); }, [loading, load]);
 
@@ -93,11 +69,10 @@ export default function TontinePage() {
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV TONTINE</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Vue de suivi des tontines accessibles, de votre adhésion et des échéances de cotisation. Aucun paiement n’est déclenché depuis cet écran.</p></div><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-white/10 px-4 py-3"><div className="text-xs text-white/40">Tontines visibles</div><div className="mt-1 text-2xl font-bold">{tontines.length}</div></div><div className="rounded-2xl border border-white/10 px-4 py-3"><div className="text-xs text-white/40">Mes adhésions</div><div className="mt-1 text-2xl font-bold">{memberships.length}</div></div></div></div>
           {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
-          {success && <div role="status" className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-3 text-sm text-emerald-100">{success}</div>}
           {!user ? <div className="mt-7 rounded-2xl border border-white/10 p-6 text-sm text-white/60">Connectez-vous pour consulter les tontines de votre organisation, vos adhésions et vos échéances personnelles.</div> : <>
             <div className="mt-7 grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
               <section className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5"><div className="flex items-center gap-2"><Users size={20} className="text-[#F28C28]" /><h2 className="text-lg font-bold">Tontines accessibles</h2></div><div className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 px-3 py-2.5"><Search size={16} className="text-white/40" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une tontine…" className="w-full bg-transparent text-sm outline-none placeholder:text-white/30" /></div>
-                <div className="mt-4 space-y-3">{filtered.map((tontine) => { const membership = membershipFor(tontine.id); return <article key={tontine.id} className="rounded-xl border border-white/10 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-semibold">{tontine.name}</h3><span className="rounded-full bg-[#F28C28]/10 px-3 py-1 text-xs font-semibold text-[#F28C28]">{statusLabels[tontine.status] || tontine.status}</span></div>{tontine.description && <p className="mt-2 text-sm text-white/50">{tontine.description}</p>}<div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-white/65"><span className="inline-flex items-center gap-1.5"><CircleDollarSign size={15} className="text-[#F28C28]" />{new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(tontine.contribution_amount)} {currencyCode(tontine.currency_id)} / {frequencyLabels[tontine.frequency] || tontine.frequency}</span><span>{tontine.cycle_periods} périodes</span><span>{membership ? (membership.membership_status === 'pending' ? 'Demande en attente' : membership.membership_status === 'active' ? 'Membre actif' : membership.membership_status) : 'Pas encore membre'}</span></div><div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3"><span className="text-xs text-white/40">Limite : {tontine.member_limit} membres · Frais de retard : {new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(tontine.late_fee_amount)} {currencyCode(tontine.currency_id)}</span>{!membership && tontine.status === 'active' && <button type="button" onClick={() => void requestMembership(tontine.id)} disabled={joiningId !== null} className="inline-flex items-center justify-center rounded-lg bg-[#F28C28] px-3 py-2 text-xs font-bold text-[#0B1B3D] transition hover:bg-[#ffab50] disabled:cursor-not-allowed disabled:opacity-50">{joiningId === tontine.id ? 'Envoi…' : 'Demander à rejoindre'}</button>}</div></article>; })}
+                <div className="mt-4 space-y-3">{filtered.map((tontine) => { const membership = membershipFor(tontine.id); return <article key={tontine.id} className="rounded-xl border border-white/10 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><Link href={`/tontine/${tontine.id}`} className="font-semibold hover:text-[#F28C28]">{tontine.name}</Link><p className="mt-1 text-xs text-white/45">{tontine.tontine_type === 'individual' ? 'Épargne individuelle' : 'Tontine de groupe'}</p></div><span className="rounded-full bg-[#F28C28]/10 px-3 py-1 text-xs font-semibold text-[#F28C28]">{statusLabels[tontine.status] || tontine.status}</span></div>{tontine.description && <p className="mt-2 text-sm text-white/50">{tontine.description}</p>}<div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-white/65"><span className="inline-flex items-center gap-1.5"><CircleDollarSign size={15} className="text-[#F28C28]" />{new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(tontine.contribution_amount)} {currencyCode(tontine.currency_id)} / {frequencyLabels[tontine.frequency] || tontine.frequency}</span><span>{tontine.cycle_periods} périodes</span><span>{membership ? (membership.membership_status === 'active' ? 'Membre actif' : membership.membership_status === 'pending' ? 'Adhésion en attente' : membership.membership_status === 'rejected' ? 'Adhésion refusée' : membership.membership_status === 'suspended' ? 'Adhésion suspendue' : membership.membership_status) : 'Adhésion non enregistrée'}</span></div><div className="mt-3 border-t border-white/10 pt-3 text-xs text-white/40">{tontine.tontine_type === 'individual' ? 'Mode individuel · sans rotation de groupe' : 'Limite : ' + tontine.member_limit + ' membres'} · Frais de retard : {new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(tontine.late_fee_amount)} {currencyCode(tontine.currency_id)}</div></article>; })}
                   {!busy && filtered.length === 0 && <p className="rounded-xl border border-dashed border-white/15 p-7 text-center text-sm text-white/40">Aucune tontine accessible ne correspond à la recherche.</p>}
                 </div>
               </section>
