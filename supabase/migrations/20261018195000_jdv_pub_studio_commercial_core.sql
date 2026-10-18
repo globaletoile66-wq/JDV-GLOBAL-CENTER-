@@ -164,11 +164,12 @@ returns public.pub_campaigns language plpgsql security definer set search_path =
 declare v_campaign public.pub_campaigns%rowtype; v_advertiser_status text; v_creative_count integer;
 begin
   if auth.uid() is null then raise exception 'Authentification requise.'; end if;
-  select c.*, a.status into v_campaign, v_advertiser_status
+  select c.* into v_campaign
   from public.pub_campaigns c join public.pub_advertisers a on a.id = c.advertiser_id
   where c.id = p_campaign_id and (a.user_id = auth.uid() or is_org_admin(a.organization_id) or is_super_admin())
   for update of c;
   if not found then raise exception 'Campagne introuvable ou accès refusé.'; end if;
+  select a.status into v_advertiser_status from public.pub_advertisers a where a.id = v_campaign.advertiser_id;
   if v_advertiser_status <> 'active' and not is_super_admin() then raise exception 'Le profil annonceur doit être validé avant de soumettre une campagne.'; end if;
   if v_campaign.status not in ('draft','rejected') then raise exception 'Cette campagne ne peut pas être soumise dans son état actuel.'; end if;
   if v_campaign.name is null or length(trim(v_campaign.name)) = 0 then raise exception 'Le nom de campagne est obligatoire.'; end if;
@@ -182,6 +183,9 @@ begin
   return v_campaign;
 end;
 $$;
+grant select on public.pub_pricing_rules to anon, authenticated;
+grant all on public.pub_pricing_rules to authenticated;
+grant select, insert, update on public.pub_partners to authenticated;
 revoke all on function public.pub_submit_campaign(uuid) from public, anon;
 grant execute on function public.pub_submit_campaign(uuid) to authenticated;
 revoke all on function public.pub_guard_campaign_mutation() from public, anon, authenticated;
