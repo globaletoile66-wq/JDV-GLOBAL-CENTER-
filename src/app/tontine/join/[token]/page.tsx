@@ -121,7 +121,7 @@ export default function TontineJoinPage() {
             <div><dt className="text-xs text-white/40">Nombre de périodes</dt><dd className="mt-1 font-semibold">{info.cycle_periods}</dd></div>
             <div><dt className="text-xs text-white/40">Version des règles / contrat</dt><dd className="mt-1 font-semibold">{info.rules_version}</dd></div>
           </dl>
-          {info.rules && <details className="mt-5 rounded-xl border border-white/10 p-4"><summary className="cursor-pointer text-sm font-semibold">Lire les règles de la tontine</summary><pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-5 text-white/70">{typeof info.rules === 'string' ? info.rules : JSON.stringify(info.rules, null, 2)}</pre></details>}
+          {info.rules !== null && info.rules !== undefined ? <details className="mt-5 rounded-xl border border-white/10 p-4"><summary className="cursor-pointer text-sm font-semibold">Lire les règles de la tontine</summary><pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-5 text-white/70">{typeof info.rules === 'string' ? info.rules : JSON.stringify(info.rules, null, 2)}</pre></details> : null}
           <div className="mt-5 flex items-start gap-2 rounded-xl border border-amber-200/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100/80"><AlertCircle size={18} className="mt-1 shrink-0"/> Le numéro confirmé sert uniquement à vérifier le contrôle du téléphone. L’identité devra être vérifiée avec un document approuvé avant activation.</div>
         </section>
 
