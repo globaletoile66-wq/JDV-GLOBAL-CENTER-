@@ -10,6 +10,7 @@ type TravelRequest = { id: string; travel_type: string | null; start_date: strin
 type TravelBooking = { id: string; reference: string | null; start_date: string | null; end_date: string | null; travelers_count: number; amount: number; booking_status: string; resource_type: string };
 type TravelQuote = { id: string; total_amount: number; quote_status: string; valid_until: string | null; created_at: string };
 type Itinerary = { id: string; title: string; is_shared: boolean; created_at: string };
+type FavoriteDestination = { id: string; name: string; city: string | null };
 
 const panel = 'rounded-2xl border border-white/10 bg-[#102348] p-5';
 const dateLabel = (value: string | null) => value ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(new Date(value)) : 'À définir';
@@ -22,6 +23,7 @@ export default function TravelAccountPage() {
   const [bookings, setBookings] = useState<TravelBooking[]>([]);
   const [quotes, setQuotes] = useState<TravelQuote[]>([]);
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteDestination[]>([]);
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,18 +33,22 @@ export default function TravelAccountPage() {
   const load = useCallback(async () => {
     if (!user) { setBusy(false); return; }
     setBusy(true); setError('');
-    const [r, b, q, i] = await Promise.all([
+    const [r, b, q, i, fav] = await Promise.all([
       supabase.from('travel_requests').select('id,travel_type,start_date,end_date,travelers_count,request_status,created_at').eq('requester_user_id', user.id).order('created_at', { ascending: false }).limit(50),
       supabase.from('travel_bookings').select('id,reference,start_date,end_date,travelers_count,amount,booking_status,resource_type').eq('buyer_user_id', user.id).order('created_at', { ascending: false }).limit(50),
       supabase.from('travel_quotes').select('id,total_amount,quote_status,valid_until,created_at').eq('client_user_id', user.id).order('created_at', { ascending: false }).limit(50),
       supabase.from('travel_itineraries').select('id,title,is_shared,created_at').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(50),
+      supabase.from('travel_favorites').select('target_id').eq('user_id', user.id).eq('target_type', 'destination'),
     ]);
-    const errors = [r.error, b.error, q.error, i.error].filter(Boolean);
+    const favoriteIds = (fav.data ?? []).map((row) => row.target_id as string);
+    const favoriteDestinations = favoriteIds.length ? await supabase.from('travel_destinations').select('id,name,city').in('id', favoriteIds) : { data: [], error: null };
+    const errors = [r.error, b.error, q.error, i.error, fav.error, favoriteDestinations.error].filter(Boolean);
     if (errors.length) setError(errors.map((item) => item!.message).join(' · '));
     setRequests((r.data ?? []) as TravelRequest[]);
     setBookings((b.data ?? []) as TravelBooking[]);
     setQuotes((q.data ?? []) as TravelQuote[]);
     setItineraries((i.data ?? []) as Itinerary[]);
+    setFavorites((favoriteDestinations.data ?? []) as FavoriteDestination[]);
     setBusy(false);
   }, [supabase, user]);
 
@@ -71,7 +77,7 @@ export default function TravelAccountPage() {
       <section className={panel}><div className="flex items-center gap-2"><CalendarDays className="text-[#F28C28]" size={20}/><h2 className="text-lg font-bold">Mes réservations</h2></div><div className="mt-4 space-y-3">{bookings.map((b)=><article key={b.id} className="rounded-xl border border-white/10 p-4"><div className="flex flex-wrap justify-between gap-2"><strong>{b.reference || 'Réservation JDV Travel'}</strong><span className="text-xs text-[#F28C28]">{label(b.booking_status)}</span></div><p className="mt-2 text-sm text-white/55">{label(b.resource_type)} · {b.travelers_count} voyageur(s)</p><p className="mt-1 text-xs text-white/40">{dateLabel(b.start_date)} → {dateLabel(b.end_date)}</p><p className="mt-2 font-bold">{new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(b.amount))}</p></article>)}{!busy && !bookings.length && <p className="text-sm text-white/45">Aucune réservation confirmée ou enregistrée.</p>}</div></section>
       <section className={panel}><div className="flex items-center gap-2"><FileText className="text-[#F28C28]" size={20}/><h2 className="text-lg font-bold">Mes devis</h2></div><div className="mt-4 space-y-3">{quotes.map((q)=><article key={q.id} className="rounded-xl border border-white/10 p-4"><div className="flex flex-wrap justify-between gap-2"><strong>Devis · {new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(q.total_amount))}</strong><span className="text-xs text-[#F28C28]">{label(q.quote_status)}</span></div><p className="mt-2 text-xs text-white/45">Reçu le {dateLabel(q.created_at)}{q.valid_until ? ' · Valide jusqu’au ' + dateLabel(q.valid_until) : ''}</p></article>)}{!busy && !quotes.length && <p className="text-sm text-white/45">Aucun devis reçu pour le moment. Un devis apparaîtra lorsqu’une agence autorisée répondra à votre demande.</p>}</div></section>
       <section className={panel}><div className="flex items-center gap-2"><Route className="text-[#F28C28]" size={20}/><h2 className="text-lg font-bold">Mes carnets de voyage</h2></div><form onSubmit={createItinerary} className="mt-4 flex flex-col gap-2 sm:flex-row"><input value={title} onChange={(e)=>setTitle(e.target.value)} required maxLength={120} placeholder="Ex. Découverte du Bénin en famille" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#09152f] px-3 py-3 text-sm outline-none focus:border-[#F28C28]"/><button disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F28C28] px-4 py-3 text-sm font-bold text-[#0B1B3D] disabled:opacity-50"><Send size={15}/>{saving ? 'Création…' : 'Créer le carnet'}</button></form><div className="mt-4 space-y-3">{itineraries.map((i)=><article key={i.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 p-4"><div><strong>{i.title}</strong><p className="mt-1 text-xs text-white/40">Créé le {dateLabel(i.created_at)}</p></div><span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-white/60">{i.is_shared ? 'Partagé' : 'Privé'}</span></article>)}{!busy && !itineraries.length && <p className="text-sm text-white/45">Créez un carnet pour commencer à planifier votre séjour.</p>}</div></section>
-    </div><div className="mt-5 rounded-2xl border border-white/10 p-4"><div className="flex items-center gap-2"><Heart size={18} className="text-[#F28C28]"/><p className="font-semibold">Vos favoris</p></div><p className="mt-2 text-sm text-white/50">Enregistrez les destinations qui vous intéressent depuis le catalogue, puis retrouvez-les dans vos favoris de voyage.</p><Link href="/travel#travel-catalogue" className="mt-3 inline-block text-sm font-semibold text-[#F28C28] underline">Voir les destinations</Link></div></>}
+    </div><div className="mt-5 rounded-2xl border border-white/10 p-4"><div className="flex items-center gap-2"><Heart size={18} className="text-[#F28C28]"/><p className="font-semibold">Mes destinations favorites ({favorites.length})</p></div><div className="mt-3 flex flex-wrap gap-2">{favorites.map((fav)=><Link key={fav.id} href="/travel#travel-catalogue" className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:border-[#F28C28]/50">{fav.name}{fav.city ? ' · '+fav.city : ''}</Link>)}</div>{!favorites.length && <p className="mt-2 text-sm text-white/50">Vous n’avez pas encore de destination favorite.</p>}<Link href="/travel#travel-catalogue" className="mt-3 inline-block text-sm font-semibold text-[#F28C28] underline">Découvrir les destinations</Link></div></>}
     <footer className="mt-6 rounded-2xl border border-white/10 p-4 text-xs leading-5 text-white/40">Les statuts affichés proviennent des données JDV Travel. Une demande ne constitue pas une réservation confirmée et aucun paiement n’est effectué depuis cet écran.</footer>
   </div></main>;
 }
