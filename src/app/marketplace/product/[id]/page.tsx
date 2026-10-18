@@ -106,7 +106,7 @@ export default function ProductDetailPage() {
       }
 
       // Increment view count
-      await supabase.rpc('increment_listing_views', { listing_uuid: id }).catch(() => {});
+       await Promise.resolve(supabase.rpc('increment_listing_views', { listing_uuid: id })).catch(() => {});
     } catch (err: any) {
       setError(err.message || 'Produit introuvable');
     } finally {
