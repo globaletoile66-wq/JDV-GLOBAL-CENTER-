@@ -4,7 +4,7 @@ on:
     branches: ['integration/**']
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,13 +24,24 @@ jobs:
           npm install --no-audit --no-fund > npm.log 2>&1; npm_rc=$?
           npx tsc --noEmit > tsc.log 2>&1; tsc_rc=$?
           npx next build > build.log 2>&1; build_rc=$?
+          R="$RUNNER_TEMP/rapport.md"
           {
-            echo "## Résultat : npm=$npm_rc | tsc=$tsc_rc | build=$build_rc (0 = OK)"
-            echo "## Erreurs TypeScript : $(grep -c 'error TS' tsc.log)"
-            echo "### Par dossier"; echo '```'
-            grep 'error TS' tsc.log | cut -d'(' -f1 | awk -F/ '{ if ($1=="src") print $1"/"$2"/"$3; else print $1 }' | sort | uniq -c | sort -rn | head -15
+            echo "# Rapport de build"
+            echo "Branche : $GITHUB_REF_NAME | commit : $GITHUB_SHA"
+            echo "Résultat : npm=$npm_rc | tsc=$tsc_rc | build=$build_rc (0 = OK)"
+            echo "Erreurs TypeScript : $(grep -c 'error TS' tsc.log)"
+            echo; echo "## Par dossier"; echo '```'
+            grep 'error TS' tsc.log | cut -d'(' -f1 | awk -F/ '{ if ($1=="src") print $1"/"$2"/"$3; else print $1 }' | sort | uniq -c | sort -rn | head -25
             echo '```'
-            echo "### 40 premières erreurs"; echo '```'; grep 'error TS' tsc.log | head -40; echo '```'
-            echo "### Fin du build"; echo '```'; tail -30 build.log; echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo; echo "## 150 premières erreurs"; echo '```'; grep 'error TS' tsc.log | head -150; echo '```'
+            echo; echo "## Fin de npm install"; echo '```'; tail -8 npm.log; echo '```'
+            echo; echo "## Fin du build"; echo '```'; tail -60 build.log; echo '```'
+          } > "$R"
+          cp "$R" "$GITHUB_STEP_SUMMARY"
+          git config user.name "jdv-bot"; git config user.email "jdv-bot@users.noreply.github.com"
+          git checkout -q --orphan rapport-build
+          git rm -rfq . ; git clean -fdxq
+          cp "$R" rapport.md
+          git add rapport.md; git commit -q -m "Rapport de build $GITHUB_SHA"
+          git push -f origin rapport-build
           [ $npm_rc -eq 0 ] && [ $tsc_rc -eq 0 ] && [ $build_rc -eq 0 ]
