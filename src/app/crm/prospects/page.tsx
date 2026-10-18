@@ -187,7 +187,7 @@ export default function CrmProspectsPage() {
   useEffect(() => {
     if (!user) { router.push('/auth/login'); return; }
     const urlFilter = searchParams.get('filter');
-    if (urlFilter === 'hot' || urlFilter === 'warm' || urlFilter === 'cold') setTempFilter(urlFilter);
+    if (['hot', 'warm', 'cold', 'today', 'overdue', 'stale'].includes(urlFilter || '')) setTempFilter(urlFilter || 'all');
     load();
   }, [user, load, router, searchParams]);
 
