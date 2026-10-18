@@ -14,6 +14,8 @@ type AssessmentQuestion = { id: string; assessment_id: string; question_order: n
 type AssessmentSubmission = { id: string; assessment_id: string; student_user_id: string; attempt_number: number; answers: Record<string, string>; submission_status: 'submitted' | 'graded'; submitted_at: string };
 type AssessmentResult = { assessment_id: string; student_user_id: string; score: number; graded_at: string | null };
 type GradeResponse = { graded: boolean; score?: number; max_score?: number; already_graded?: boolean; reason?: string };
+type Certificate = { certificate_code: string; issued_at: string; certificate_status: 'active' | 'revoked'; average_score_percent: number | null };
+type CertificateIssueResponse = { issued: boolean; certificate_code?: string; issued_at?: string; reason?: string; completed_lessons?: number; total_lessons?: number; unpassed_assessments?: number; total_assessments?: number; required_percent?: number };
 type Enrollment = { enrollment_status: string };
 type LessonProgress = { lesson_id: string; progress_status: 'in_progress' | 'completed'; last_position_seconds: number; completed_at: string | null };
 
@@ -33,6 +35,7 @@ export default function AcademyCoursePage() {
   const [assessmentQuestions, setAssessmentQuestions] = useState<AssessmentQuestion[]>([]);
   const [assessmentSubmissions, setAssessmentSubmissions] = useState<AssessmentSubmission[]>([]);
   const [assessmentResults, setAssessmentResults] = useState<AssessmentResult[]>([]);
+  const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [studentAnswers, setStudentAnswers] = useState<Record<string, string>>({});
   const [questionFormOpenFor, setQuestionFormOpenFor] = useState<string | null>(null);
   const [questionForm, setQuestionForm] = useState({ prompt: '', question_type: 'short_answer' as AssessmentQuestion['question_type'], options: '', points: '1', correct_answer: '' });
@@ -51,7 +54,7 @@ export default function AcademyCoursePage() {
     const { data: courseData, error: courseError } = await supabase.from('academy_courses').select('id,program_id,title,description,starts_at,ends_at,status').eq('id', courseId).maybeSingle();
     if (courseError) setError(courseError.message);
     if (!courseData) {
-      setCourse(null); setLessons([]); setLessonProgress([]); setAssessments([]); setBusy(false);
+      setCourse(null); setLessons([]); setLessonProgress([]); setAssessments([]); setCertificate(null); setBusy(false);
       if (!courseError) setError('Ce cours est introuvable ou ton compte ne dispose pas des droits de consultation.');
       return;
     }
@@ -101,6 +104,17 @@ export default function AcademyCoursePage() {
     } else {
       setEnrollment(null);
       setLessonProgress([]);
+      setCertificate(null);
+    }
+    if (user) {
+      const { data: certificateData, error: certificateError } = await supabase
+        .from('academy_certificates')
+        .select('certificate_code,issued_at,certificate_status,average_score_percent')
+        .eq('course_id', courseId)
+        .eq('student_user_id', user.id)
+        .maybeSingle();
+      setCertificate((certificateData || null) as Certificate | null);
+      if (certificateError) setError((current) => current || certificateError.message);
     }
     setBusy(false);
   }, [courseId, supabase, user]);
@@ -249,6 +263,34 @@ export default function AcademyCoursePage() {
     setSaving(false);
   };
 
+  const issueCertificate = async () => {
+    if (!user) { setError('Connecte-toi pour demander ton attestation.'); return; }
+    setSaving(true); setError(''); setNotice('');
+    const { data, error: issueError } = await supabase.rpc('academy_issue_certificate', { p_course_id: courseId });
+    if (issueError) {
+      setError(issueError.message);
+      setSaving(false);
+      return;
+    }
+    const result = (data || null) as CertificateIssueResponse | null;
+    if (result?.issued && result.certificate_code) {
+      setNotice('Ton attestation de complétion est prête et vérifiable en ligne.');
+      await load();
+    } else {
+      const message = result?.reason === 'lessons_incomplete'
+        ? `Termine les ${result.total_lessons ?? 'toutes les'} leçons avant de demander l’attestation.`
+        : result?.reason === 'assessments_not_passed'
+          ? `Toutes les évaluations doivent être validées avec au moins ${result.required_percent ?? 70} %.`
+          : result?.reason === 'course_has_no_lessons'
+            ? 'Ce cours ne contient pas encore de leçons ; l’attestation ne peut pas être délivrée.'
+            : result?.reason === 'certificate_revoked'
+              ? 'Cette attestation a été révoquée. Contacte le responsable pédagogique.'
+              : 'Les conditions de délivrance ne sont pas encore remplies.';
+      setNotice(message);
+    }
+    setSaving(false);
+  };
+
   const saveAssessment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!course || !assessmentForm.title.trim()) return;
@@ -321,6 +363,19 @@ export default function AcademyCoursePage() {
             </section>
           </div>
         </>}
+        <section className="mt-6 rounded-3xl border border-white/10 bg-white/[.04] p-5 sm:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold">Attestation de complétion</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">L’attestation est délivrée par Supabase uniquement lorsque toutes les leçons sont terminées et que chaque évaluation est validée. Les évaluations ouvertes restent en correction manuelle.</p>
+              {certificate && certificate.certificate_status === 'active' && <p className="mt-3 text-sm text-emerald-100">Attestation délivrée le {new Date(certificate.issued_at).toLocaleDateString('fr-FR')} · code {certificate.certificate_code}</p>}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {certificate?.certificate_status === 'active' && <Link href={`/academy/certificates/${certificate.certificate_code}`} className={actionClass}>Vérifier l’attestation</Link>}
+              {user && enrollment && ['confirmed', 'completed'].includes(enrollment.enrollment_status) && <button type="button" disabled={saving} onClick={() => void issueCertificate()} className={actionClass}>{saving ? 'Vérification…' : certificate?.certificate_status === 'active' ? 'Actualiser' : 'Demander mon attestation'}</button>}
+            </div>
+          </div>
+        </section>
         <p className="px-2 py-5 text-xs text-white/30">Les règles RLS de Supabase déterminent les contenus consultables et les opérations autorisées.</p>
       </div>
     </main>
