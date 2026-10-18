@@ -11,7 +11,7 @@ Ils doivent être exécutés dans un environnement de test isolé avec des utili
    - crée un enregistrement `tontine_members` en `pending`;
    - `joined_at`, `identity_confirmed_at` et `identity_confirmation_method` restent NULL;
    - enregistre la date/version d'acceptation des règles;
-   - écrit dans `audit_logs` `identity_verified=false`.
+   - écrit dans `audit_logs` `identity_verified_by_join_link=false`.
 
 2. **Règles non acceptées**
    - la fonction échoue avec `RULES_ACCEPTANCE_REQUIRED`;
