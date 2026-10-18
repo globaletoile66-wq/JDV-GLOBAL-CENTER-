@@ -22,7 +22,7 @@ BEGIN
   END IF;
 
   IF v_email = '' OR char_length(v_email) > 254
-     OR v_email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$' THEN
+     OR v_email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+[.][A-Z]{2,}$' THEN
     RAISE EXCEPTION 'INVALID_EMAIL';
   END IF;
 
