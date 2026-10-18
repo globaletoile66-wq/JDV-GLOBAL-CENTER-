@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import AcademyNavigation from '@/components/academy/AcademyNavigation';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Clock3, Plus, RefreshCw, ClipboardList, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -377,6 +378,7 @@ export default function AcademyCoursePage() {
   return (
     <main className="min-h-screen bg-[#0B1B3D] px-4 py-5 text-white sm:px-8 sm:py-8">
       <div className="mx-auto max-w-5xl">
+        <AcademyNavigation />
         <header className="flex flex-wrap items-center justify-between gap-3"><Link href="/academy" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> JDV Academy</Link><button onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm"><RefreshCw size={15}/> Actualiser</button></header>
         {!course ? <section className="mt-8 rounded-3xl border border-white/10 p-8"><AlertCircle className="text-red-300"/><h1 className="mt-3 text-2xl font-bold">Cours inaccessible</h1><p className="mt-2 text-white/60">{error}</p></section> : <>
           <section className="mt-7 rounded-3xl border border-white/10 bg-gradient-to-br from-[#122b57] to-[#0b1b3d] p-6 sm:p-8">
