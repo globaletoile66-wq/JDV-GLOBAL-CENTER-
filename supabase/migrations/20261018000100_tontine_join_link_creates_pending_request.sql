@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION public.tontine_join_by_link(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'extensions', 'pg_catalog'
+SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_user uuid := auth.uid();
@@ -18,7 +18,6 @@ DECLARE
   v_phone text;
   v_phone_confirmed timestamptz;
   v_existing boolean;
-  v_existing_status text;
   v_member_count integer;
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED'; END IF;
@@ -62,22 +61,6 @@ BEGIN
     SELECT 1 FROM public.tontine_members
     WHERE tontine_id = v_tontine.id AND user_id = v_user
   ) INTO v_existing;
-
-  IF v_existing THEN
-    SELECT membership_status INTO v_existing_status
-    FROM public.tontine_members
-    WHERE tontine_id = v_tontine.id AND user_id = v_user
-    FOR UPDATE;
-
-    IF v_existing_status = 'active' THEN
-      RETURN (SELECT id FROM public.tontine_members
-              WHERE tontine_id = v_tontine.id AND user_id = v_user);
-    END IF;
-
-    IF v_existing_status IN ('suspended', 'rejected', 'left') THEN
-      RAISE EXCEPTION 'MEMBERSHIP_NOT_ELIGIBLE';
-    END IF;
-  END IF;
 
   SELECT count(*) INTO v_member_count
   FROM public.tontine_members
