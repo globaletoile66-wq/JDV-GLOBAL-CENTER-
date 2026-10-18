@@ -46,8 +46,10 @@ export default function AcademyDemoPage() {
     const checked = await Promise.all(sectors.map(async (sector): Promise<CheckResult> => {
       const routeCheck = await fetch(sector.route, { method: 'GET', cache: 'no-store', redirect: 'follow' })
         .then((response) => {
-          const finalPath = new URL(response.url, window.location.origin).pathname.replace(/\\/$/, '') || '/';
-          const expectedPath = sector.route.replace(/\\/$/, '') || '/';
+          const rawFinalPath = new URL(response.url, window.location.origin).pathname;
+          const finalPath = rawFinalPath.length > 1 && rawFinalPath.endsWith('/') ? rawFinalPath.slice(0, -1) : rawFinalPath;
+          const rawExpectedPath = sector.route;
+          const expectedPath = rawExpectedPath.length > 1 && rawExpectedPath.endsWith('/') ? rawExpectedPath.slice(0, -1) : rawExpectedPath;
           const redirectedAway = response.redirected && finalPath !== expectedPath;
           return {
             ok: response.status >= 200 && response.status < 400 && !redirectedAway,
