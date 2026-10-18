@@ -369,13 +369,21 @@ BEGIN
   ORDER BY kp.updated_at DESC LIMIT 1;
   IF v_kyc_profile IS NULL THEN RAISE EXCEPTION 'KYC_PROFILE_NOT_APPROVED'; END IF;
 
-  SELECT EXISTS (
-    SELECT 1 FROM public.kyc_documents kd
-    WHERE kd.kyc_profile_id = v_kyc_profile
-      AND kd.document_status = 'approved'
-      AND lower(kd.document_type) IN ('identity_document', 'national_id', 'passport', 'id_card', 'identity')
-  ) INTO v_has_approved_identity;
-  IF NOT v_has_approved_identity THEN RAISE EXCEPTION 'APPROVED_IDENTITY_DOCUMENT_REQUIRED'; END IF;
+  SELECT
+    EXISTS (
+      SELECT 1 FROM public.kyc_documents kd
+      WHERE kd.kyc_profile_id = v_kyc_profile
+        AND kd.document_type = 'id_front'
+        AND kd.document_status = 'approved'
+    )
+    AND EXISTS (
+      SELECT 1 FROM public.kyc_documents kd
+      WHERE kd.kyc_profile_id = v_kyc_profile
+        AND kd.document_type = 'selfie'
+        AND kd.document_status = 'approved'
+    )
+  INTO v_has_approved_identity;
+  IF NOT v_has_approved_identity THEN RAISE EXCEPTION 'APPROVED_ID_FRONT_AND_SELFIE_REQUIRED'; END IF;
 
   UPDATE public.tontine_members
   SET membership_status = 'active',
