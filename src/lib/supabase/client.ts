@@ -1,6 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 
-let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+let browserClient: ReturnType<typeof createBrowserClient<any>> | null = null;
 
 export function createClient() {
   if (browserClient) return browserClient;
