@@ -119,6 +119,7 @@ export default function TontineDetailPage() {
   const isOwnerActive = overview?.me.is_member === true;
   const canManage = (isOwnerActive && overview?.me.is_president === true) || isSuperAdmin;
   const canOpen = canManage && tontine.status === 'draft' && Boolean(overview?.cycle) && (tontine.tontine_type === 'individual' ? activeMembers === 1 : activeMembers >= 2);
+  const canComplete = canManage && ['open','paused'].includes(tontine.status) && (overview?.pool.balance ?? 1) === 0 && (overview?.schedules ?? []).every((schedule) => ['paid','completed'].includes(schedule.status)) && (overview?.rotations ?? []).every((rotation) => ['paid','cancelled'].includes(rotation.status)) && (tontine.tontine_type !== 'individual' || (overview?.payouts.length ?? 0) > 0);
   const canCreateCycle = canManage && overview?.cycles_total === 0 && (tontine.tontine_type === 'individual' ? activeMembers === 1 : activeMembers >= 2);
   const ownSchedules = overview?.my_schedules ?? [];
 
@@ -142,6 +143,7 @@ export default function TontineDetailPage() {
           {canOpen && <button onClick={() => void setStatus('open')} disabled={working !== ''} className="mt-4 w-full rounded-xl bg-[#F28C28] px-4 py-3 font-bold text-[#0B1B3D] disabled:opacity-50">{working === 'status' ? 'Démarrage…' : 'Démarrer la tontine'}</button>}
           {tontine.status === 'open' && <button onClick={() => void setStatus('paused')} disabled={working !== ''} className="mt-4 w-full rounded-xl border border-white/15 px-4 py-3 font-semibold disabled:opacity-50">Mettre en pause</button>}
           {tontine.status === 'paused' && <button onClick={() => void setStatus('open')} disabled={working !== ''} className="mt-4 w-full rounded-xl bg-[#F28C28] px-4 py-3 font-bold text-[#0B1B3D] disabled:opacity-50">Reprendre</button>}
+          {canComplete && <button onClick={() => void setStatus('completed')} disabled={working !== ''} className="mt-4 w-full rounded-xl border border-emerald-300/20 px-4 py-3 font-semibold text-emerald-200 disabled:opacity-50">Terminer après règlement complet</button>}
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
           <h2 className="flex items-center gap-2 text-lg font-bold"><Users size={19} className="text-[#F28C28]"/> Membres et validation</h2>
