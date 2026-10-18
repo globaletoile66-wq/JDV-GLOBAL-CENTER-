@@ -52,8 +52,8 @@ BEGIN
   IF coalesce(v_phone, '') = '' THEN RAISE EXCEPTION 'PHONE_REQUIRED_FOR_TONTINE_IDENTITY'; END IF;
   IF v_phone_confirmed IS NULL THEN RAISE EXCEPTION 'PHONE_IDENTITY_NOT_CONFIRMED'; END IF;
   IF v_link.invited_phone IS NOT NULL
-     AND regexp_replace(v_link.invited_phone, '\\D', '', 'g')
-         IS DISTINCT FROM regexp_replace(v_phone, '\\D', '', 'g') THEN
+     AND regexp_replace(v_link.invited_phone, '\D', '', 'g')
+         IS DISTINCT FROM regexp_replace(v_phone, '\D', '', 'g') THEN
     RAISE EXCEPTION 'INVITED_PHONE_MISMATCH';
   END IF;
 
