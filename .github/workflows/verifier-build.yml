@@ -1,7 +1,7 @@
 name: Verifier le build
 on:
   push:
-    branches: ['integration/**']
+    branches: ['integration/**', 'supabase-sync-2026-09-24']
   workflow_dispatch:
 permissions:
   contents: write
