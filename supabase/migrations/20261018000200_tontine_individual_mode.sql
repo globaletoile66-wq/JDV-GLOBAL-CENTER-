@@ -98,6 +98,8 @@ BEGIN
   VALUES (v_tontine, v_user, 'owner', 'pending', NULL, now(), '1.0', now(), '1.0', NULL, NULL)
   RETURNING id INTO v_member;
 
+  UPDATE public.tontines SET president_member_id = v_member WHERE id = v_tontine;
+
   INSERT INTO public.audit_logs (
     user_id, organization_id, module_code, action, entity_type, entity_id, new_data
   )
@@ -403,3 +405,340 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.tontine_approve_member(uuid, boolean) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.tontine_approve_member(uuid, boolean) TO authenticated;
+
+
+-- The creator is a pending owner until identity and contract evidence are reviewed.
+CREATE OR REPLACE FUNCTION public.tontine_create(
+  p_organization_id uuid, p_country_id uuid, p_currency_id uuid, p_name text,
+  p_description text, p_contribution_amount numeric, p_frequency text,
+  p_cycle_periods integer, p_member_limit integer, p_starts_on date,
+  p_late_fee_amount numeric DEFAULT 0, p_rules jsonb DEFAULT '{}'::jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_catalog'
+AS $function$
+DECLARE v_id uuid; v_member uuid; v_rules jsonb := coalesce(p_rules, '{}'::jsonb);
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED'; END IF;
+  IF NOT public.is_org_admin(p_organization_id) AND NOT public.is_super_admin() THEN RAISE EXCEPTION 'NOT_AUTHORIZED'; END IF;
+  IF coalesce(length(trim(p_name)), 0) < 2 THEN RAISE EXCEPTION 'INVALID_TONTINE_NAME'; END IF;
+  IF p_contribution_amount IS NULL OR p_contribution_amount <= 0 THEN RAISE EXCEPTION 'INVALID_CONTRIBUTION_AMOUNT'; END IF;
+  IF p_member_limit < 2 THEN RAISE EXCEPTION 'INVALID_MEMBER_LIMIT'; END IF;
+
+  INSERT INTO public.tontines(
+    organization_id,country_id,currency_id,name,description,contribution_amount,
+    frequency,cycle_periods,member_limit,starts_on,late_fee_amount,rules,created_by,tontine_type
+  )
+  VALUES(
+    p_organization_id,p_country_id,p_currency_id,trim(p_name),p_description,p_contribution_amount,
+    p_frequency,p_cycle_periods,p_member_limit,p_starts_on,coalesce(p_late_fee_amount,0),v_rules,auth.uid(),'group'
+  ) RETURNING id INTO v_id;
+
+  INSERT INTO public.tontine_members(
+    tontine_id,user_id,role,membership_status,joined_at,approved_by,approved_at,
+    rules_accepted_at,rules_version,contract_accepted_at,contract_version,
+    identity_confirmed_at,identity_confirmation_method
+  )
+  VALUES(
+    v_id,auth.uid(),'owner','pending',NULL,NULL,NULL,
+    CASE WHEN coalesce((v_rules->>'rules_accepted')::boolean,false) THEN now() ELSE NULL END,
+    coalesce(v_rules->>'version','1.0'),
+    CASE WHEN coalesce((v_rules->>'contract_accepted')::boolean,false) THEN now() ELSE NULL END,
+    coalesce(v_rules->>'version','1.0'),NULL,NULL
+  ) RETURNING id INTO v_member;
+
+  UPDATE public.tontines SET president_member_id=v_member WHERE id=v_id;
+  INSERT INTO public.audit_logs(user_id,organization_id,module_code,action,entity_type,entity_id,new_data)
+  VALUES(auth.uid(),p_organization_id,'jdv_tontine','create','tontine',v_id::text,
+    jsonb_build_object('name',trim(p_name),'status','draft','membership_status','pending','identity_verified',false));
+  RETURN v_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.tontine_create_group(
+  p_organization_id uuid, p_country_id uuid, p_currency_id uuid, p_name text,
+  p_description text, p_contribution_amount numeric, p_frequency text,
+  p_cycle_periods integer, p_member_limit integer, p_starts_on date,
+  p_late_fee_amount numeric DEFAULT 0, p_rules jsonb DEFAULT '{}'::jsonb,
+  p_link_expires_at timestamptz DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'extensions', 'pg_catalog'
+AS $function$
+DECLARE
+  v_tontine uuid; v_owner_member uuid; v_token text;
+  v_rules jsonb := coalesce(p_rules, '{}'::jsonb);
+  v_version text := coalesce(p_rules->>'version','1.0');
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED'; END IF;
+  IF NOT coalesce(public.is_org_member(p_organization_id),false) AND NOT coalesce(public.is_super_admin(),false) THEN
+    RAISE EXCEPTION 'ORGANIZATION_MEMBERSHIP_REQUIRED';
+  END IF;
+  IF NOT coalesce((v_rules->>'rules_accepted')::boolean,false) THEN RAISE EXCEPTION 'RULES_ACCEPTANCE_REQUIRED'; END IF;
+  IF NOT coalesce((v_rules->>'contract_accepted')::boolean,false) THEN RAISE EXCEPTION 'CONTRACT_ACCEPTANCE_REQUIRED'; END IF;
+  IF coalesce(length(trim(p_name)),0)<2 THEN RAISE EXCEPTION 'INVALID_TONTINE_NAME'; END IF;
+  IF p_contribution_amount IS NULL OR p_contribution_amount<=0 THEN RAISE EXCEPTION 'INVALID_CONTRIBUTION_AMOUNT'; END IF;
+  IF p_member_limit<2 THEN RAISE EXCEPTION 'INVALID_MEMBER_LIMIT'; END IF;
+  IF p_late_fee_amount<0 THEN RAISE EXCEPTION 'INVALID_LATE_FEE'; END IF;
+  IF p_link_expires_at IS NOT NULL AND p_link_expires_at<=now() THEN RAISE EXCEPTION 'INVALID_EXPIRY'; END IF;
+
+  INSERT INTO public.tontines(
+    organization_id,country_id,currency_id,name,description,contribution_amount,
+    frequency,cycle_periods,member_limit,starts_on,late_fee_amount,rules,created_by,tontine_type,status
+  )
+  VALUES(
+    p_organization_id,p_country_id,p_currency_id,trim(p_name),p_description,p_contribution_amount,
+    p_frequency,p_cycle_periods,p_member_limit,p_starts_on,p_late_fee_amount,
+    v_rules || jsonb_build_object('rules_version',v_version,'contract_version',v_version),
+    auth.uid(),'group','draft'
+  ) RETURNING id INTO v_tontine;
+
+  INSERT INTO public.tontine_members(
+    tontine_id,user_id,role,membership_status,joined_at,approved_by,approved_at,
+    rules_accepted_at,rules_version,contract_accepted_at,contract_version,
+    identity_confirmed_at,identity_confirmation_method
+  )
+  VALUES(
+    v_tontine,auth.uid(),'owner','pending',NULL,NULL,NULL,now(),v_version,now(),v_version,NULL,NULL
+  ) RETURNING id INTO v_owner_member;
+
+  UPDATE public.tontines SET president_member_id=v_owner_member WHERE id=v_tontine;
+  v_token := encode(gen_random_bytes(32),'hex');
+  INSERT INTO public.tontine_join_links(tontine_id,token_hash,status,expires_at,created_by,rules_version)
+  VALUES(v_tontine,encode(digest(v_token,'sha256'),'hex'),'active',p_link_expires_at,auth.uid(),v_version);
+
+  INSERT INTO public.audit_logs(user_id,organization_id,module_code,action,entity_type,entity_id,new_data)
+  VALUES(auth.uid(),p_organization_id,'jdv_tontine','create_group','tontine',v_tontine::text,
+    jsonb_build_object('president_member_id',v_owner_member,'membership_status','pending',
+      'identity_verified',false,'rules_version',v_version,'contract_version',v_version,
+      'payout_control','system_only'));
+
+  RETURN jsonb_build_object('tontine_id',v_tontine,'president_member_id',v_owner_member,
+    'join_token',v_token,'join_path','/tontine/join/'||v_token,
+    'rules_version',v_version,'expires_at',p_link_expires_at,'membership_status','pending');
+END;
+$function$;
+
+-- No tontine can be opened by directly changing the row before the owner has been reviewed.
+CREATE OR REPLACE FUNCTION public.tontine_guard_status_activation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_catalog'
+AS $function$
+DECLARE m public.tontine_members;
+BEGIN
+  IF NEW.status IN ('open','active') AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+    IF NEW.president_member_id IS NULL THEN RAISE EXCEPTION 'PRESIDENT_MEMBERSHIP_REQUIRED'; END IF;
+    SELECT * INTO m FROM public.tontine_members WHERE id=NEW.president_member_id AND tontine_id=NEW.id;
+    IF NOT FOUND OR m.membership_status <> 'active' THEN RAISE EXCEPTION 'PRESIDENT_MEMBERSHIP_NOT_ACTIVE'; END IF;
+    IF m.identity_confirmed_at IS NULL OR m.contract_accepted_at IS NULL
+       OR m.contract_version IS DISTINCT FROM m.rules_version THEN
+      RAISE EXCEPTION 'PRESIDENT_IDENTITY_AND_CONTRACT_VALIDATION_REQUIRED';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS tontines_guard_status_activation ON public.tontines;
+CREATE TRIGGER tontines_guard_status_activation
+BEFORE INSERT OR UPDATE OF status ON public.tontines
+FOR EACH ROW EXECUTE FUNCTION public.tontine_guard_status_activation();
+
+-- Personal tontines use the existing schedules, contribution ledger, pool and wallet payout
+-- worker. Their one maturity rotation represents the owner, not a shared group rotation.
+CREATE OR REPLACE FUNCTION public.tontine_open_cycle(
+  p_tontine_id uuid, p_starts_on date, p_ends_on date
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_catalog'
+AS $function$
+DECLARE
+  t public.tontines; v_cycle uuid; v_president uuid; v_num integer;
+  v_members integer; v_amount numeric; v_periods integer; v_frequency text;
+  v_owner public.tontine_members; v_phone text; v_expected numeric;
+BEGIN
+  SELECT * INTO t FROM public.tontines WHERE id=p_tontine_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'TONTINE_NOT_FOUND'; END IF;
+  SELECT * INTO v_owner FROM public.tontine_members WHERE id=t.president_member_id AND tontine_id=t.id;
+  IF NOT FOUND OR v_owner.membership_status <> 'active' THEN RAISE EXCEPTION 'PRESIDENT_MEMBERSHIP_NOT_ACTIVE'; END IF;
+  IF NOT (coalesce(public.is_super_admin(),false) OR auth.uid()=v_owner.user_id) THEN RAISE EXCEPTION 'PRESIDENT_ONLY'; END IF;
+  IF p_starts_on IS NULL OR p_ends_on IS NULL OR p_ends_on<p_starts_on THEN RAISE EXCEPTION 'INVALID_CYCLE_DATES'; END IF;
+  IF t.status NOT IN ('draft','open','active','paused') THEN RAISE EXCEPTION 'TONTINE_NOT_CYCLABLE'; END IF;
+  IF EXISTS (SELECT 1 FROM public.tontine_cycles WHERE tontine_id=t.id AND status IN ('planned','open','active')) THEN
+    RAISE EXCEPTION 'OPEN_CYCLE_ALREADY_EXISTS';
+  END IF;
+
+  SELECT count(*) INTO v_members FROM public.tontine_members WHERE tontine_id=t.id AND membership_status='active';
+  IF t.tontine_type='individual' THEN
+    IF v_members <> 1 OR v_owner.role <> 'owner' THEN RAISE EXCEPTION 'INDIVIDUAL_REQUIRES_ONE_ACTIVE_OWNER'; END IF;
+  ELSE
+    IF v_members < 2 THEN RAISE EXCEPTION 'MINIMUM_MEMBERS_REQUIRED'; END IF;
+  END IF;
+
+  v_amount:=t.contribution_amount;
+  v_periods:=t.cycle_periods;
+  v_frequency:=t.frequency;
+  v_expected:=v_amount*v_periods*v_members;
+  SELECT coalesce(max(cycle_number),0)+1 INTO v_num FROM public.tontine_cycles WHERE tontine_id=t.id;
+
+  INSERT INTO public.tontine_cycles(tontine_id,cycle_number,starts_on,ends_on,status,total_expected,total_collected)
+  VALUES(t.id,v_num,p_starts_on,p_ends_on,'open',v_expected,0) RETURNING id INTO v_cycle;
+
+  INSERT INTO public.tontine_contribution_schedules(cycle_id,member_id,period_number,due_on,expected_amount,late_fee_amount)
+  SELECT v_cycle,tm.id,g,
+    p_starts_on + CASE
+      WHEN v_frequency='daily' THEN g-1
+      WHEN v_frequency='weekly' THEN 7*(g-1)
+      WHEN v_frequency='biweekly' THEN 14*(g-1)
+      WHEN v_frequency='quarterly' THEN 90*(g-1)
+      ELSE 30*(g-1)
+    END,
+    v_amount,t.late_fee_amount
+  FROM public.tontine_members tm CROSS JOIN generate_series(1,v_periods) g
+  WHERE tm.tontine_id=t.id AND tm.membership_status='active';
+
+  IF t.tontine_type='individual' THEN
+    SELECT p.phone INTO v_phone FROM public.profiles p WHERE p.id=v_owner.user_id;
+    INSERT INTO public.tontine_rotations(
+      cycle_id,member_id,rotation_order,planned_payout_on,expected_amount,beneficiary_phone,status
+    ) VALUES(v_cycle,v_owner.id,1,p_ends_on,v_expected,v_phone,'planned');
+  ELSE
+    INSERT INTO public.tontine_rotations(cycle_id,member_id,rotation_order,planned_payout_on,expected_amount,beneficiary_phone,status)
+    SELECT v_cycle,tm.id,
+      row_number() OVER (ORDER BY tm.joined_at,tm.created_at,tm.id)::int,
+      p_starts_on + CASE
+        WHEN v_frequency='daily' THEN row_number() OVER (ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1
+        WHEN v_frequency='weekly' THEN 7*(row_number() OVER (ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1)
+        WHEN v_frequency='biweekly' THEN 14*(row_number() OVER (ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1)
+        WHEN v_frequency='quarterly' THEN 90*(row_number() OVER (ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1)
+        ELSE 30*(row_number() OVER (ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1)
+      END,
+      v_amount*v_members,p.phone,'planned'
+    FROM public.tontine_members tm JOIN public.profiles p ON p.id=tm.user_id
+    WHERE tm.tontine_id=t.id AND tm.membership_status='active';
+  END IF;
+
+  INSERT INTO public.audit_logs(user_id,organization_id,module_code,action,entity_type,entity_id,new_data)
+  VALUES(auth.uid(),t.organization_id,'jdv_tontine','open_cycle','tontine_cycle',v_cycle::text,
+    jsonb_build_object('cycle_number',v_num,'tontine_type',t.tontine_type,'active_members',v_members,'total_expected',v_expected));
+  RETURN v_cycle;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.tontine_set_status(p_tontine_id uuid, p_status text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_catalog'
+AS $function$
+DECLARE t public.tontines; v_pres uuid; v_members integer; v_pool numeric; v_ok boolean; m record; v_msg text;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'AUTHENTICATION_REQUIRED'; END IF;
+  IF p_status NOT IN ('open','paused','completed','cancelled') THEN RAISE EXCEPTION 'INVALID_STATUS'; END IF;
+  SELECT * INTO t FROM public.tontines WHERE id=p_tontine_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'TONTINE_NOT_FOUND'; END IF;
+  SELECT user_id INTO v_pres FROM public.tontine_members WHERE id=t.president_member_id;
+  IF NOT (coalesce(v_pres=auth.uid(),false) OR coalesce(public.is_super_admin(),false)) THEN RAISE EXCEPTION 'PRESIDENT_ONLY'; END IF;
+
+  v_ok := CASE
+    WHEN t.status='draft' AND p_status IN ('open','cancelled') THEN true
+    WHEN t.status='open' AND p_status IN ('paused','completed','cancelled') THEN true
+    WHEN t.status='paused' AND p_status IN ('open','completed','cancelled') THEN true
+    ELSE false END;
+  IF NOT v_ok THEN RAISE EXCEPTION 'INVALID_TRANSITION'; END IF;
+
+  IF p_status='open' AND t.status='draft' THEN
+    SELECT count(*) INTO v_members FROM public.tontine_members WHERE tontine_id=t.id AND membership_status='active';
+    IF t.tontine_type='individual' THEN
+      IF v_members <> 1 THEN RAISE EXCEPTION 'INDIVIDUAL_REQUIRES_ONE_ACTIVE_OWNER'; END IF;
+    ELSE
+      IF v_members < 2 THEN RAISE EXCEPTION 'AT_LEAST_TWO_MEMBERS_REQUIRED'; END IF;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.tontine_cycles WHERE tontine_id=t.id AND status IN ('planned','open','active')) THEN
+      RAISE EXCEPTION 'OPEN_A_CYCLE_FIRST';
+    END IF;
+  END IF;
+
+  IF p_status IN ('completed','cancelled') THEN
+    v_pool:=public.tontine_pool_balance(t.id);
+    IF v_pool<>0 THEN RAISE EXCEPTION 'POOL_NOT_EMPTY'; END IF;
+  END IF;
+
+  UPDATE public.tontines SET status=p_status,updated_at=now() WHERE id=t.id;
+  v_msg:=CASE p_status
+    WHEN 'open' THEN 'La tontine « '||t.name||' » est démarrée : les cotisations peuvent être payées.'
+    WHEN 'paused' THEN 'La tontine « '||t.name||' » est mise en pause.'
+    WHEN 'completed' THEN 'La tontine « '||t.name||' » est terminée.'
+    ELSE 'La tontine « '||t.name||' » est annulée.' END;
+
+  FOR m IN SELECT user_id FROM public.tontine_members WHERE tontine_id=t.id AND membership_status='active' AND user_id<>auth.uid() LOOP
+    INSERT INTO public.notifications(user_id,notification_type,title,message,action_url)
+    VALUES(m.user_id,'info','Tontine : '||t.name,v_msg,'/tontine/'||t.id);
+  END LOOP;
+
+  INSERT INTO public.audit_logs(user_id,organization_id,module_code,action,entity_type,entity_id,new_data)
+  VALUES(auth.uid(),t.organization_id,'jdv_tontine','set_status','tontine',t.id::text,jsonb_build_object('from',t.status,'to',p_status,'tontine_type',t.tontine_type));
+  RETURN jsonb_build_object('status',p_status);
+END;
+$function$;
+
+-- Individual savings plans do not auto-open another cycle after their maturity cycle.
+CREATE OR REPLACE FUNCTION public.tontine_open_next_cycle_system(p_tontine_id uuid, p_previous_cycle_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_catalog'
+AS $function$
+DECLARE v_t public.tontines; v_prev public.tontine_cycles;
+BEGIN
+  IF current_user <> 'service_role' THEN RAISE EXCEPTION 'SYSTEM_ONLY_TONTINE_ENGINE'; END IF;
+  SELECT * INTO v_t FROM public.tontines WHERE id=p_tontine_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'TONTINE_NOT_FOUND'; END IF;
+  SELECT * INTO v_prev FROM public.tontine_cycles WHERE id=p_previous_cycle_id AND tontine_id=p_tontine_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'PREVIOUS_CYCLE_NOT_FOUND'; END IF;
+  IF v_prev.status <> 'closed' THEN RAISE EXCEPTION 'PREVIOUS_CYCLE_NOT_CLOSED'; END IF;
+  IF v_t.tontine_type='individual' THEN RETURN NULL; END IF;
+  RAISE EXCEPTION 'GROUP_NEXT_CYCLE_REQUIRES_EXISTING_SCHEDULED_ENGINE';
+END;
+$function$;
+
+-- Invitation previews and admission are available only after a group is opened.
+CREATE OR REPLACE FUNCTION public.tontine_invite_info(p_join_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'extensions', 'auth', 'pg_catalog'
+AS $function$
+DECLARE l public.tontine_join_links; t public.tontines; v_pres uuid; v_code text; v_phone_ok boolean;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'AUTHENTICATION_REQUIRED'; END IF;
+  SELECT * INTO l FROM public.tontine_join_links
+  WHERE token_hash=encode(digest(btrim(coalesce(p_join_token,'')),'sha256'),'hex')
+    AND status='active' AND (expires_at IS NULL OR expires_at>now());
+  IF NOT FOUND THEN RAISE EXCEPTION 'INVALID_OR_EXPIRED_JOIN_LINK'; END IF;
+  SELECT * INTO t FROM public.tontines WHERE id=l.tontine_id;
+  IF NOT FOUND OR t.tontine_type<>'group' THEN RAISE EXCEPTION 'JOIN_LINKS_REQUIRE_GROUP_TONTINE'; END IF;
+  IF t.status NOT IN ('open','active') THEN RAISE EXCEPTION 'TONTINE_NOT_OPEN_FOR_ADMISSION'; END IF;
+  SELECT user_id INTO v_pres FROM public.tontine_members WHERE id=t.president_member_id;
+  SELECT code INTO v_code FROM public.currencies WHERE id=t.currency_id;
+  SELECT (phone IS NOT NULL AND btrim(phone)<>'' AND phone_confirmed_at IS NOT NULL)
+  INTO v_phone_ok FROM auth.users WHERE id=auth.uid();
+  RETURN jsonb_build_object(
+    'name',t.name,'description',t.description,'contribution_amount',t.contribution_amount,'currency',v_code,
+    'frequency',t.frequency,'cycle_periods',t.cycle_periods,'late_fee_amount',t.late_fee_amount,
+    'starts_on',t.starts_on,'status',t.status,'member_limit',t.member_limit,
+    'members',(SELECT count(*) FROM public.tontine_members WHERE tontine_id=t.id AND membership_status IN ('active','pending')),
+    'president_name',public.tontine_member_label(v_pres),'rules',t.rules,'rules_version',l.rules_version,
+    'already_member',EXISTS(SELECT 1 FROM public.tontine_members WHERE tontine_id=t.id AND user_id=auth.uid()),
+    'phone_confirmed',coalesce(v_phone_ok,false),'expires_at',l.expires_at
+  );
+END;
+$function$;
