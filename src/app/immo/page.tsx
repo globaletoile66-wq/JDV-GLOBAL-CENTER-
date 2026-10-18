@@ -6,7 +6,7 @@ import { ArrowLeft, CalendarClock, Heart, MapPin, RefreshCw, Search } from 'luci
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
-type Property = { id: string; title: string; slug: string; description: string | null; country_id: string | null; city: string | null; district: string | null; hide_exact_address: boolean; address: string | null; surface: number | null; bedrooms: number | null; bathrooms: number | null; furnished: boolean; price: number; currency_id: string | null; transaction_type: string; property_status: string; property_type_id: string; owner_user_id: string | null; business_id: string | null; published_at: string | null };
+type Property = { id: string; title: string; slug: string; description: string | null; country_id: string | null; city: string | null; district: string | null; hide_exact_address: boolean; address: string | null; surface: number | null; land_surface: number | null; bedrooms: number | null; bathrooms: number | null; parking_spaces: number | null; furnished: boolean; price: number; currency_id: string | null; transaction_type: string; property_status: string; property_type_id: string; owner_user_id: string | null; business_id: string | null; published_at: string | null };
 type PropertyType = { id: string; name: string; code: string };
 type Currency = { id: string; code: string; symbol: string | null };
 type Country = { id: string; name: string };
@@ -36,6 +36,7 @@ export default function ImmoPage() {
   const [minSurface, setMinSurface] = useState('');
   const [furnishedFilter, setFurnishedFilter] = useState('');
   const [contactProperty, setContactProperty] = useState<Property | null>(null);
+  const [detailProperty, setDetailProperty] = useState<Property | null>(null);
   const [contactMessage, setContactMessage] = useState('');
   const [appointmentProperty, setAppointmentProperty] = useState<Property | null>(null);
   const [scheduledAt, setScheduledAt] = useState('');
@@ -47,9 +48,18 @@ export default function ImmoPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    const propertyQuery = supabase.from('immo_properties')
-      .select('id,title,slug,description,country_id,city,district,hide_exact_address,address,surface,bedrooms,bathrooms,furnished,price,currency_id,transaction_type,property_status,property_type_id,owner_user_id,business_id,published_at')
+    let propertyQuery = supabase.from('immo_properties')
+      .select('id,title,slug,description,country_id,city,district,hide_exact_address,address,surface,land_surface,bedrooms,bathrooms,parking_spaces,furnished,price,currency_id,transaction_type,property_status,property_type_id,owner_user_id,business_id,published_at')
       .order('published_at', { ascending: false, nullsFirst: false }).limit(100);
+    if (typeFilter) propertyQuery = propertyQuery.eq('property_type_id', typeFilter);
+    if (transactionFilter) propertyQuery = propertyQuery.eq('transaction_type', transactionFilter as any);
+    if (countryFilter) propertyQuery = propertyQuery.eq('country_id', countryFilter);
+    if (cityFilter.trim()) propertyQuery = propertyQuery.ilike('city', '%' + cityFilter.trim() + '%');
+    if (minPrice.trim() && Number.isFinite(Number(minPrice))) propertyQuery = propertyQuery.gte('price', Number(minPrice));
+    if (maxPrice.trim() && Number.isFinite(Number(maxPrice))) propertyQuery = propertyQuery.lte('price', Number(maxPrice));
+    if (minBedrooms.trim() && Number.isFinite(Number(minBedrooms))) propertyQuery = propertyQuery.gte('bedrooms', Number(minBedrooms));
+    if (minSurface.trim() && Number.isFinite(Number(minSurface))) propertyQuery = propertyQuery.gte('surface', Number(minSurface));
+    if (furnishedFilter) propertyQuery = propertyQuery.eq('furnished', furnishedFilter === 'true');
     const [propertyResult, typeResult, currencyResult, countryResult, favoriteResult, appointmentResult] = await Promise.all([
       user ? propertyQuery.or('property_status.eq.published,owner_user_id.eq.' + user.id) : propertyQuery.eq('property_status', 'published'),
       supabase.from('immo_property_types').select('id,name,code').eq('is_active', true).order('sort_order'),
@@ -65,7 +75,7 @@ export default function ImmoPage() {
     if (favoriteResult.error) setError((current) => current || favoriteResult.error!.message); else setFavorites((favoriteResult.data ?? []).map((row: { property_id: string }) => row.property_id));
     if (appointmentResult.error) setError((current) => current || appointmentResult.error!.message); else setAppointments((appointmentResult.data ?? []) as Appointment[]);
     setBusy(false);
-  }, [supabase, user]);
+  }, [supabase, user, typeFilter, transactionFilter, countryFilter, cityFilter, minPrice, maxPrice, minBedrooms, minSurface, furnishedFilter]);
 
   useEffect(() => { if (!loading) void load(); }, [loading, load]);
 
