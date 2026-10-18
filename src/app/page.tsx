@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Building2, CreditCard, Home, ShoppingBag, Plane, Truck, HeartPulse, ShieldCheck, GraduationCap, Sparkles, Store, UserRound, BriefcaseBusiness } from 'lucide-react';
+import { ArrowRight, Building2, CreditCard, Home, ShoppingBag, Plane, Truck, HeartPulse, ShieldCheck, GraduationCap, Sparkles, Store, UserRound, BriefcaseBusiness, Users, Wrench, CalendarDays, Scale, Calculator, UserRoundCog, ClipboardList, Package, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 
 const modules = [
   ['JDV PAY','Paiements, transferts et services financiers','/pay',CreditCard],
   ['JDV CORE','Espace central et services personnels','/dashboard',BriefcaseBusiness],
+  ['JDV CRM','Gestion de la relation client','/crm',BarChart3],
   ['JDV BUSINESS','Gestion commerciale et opérations','/business',Building2],
   ['JDV MARKETPLACE','Commerce et vente en ligne','/marketplace',ShoppingBag],
   ['JDV IMMO','Immobilier et gestion de biens','/immo',Home],
@@ -24,6 +25,15 @@ const modules = [
   ['JDV MEDIA','Média et contenus','/media',Store],
   ['JDV SOCIAL','Réseau social JDV','/social',UserRound],
   ['JDV AI','Assistant IA JDV','/ai',Sparkles],
+  ['JDV COMMUNITY','Communautés et espaces collectifs','/coming-soon?name=JDV%20COMMUNITY',Users],
+  ['JDV SERVICES','Catalogue de services et prestations','/coming-soon?name=JDV%20SERVICES',Wrench],
+  ['JDV EVENTS','Organisation et gestion d’événements','/coming-soon?name=JDV%20EVENTS',CalendarDays],
+  ['JDV JOBS','Offres d’emploi et recrutement','/coming-soon?name=JDV%20JOBS',BriefcaseBusiness],
+  ['JDV LEGAL','Ressources et services juridiques','/coming-soon?name=JDV%20LEGAL',Scale],
+  ['JDV ACCOUNTING','Comptabilité et clôtures financières','/coming-soon?name=JDV%20ACCOUNTING',Calculator],
+  ['JDV HR','Gestion des ressources humaines','/coming-soon?name=JDV%20HR',UserRoundCog],
+  ['JDV PROCUREMENT','Achats et validations fournisseurs','/coming-soon?name=JDV%20PROCUREMENT',ClipboardList],
+  ['JDV INVENTORY','Stocks et traçabilité des articles','/coming-soon?name=JDV%20INVENTORY',Package],
 ] as const;
 
 export default function HomePage() {
