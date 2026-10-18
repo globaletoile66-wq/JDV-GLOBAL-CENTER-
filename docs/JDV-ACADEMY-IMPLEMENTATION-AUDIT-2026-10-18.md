@@ -4,7 +4,7 @@
 
 Audit en lecture seule du dépôt GitHub `globaletoile66-wq/JDV-GLOBAL-CENTER-` et du schéma Supabase du projet JDV Global Center. La branche de travail de ce changement est créée depuis la branche par défaut `supabase-sync-2026-09-24` afin de ne pas repartir d'une ancienne branche Academy située 196 commits derrière la base actuelle.
 
-Aucune donnée n'a été supprimée et aucune migration n'a été appliquée à la base de production pendant cet audit.
+Aucune donnée n'a été supprimée. Après revue du SQL, de son périmètre et du retour arrière, une migration additive dédiée aux politiques RLS Academy a été appliquée le 18 octobre 2026.
 
 ## État vérifié
 
@@ -29,7 +29,7 @@ Le dépôt contient les migrations :
 - `20261018060000_jdv_academy_published_catalog_rls.sql`
 - `20261018061000_jdv_academy_enrolled_content_rls.sql`
 
-Cependant, la lecture des politiques actives dans Supabase au moment de l'audit ne montrait que les politiques Academy authentifiées de base. Les politiques `academy_programs_published_catalog_select`, `academy_courses_published_catalog_select`, `academy_lessons_enrolled_student_select` et `academy_assessments_enrolled_student_select` n'apparaissaient pas dans `pg_policies`. La liste des migrations Supabase doit donc être réconciliée avec les fichiers versionnés avant application. Les migrations n'ont pas été rejouées aveuglément pour éviter une dérive du journal de migration.
+La lecture initiale des politiques actives ne montrait pas les quatre politiques attendues. Après revue du SQL, la migration `20261018160533_jdv_academy_public_catalog_and_enrolled_content_rls.sql` a été appliquée via la voie contrôlée Supabase. La vérification post-application confirme que les quatre politiques apparaissent dans `pg_policies` et que la version `20261018160533` figure dans l'historique des migrations.
 
 ## Écarts fonctionnels à construire
 
@@ -52,7 +52,7 @@ Cependant, la lecture des politiques actives dans Supabase au moment de l'audit 
 
 ## Critères d'acceptation avant production
 
-- Réconcilier le journal Supabase avec les migrations versionnées, puis appliquer uniquement les migrations examinées.
+- Vérifier que le journal Supabase correspond aux fichiers de migration versionnés ; la migration RLS Academy est maintenant alignée sur la version `20261018160533`.
 - Vérifier les parcours visiteur, apprenant, formateur et administrateur d'organisation avec comptes de test distincts.
 - Tester les accès directs aux leçons, évaluations, résultats et certificats avec des rôles non autorisés.
 - Vérifier compilation TypeScript, build Next.js, preview Netlify et tests de parcours.
@@ -64,4 +64,5 @@ Cependant, la lecture des politiques actives dans Supabase au moment de l'audit 
 - Modification limitée à `src/app/academy/page.tsx` pour débloquer l'expérience catalogue visiteur et améliorer le lien de connexion.
 - Ajout de ce rapport d'audit.
 - Aucune suppression de données ou de tables.
-- Aucune migration de production appliquée.
+- Migration RLS additive appliquée après revue ; aucun objet ou aucune ligne supprimés.
+- Vérification post-application des quatre politiques RLS et de l'entrée dans l'historique Supabase.
