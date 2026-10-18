@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2, ClipboardList, LoaderCircle, PlusCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -69,7 +69,7 @@ export default function TontineConcepteurPage() {
     if (!authLoading && user && isSuperAdmin) void load();
   }, [authLoading, isSuperAdmin, load, user]);
 
-  async function createDraft(event: React.FormEvent<HTMLFormElement>) {
+  async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || !isSuperAdmin) return;
     setError('');
