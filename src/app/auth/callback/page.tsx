@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { safeRedirect } from '@/lib/auth/mfa';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -12,14 +13,16 @@ export default function AuthCallbackPage() {
     let active = true;
 
     (async () => {
-      const code = new URLSearchParams(window.location.search).get('code');
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const next = safeRedirect(params.get('next'), '/dashboard');
       if (code) {
         await supabase.auth.exchangeCodeForSession(code);
       }
 
       const { data } = await supabase.auth.getSession();
       if (!active) return;
-      router.replace(data.session ? '/dashboard' : '/auth/login');
+      router.replace(data.session ? next : '/auth/login');
     })();
 
     return () => { active = false; };
