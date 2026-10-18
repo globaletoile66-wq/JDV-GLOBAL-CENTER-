@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingCart, MapPin, CreditCard, Package, Truck, Plus, CheckCircle2, Loader2, AlertCircle, Trash2, Shield } from 'lucide-react';
