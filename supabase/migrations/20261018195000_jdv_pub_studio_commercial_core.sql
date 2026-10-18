@@ -19,8 +19,6 @@ alter table public.pub_campaigns add constraint pub_campaigns_format_check
 alter table public.pub_campaigns drop constraint if exists pub_campaigns_pricing_model_check;
 alter table public.pub_campaigns add constraint pub_campaigns_pricing_model_check
   check (pricing_model in ('fixed_duration','cpm','cpc','premium','priority'));
-alter table public.pub_campaigns drop constraint if exists pub_campaigns_budget_nonnegative_check;
-alter table public.pub_campaigns add constraint pub_campaigns_budget_nonnegative_check check (budget_amount >= 0);
 alter table public.pub_campaigns drop constraint if exists pub_campaigns_date_order_check;
 alter table public.pub_campaigns add constraint pub_campaigns_date_order_check
   check (starts_at is null or ends_at is null or ends_at > starts_at);
