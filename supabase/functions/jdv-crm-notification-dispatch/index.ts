@@ -25,7 +25,8 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST required" }, 405);
 
   const url = Deno.env.get("SUPABASE_URL");
-  const appBaseUrl = (Deno.env.get("CRM_APP_BASE_URL") || "").replace(/\\/$/, "");
+  const rawAppBaseUrl = Deno.env.get("CRM_APP_BASE_URL") || "";
+  const appBaseUrl = rawAppBaseUrl.endsWith("/") ? rawAppBaseUrl.slice(0, -1) : rawAppBaseUrl;
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !anonKey || !serviceKey) return json({ error: "Supabase function secrets are incomplete" }, 500);
