@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, GraduationCap, RefreshCw, Search, Plus, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +20,7 @@ const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-x
 export default function AcademyPage() {
   const { user, loading: authLoading, isSuperAdmin } = useAuth();
   const supabase = useMemo(() => createClient(), []);
-  const searchParams = useSearchParams();
+
   const [programs, setPrograms] = useState<Program[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -107,9 +107,9 @@ export default function AcademyPage() {
   useEffect(() => { if (!authLoading) void load(); }, [authLoading, load]);
 
   useEffect(() => {
-    const requestedTab = searchParams.get('tab');
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
     if (requestedTab === 'catalog' || requestedTab === 'learning' || requestedTab === 'manage') setTab(requestedTab);
-  }, [searchParams]);
+  }, []);
 
   const programName = (id: string) => programs.find((program) => program.id === id)?.name || 'Programme non visible';
   const enrolledIds = new Set(enrollments.filter((enrollment) => enrollment.enrollment_status !== 'cancelled').map((enrollment) => enrollment.course_id));
