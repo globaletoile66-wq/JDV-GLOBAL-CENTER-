@@ -44,15 +44,13 @@ export default function AcademyDemoPage() {
     setResults(sectors.map((sector) => ({ id: sector.id, sector: sector.name, detail: sector.detail, status: 'running', result: 'Vérification en cours…' })));
 
     const checked = await Promise.all(sectors.map(async (sector): Promise<CheckResult> => {
-      const [routeCheck, ...tableChecks] = await Promise.all([
-        fetch(sector.route, { method: 'GET', cache: 'no-store', redirect: 'follow' })
-          .then((response) => ({ ok: response.status < 500, status: response.status }))
-          .catch(() => ({ ok: false, status: 0 })),
-        ...sector.tables.map(async (table) => {
-          const { error } = await supabase.from(table).select('*', { count: 'exact', head: true }).limit(1);
-          return { table, ok: !error, error: error?.message };
-        }),
-      ]);
+      const routeCheck = await fetch(sector.route, { method: 'GET', cache: 'no-store', redirect: 'follow' })
+        .then((response) => ({ ok: response.status < 500, status: response.status }))
+        .catch(() => ({ ok: false, status: 0 }));
+      const tableChecks = await Promise.all(sector.tables.map(async (table) => {
+        const { error } = await supabase.from(table).select('*', { count: 'exact', head: true }).limit(1);
+        return { table, ok: !error, error: error?.message };
+      }));
 
       const failedTables = tableChecks.filter((item) => !item.ok);
       if (!routeCheck.ok) return { id: sector.id, sector: sector.name, detail: sector.detail, status: 'failed', result: `Page inaccessible ou erreur serveur (HTTP ${routeCheck.status || 'réseau'}).` };
