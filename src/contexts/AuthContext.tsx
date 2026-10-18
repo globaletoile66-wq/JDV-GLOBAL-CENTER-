@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const authRequestId = useRef(0);
-  const supabase = createClient();
+  // Keep one Supabase client for this provider's lifetime. A new client on every\n  // render would retrigger auth effects and repeatedly recreate subscriptions.\n  const supabase = useMemo(() => createClient(), []);
 
   const loadProfile = useCallback(async (userId: string, requestId: number) => {
     try {
