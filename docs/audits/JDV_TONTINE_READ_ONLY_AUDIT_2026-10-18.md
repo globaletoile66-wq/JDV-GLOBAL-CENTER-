@@ -61,6 +61,62 @@ Ce constat n'établit pas que les fonctions sont exploitables : il faut lire le 
 
 Les fonctions sensibles de dispatch/rapprochement, notamment `tontine_queue_due_payouts`, `tontine_claim_due_dispatch` et `tontine_reconcile_dispatch`, ne sont pas exécutables directement par `authenticated` selon le contrôle des privilèges effectué. Le worker doit continuer à les appeler exclusivement côté serveur.
 
+
+## 4.2 Résultats de lecture des fonctions — constats précis
+
+### F-01 — Adhésion activée avant la vérification complète (priorité critique)
+
+La fonction `public.tontine_join_by_link(text, boolean)` :
+- exige un utilisateur connecté, un lien valide et l'acceptation des règles ;
+- exige un numéro de téléphone confirmé dans Supabase Auth ;
+- crée ou met à jour l'adhésion avec `membership_status='active'` ;
+- renseigne `identity_confirmed_at` et `identity_confirmation_method='verified_phone_auth'`.
+
+Elle ne vérifie pas de pièce d'identité officielle, de validation documentaire, de contrat signé/versionné ou de témoins avant de rendre le membre actif. La confirmation du téléphone ne doit pas être présentée comme une vérification d'identité documentaire. Cette fonction contredit donc le parcours d'admission souhaité.
+
+**Mesure recommandée :** introduire un état d'admission en attente et un workflow explicite de validation (identité, contrat, témoins si retenus) avant activation. Avant de modifier la fonction, inventorier tous ses appelants et vérifier si le parcours d'invitation est déjà utilisé en production. Ne pas faire de changement silencieux qui bloque ou réactive des adhésions existantes.
+
+### F-02 — Activation de la tontine avec des prérequis insuffisants (priorité élevée)
+
+La fonction `public.tontine_set_status(uuid, text)` permet au président ou au super-administrateur de passer une tontine de `draft` à `open` si elle a au moins deux membres `active` et un cycle planifié/ouvert/actif. Elle n'exige pas explicitement, dans cette fonction, que les pièces d'identité soient validées, que les signatures/témoins soient présents, ou que le taux de commission et la version du contrat aient été acceptés.
+
+**Mesure recommandée :** centraliser les critères d'éligibilité à l'activation côté serveur, à partir de données versionnées et vérifiables. Une activation doit échouer en expliquant les prérequis manquants.
+
+### F-03 — La fonction de pénalité ne représente pas la règle des trois impayés (priorité élevée)
+
+La fonction `public.tontine_apply_late_penalties(uuid)` marque `late` les échéances passées encore `due` ou `partially_paid`, renseigne `late_fee_amount` et `late_marked_at`, puis retourne le nombre d'échéances marquées. Elle autorise le président ou le super-administrateur à la déclencher. Elle ne compte pas trois impayés confirmés par membre, ne gère pas une contestation et ne crée pas de dossier de défaut.
+
+**Mesure recommandée :** séparer le marquage d'une échéance en retard de la confirmation d'un défaut, compter les échéances distinctes réellement impayées, intégrer le délai de grâce et les contestations, puis déclencher le dossier au troisième défaut confirmé. Toute pénalité doit rester conforme au contrat et être comptabilisée séparément.
+
+### F-04 — Risque de nouvelle contribution après une réponse réseau ambiguë (à tester)
+
+`public.tontine_pay_contribution(uuid, uuid, numeric)` verrouille l'échéance et le portefeuille, vérifie le solde, crée un débit JDV PAY, puis enregistre la contribution. Elle ne reçoit pas de clé d'idempotence fournie par le client. Les verrous et contrôles de solde réduisent certains risques, mais ne remplacent pas une clé stable permettant de reconnaître une répétition exacte de la même demande après une coupure réseau.
+
+**Mesure recommandée :** concevoir une clé d'idempotence persistée par demande de paiement, avec contrainte d'unicité et résultat réutilisable en cas de répétition. Tester deux demandes simultanées, la répétition après timeout et le paiement partiel. Ne pas lancer de tests avec de vrais portefeuilles ou fonds.
+
+### F-05 — Fonctions privilégiées exposées au rôle authentifié : revue ciblée requise
+
+Les ACL PostgreSQL indiquent que plusieurs fonctions `SECURITY DEFINER` sont exécutables par `authenticated`, dont `tontine_set_status`, `tontine_apply_late_penalties`, `tontine_pay_contribution`, `tontine_record_contribution`, `tontine_create_join_link`, `tontine_join_by_link` et `tontine_program_collection`. Certaines vérifient l'identité/le rôle à l'intérieur ; l'exposition ne prouve donc pas à elle seule une vulnérabilité.
+
+**Mesure recommandée :** pour chaque fonction, documenter l'acteur attendu, l'autorisation, les invariants, les objets verrouillés et les tests négatifs. Révoquer l'exécution aux rôles non nécessaires et accorder le moindre privilège uniquement après vérification des appelants applicatifs.
+
+### F-06 — Le mécanisme de paiement externe est séparé du crédit du portefeuille interne
+
+`tontine_generate_payout` est réservé au rôle système et crédite le portefeuille JDV du bénéficiaire après contrôle du montant et des fonds collectés du cycle. Le worker de dispatch externe utilise un autre parcours avec clé d'idempotence et rapprochement prestataire. Il faut vérifier la règle de sélection du parcours de paiement et s'assurer qu'une même rotation ne peut pas être payée à la fois dans le portefeuille interne et via le prestataire externe.
+
+**Mesure recommandée :** définir un mode de décaissement unique par rotation, imposer une contrainte/transition d'état commune et tester l'exclusion mutuelle entre les deux parcours.
+
+## 4.3 Tests ciblés avant toute modification
+
+- Appeler `tontine_join_by_link` dans un environnement de test avec téléphone confirmé mais sans preuve documentaire/contrat : le nouveau comportement attendu doit être « en attente », pas `active`.
+- Vérifier qu'un membre en attente ne peut pas contribuer, accéder à un cycle de paiement ou devenir bénéficiaire.
+- Tenter d'ouvrir une tontine sans acceptation versionnée du contrat et sans validation d'identité : activation refusée.
+- Marquer une seule échéance en retard : aucun dossier « trois impayés » ne doit être créé.
+- Confirmer trois échéances impayées distinctes après délai de grâce : un seul dossier de défaut doit être créé.
+- Soumettre la même demande de contribution deux fois avec la même clé : même résultat, un seul débit.
+- Lancer simultanément deux paiements de la même échéance : au plus un débit par demande et aucun dépassement du solde dû.
+- Vérifier qu'une rotation ne peut pas aboutir à deux paiements, l'un interne et l'autre externe.
+
 ## 5. Interface actuelle observée
 
 `src/app/tontine/page.tsx` charge les tontines, les adhésions de l'utilisateur et ses échéances. Le texte de l'écran indique explicitement qu'aucun paiement n'est déclenché depuis cette page. C'est une vue consultative, pas une preuve d'un parcours de paiement de bout en bout.
