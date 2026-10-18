@@ -111,7 +111,8 @@ export default function HealthPage() {
         </div>
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-            <div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV HEALTH</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Catalogue de services de santé et demandes de rendez-vous. Les rendez-vous restent privés selon les règles d’accès Supabase.</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV HEALTH</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Catalogue de services de santé et demandes de rendez-vous. Les rendez-vous restent privés selon les règles d’accès Supabase.</p>
+              <Link href="/health/reseau" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#F28C28] px-4 py-2.5 text-sm font-bold text-[#0B1B3D] hover:bg-orange-300"><Search size={16} /> Trouver un médecin, une pharmacie ou un laboratoire</Link></div>
             <div className="rounded-2xl border border-white/10 px-5 py-4"><div className="text-xs text-white/40">Services actifs</div><div className="mt-1 text-2xl font-bold">{services.length}</div></div>
           </div>
           {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
