@@ -59,6 +59,8 @@ export default function HealthPage() {
     else setServices((serviceResult.data ?? []) as HealthService[]);
     if (appointmentResult.error) setError((current) => current || appointmentResult.error!.message);
     else setAppointments((appointmentResult.data ?? []) as Appointment[]);
+    if (currencyResult.error) setError((current) => current || currencyResult.error!.message);
+    else setCurrencies((currencyResult.data ?? []) as Currency[]);
     setBusy(false);
   }, [supabase, user]);
 
