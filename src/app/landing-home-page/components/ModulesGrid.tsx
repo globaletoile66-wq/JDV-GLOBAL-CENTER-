@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import {
   CreditCard, Building2, ShoppingBag, Home, Plane,
   Truck, Ship, Heart, Shield, Leaf, Zap, GraduationCap,
@@ -34,7 +35,7 @@ const modules = [
     name: 'JDV BUSINESS',
     description: 'Outils de gestion, facturation et comptabilité pour PME',
     icon: Building2,
-    status: 'development',
+    status: 'active',
     color: '#8B5CF6',
     accent: 'rgba(139, 92, 246, 0.1)',
     border: 'rgba(139, 92, 246, 0.25)',
@@ -45,7 +46,7 @@ const modules = [
     name: 'JDV MARKETPLACE',
     description: 'Place de marché pour achat et vente de produits et services',
     icon: ShoppingBag,
-    status: 'development',
+    status: 'active',
     color: '#F97316',
     accent: 'rgba(249, 115, 22, 0.1)',
     border: 'rgba(249, 115, 22, 0.25)',
@@ -56,7 +57,7 @@ const modules = [
     name: 'JDV IMMO',
     description: 'Immobilier : achat, vente, location et gestion de biens',
     icon: Home,
-    status: 'planned',
+    status: 'active',
     color: '#06B6D4',
     accent: 'rgba(6, 182, 212, 0.1)',
     border: 'rgba(6, 182, 212, 0.25)',
@@ -67,7 +68,7 @@ const modules = [
     name: 'JDV TRAVEL',
     description: 'Réservation de voyages, hôtels et services touristiques',
     icon: Plane,
-    status: 'planned',
+    status: 'active',
     color: '#F59E0B',
     accent: 'rgba(245, 158, 11, 0.1)',
     border: 'rgba(245, 158, 11, 0.25)',
@@ -206,6 +207,27 @@ const modules = [
   },
 ];
 
+const moduleRoutes: Record<string, string> = {
+  jdv_pay: '/pay',
+  jdv_crm: '/crm',
+  jdv_business: '/business',
+  jdv_marketplace: '/marketplace',
+  jdv_immo: '/immo',
+  jdv_travel: '/travel',
+  jdv_transport: '/transport',
+  jdv_transit: '/transit',
+  jdv_health: '/health',
+  jdv_insurance: '/insurance',
+  jdv_agriculture: '/agriculture',
+  jdv_energy: '/energy',
+  jdv_academy: '/academy',
+  jdv_tontine: '/tontine',
+  jdv_pub: '/pub',
+  jdv_media: '/media',
+  jdv_social: '/social',
+  jdv_ai: '/ai',
+};
+
 const statusLabels: Record<string, string> = {
   active: 'Actif',
   development: 'En développement',
@@ -250,12 +272,15 @@ export default function ModulesGrid() {
         {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
           {modules.map((mod) => (
-            <div
+            <Link
               key={mod.id}
-              className="jdv-card group cursor-pointer relative overflow-hidden"
+              href={moduleRoutes[mod.code] ?? '/coming-soon'}
+              aria-label={`Ouvrir ${mod.name}`}
+              className="jdv-card group cursor-pointer relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               style={{
                 background: mod.accent,
                 borderColor: mod.border,
+                textDecoration: 'none',
               }}
             >
               {/* Shine overlay */}
@@ -281,7 +306,7 @@ export default function ModulesGrid() {
                   {mod.description}
                 </p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
