@@ -14,7 +14,7 @@ const frequencyLabels: Record<string, string> = { daily: 'Quotidienne', weekly: 
 const statusLabels: Record<string, string> = { active: 'Active', draft: 'Brouillon', pending: 'En attente', completed: 'Terminée', suspended: 'Suspendue', approved: 'Approuvée' };
 
 export default function TontinePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [tontines, setTontines] = useState<Tontine[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -65,7 +65,7 @@ export default function TontinePage() {
   return (
     <main className="min-h-screen bg-[#0B1B3D] p-5 text-white sm:p-8">
       <div className="mx-auto max-w-7xl">
-        <div className="flex items-center justify-between gap-3"><Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Accueil</Link><button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
+        <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-4"><Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Accueil</Link>{isSuperAdmin && <Link href="/tontine/concepteur" className="inline-flex items-center gap-2 rounded-xl bg-[#F28C28] px-3 py-2 text-sm font-bold text-[#0B1B3D]">Espace concepteur · Créer une tontine</Link>}</div><button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV TONTINE</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Vue de suivi des tontines accessibles, de votre adhésion et des échéances de cotisation. Aucun paiement n’est déclenché depuis cet écran.</p></div><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-white/10 px-4 py-3"><div className="text-xs text-white/40">Tontines visibles</div><div className="mt-1 text-2xl font-bold">{tontines.length}</div></div><div className="rounded-2xl border border-white/10 px-4 py-3"><div className="text-xs text-white/40">Mes adhésions</div><div className="mt-1 text-2xl font-bold">{memberships.length}</div></div></div></div>
           {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
