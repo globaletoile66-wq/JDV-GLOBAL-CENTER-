@@ -22,6 +22,11 @@ with check (
   )
 );
 
+-- Remove legacy broad grants (including TRUNCATE) that bypass column-level restrictions.
+-- Customer claim creation remains available through insurance_submit_claim(), which
+-- validates ownership and inserts as its controlled function owner.
+revoke all privileges on table public.insurance_claims from public, anon, authenticated;
+grant select on table public.insurance_claims to authenticated;
 grant update (status, approved_amount, updated_at)
 on public.insurance_claims to authenticated;
 
@@ -66,6 +71,10 @@ begin
     raise exception 'insurance operations permission required' using errcode = '42501';
   end if;
 
+  if v_claim.status in ('paid', 'closed') then
+    raise exception 'paid or closed claims cannot be reviewed again';
+  end if;
+
   if p_approved_amount is null or p_approved_amount < 0 or p_approved_amount > v_claim.claimed_amount then
     raise exception 'approved amount must be between zero and the declared amount';
   end if;
@@ -86,5 +95,5 @@ begin
 end;
 $function$;
 
-revoke all on function public.insurance_review_claim(uuid, text, numeric) from public;
+revoke all on function public.insurance_review_claim(uuid, text, numeric) from public, anon;
 grant execute on function public.insurance_review_claim(uuid, text, numeric) to authenticated;
