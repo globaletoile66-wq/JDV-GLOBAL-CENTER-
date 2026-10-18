@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import AcademyNavigation from '@/components/academy/AcademyNavigation';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, BadgeCheck, ShieldCheck, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -45,6 +46,7 @@ export default function AcademyCertificateVerificationPage() {
   return (
     <main className="min-h-screen bg-[#0B1B3D] px-4 py-8 text-white sm:px-8">
       <div className="mx-auto max-w-3xl">
+        <AcademyNavigation />
         <Link href="/academy" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> JDV Academy</Link>
         <section className="mt-8 rounded-3xl border border-white/10 bg-white/[.04] p-6 shadow-2xl sm:p-10">
           <div className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER · CERTIFICATION</div>
