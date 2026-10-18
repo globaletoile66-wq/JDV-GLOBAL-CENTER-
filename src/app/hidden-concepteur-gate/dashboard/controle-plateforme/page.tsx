@@ -21,6 +21,22 @@ const ROUTES: Record<string, string> = {
   jdv_social: '/social', jdv_ai: '/ai',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  planned: 'PLANIFIÉ',
+  development: 'EN DÉVELOPPEMENT',
+  active: 'ACTIF',
+  maintenance: 'MAINTENANCE',
+  disabled: 'DÉSACTIVÉ',
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  planned: 'border-sky-500/30 bg-sky-500/10 text-sky-700',
+  development: 'border-amber-500/30 bg-amber-500/10 text-amber-700',
+  active: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700',
+  maintenance: 'border-orange-500/30 bg-orange-500/10 text-orange-700',
+  disabled: 'border-border bg-muted text-muted-foreground',
+};
+
 export default function ControlePlateformePage() {
   const { user, isSuperAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -74,7 +90,7 @@ export default function ControlePlateformePage() {
       {error && <p role="alert" className="mt-5 rounded-xl border border-red-500/30 p-4 text-sm">Impossible de charger l’inventaire des modules : {error}</p>}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {modules.map(module => <article key={module.code} className="flex flex-col rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-start justify-between gap-3"><div className="rounded-xl bg-accent/10 p-2 text-accent"><Layers3 size={20}/></div><span className="rounded-full border border-border px-2 py-1 text-xs">{module.module_status}</span></div>
+          <div className="flex items-start justify-between gap-3"><div className="rounded-xl bg-accent/10 p-2 text-accent"><Layers3 size={20}/></div><span className={`rounded-full border px-2 py-1 text-xs font-bold ${STATUS_STYLES[module.module_status] || STATUS_STYLES.disabled}`}>{STATUS_LABELS[module.module_status] || module.module_status.toUpperCase()}</span></div>
           <h2 className="mt-4 font-bold">{module.name}</h2><p className="mt-1 text-xs text-muted-foreground">{module.code}</p>
           <p className="mt-3 flex-1 text-sm text-muted-foreground">{module.description || 'Aucune description enregistrée.'}</p>
           <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground"><span className="rounded-lg bg-muted px-2 py-1">Version {module.version || '—'}</span><span className="rounded-lg bg-muted px-2 py-1">{module.requires_subscription ? 'Abonnement requis côté client' : 'Sans abonnement déclaré'}</span></div>
