@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, LogOut, RefreshCw, Layers3, BriefcaseBusiness } from 'lucide-react';
+
+const MODULE_ROUTES: Record<string, string> = {
+ jdv_core: '/dashboard', jdv_pay: '/pay', jdv_crm: '/crm', jdv_business: '/business',
+ jdv_marketplace: '/marketplace', jdv_immo: '/immo', jdv_travel: '/travel', jdv_transport: '/transport',
+ jdv_transit: '/transit', jdv_health: '/health', jdv_insurance: '/insurance', jdv_agriculture: '/agriculture',
+ jdv_energy: '/energy', jdv_academy: '/academy', jdv_tontine: '/tontine', jdv_pub: '/pub', jdv_media: '/media',
+ jdv_social: '/social', jdv_ai: '/ai',
+};
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -21,7 +29,7 @@ export default function ConcepteurDashboard(){
    <div className="flex items-center gap-2"><Link href="/hidden-concepteur-gate/dashboard/portefeuille-clients" className="btn-secondary"><BriefcaseBusiness size={16}/>Mon portefeuille clients</Link><button onClick={async()=>{await signOut();router.replace('/')}} className="btn-secondary"><LogOut size={16}/>Déconnexion</button></div>
   </div></header>
   <section className="mx-auto max-w-7xl px-4 py-8"><div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-2xl font-extrabold">JDV GLOBAL CENTER</h2><p className="text-muted-foreground mt-1">Centre de contrôle des modules et services.</p></div><Link href="/hidden-concepteur-gate/dashboard/portefeuille-clients" className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 font-bold text-accent-foreground"><BriefcaseBusiness size={17}/>Créer / gérer mes clients</Link></div>
-   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{loading?<div className="col-span-full flex justify-center py-16"><RefreshCw className="animate-spin text-accent"/></div>:modules.map(m=><article key={m.code} className="rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><div className="h-10 w-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center"><Layers3 size={19}/></div><span className="text-xs rounded-full border border-border px-2 py-1">{m.module_status}</span></div><h3 className="mt-4 font-bold">{m.name}</h3><p className="mt-1 text-xs text-muted-foreground">{m.code}</p><p className="mt-3 text-sm text-muted-foreground min-h-10">{m.description||'Module JDV'}</p><div className="mt-4 text-xs text-muted-foreground">Version {m.version||'—'} · {m.requires_subscription?'Abonnement':'Sans abonnement'}</div></article>)}</div>
+   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{loading?<div className="col-span-full flex justify-center py-16"><RefreshCw className="animate-spin text-accent"/></div>:modules.map(m=><Link href={MODULE_ROUTES[m.code]||'/dashboard'} key={m.code} className="group rounded-2xl border border-border bg-card p-5 transition hover:border-accent/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"><div className="flex items-center justify-between"><div className="h-10 w-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center"><Layers3 size={19}/></div><span className="text-xs rounded-full border border-border px-2 py-1">{m.module_status}</span></div><h3 className="mt-4 font-bold">{m.name}</h3><p className="mt-1 text-xs text-muted-foreground">{m.code}</p><p className="mt-3 text-sm text-muted-foreground min-h-10">{m.description||'Module JDV'}</p><div className="mt-4 flex items-center justify-between text-xs text-muted-foreground"><span>Version {m.version||'—'} · {m.requires_subscription?'Abonnement':'Sans abonnement'}</span><span className="font-semibold text-accent">Ouvrir →</span></div></Link>)}</div>
   </section>
  </main>;
 }
