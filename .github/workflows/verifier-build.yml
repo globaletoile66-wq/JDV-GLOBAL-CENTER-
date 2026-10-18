@@ -1,7 +1,7 @@
 name: Verifier le build
 on:
   push:
-    branches: ['integration/**', 'supabase-sync-2026-09-24']
+    branches: ['integration/**', 'supabase-sync-2026-09-24', 'feat/jdv-transit-360']
   workflow_dispatch:
 permissions:
   contents: write
