@@ -151,7 +151,11 @@ returns trigger language plpgsql security invoker set search_path = public, pg_t
 begin
   if coalesce(is_super_admin(), false) then return new; end if;
   if tg_op = 'INSERT' then new.approval_status := 'pending';
-  elsif new.approval_status is distinct from old.approval_status then raise exception 'La validation des créations est réservée à JDV Pub Control Center.';
+  else
+    if new.approval_status is distinct from old.approval_status then raise exception 'La validation des créations est réservée à JDV Pub Control Center.'; end if;
+    if not exists (select 1 from public.pub_campaigns c where c.id = new.campaign_id and c.status in ('draft','rejected')) then
+      raise exception 'Les créations d’une campagne soumise ne peuvent plus être modifiées.';
+    end if;
   end if;
   return new;
 end;
