@@ -84,19 +84,19 @@ BEGIN
         ELSE 'pending'
       END,
       joined_at = CASE
-        WHEN tontine_members.membership_status = 'active'
+        WHEN tontine_members.membership_status IN ('active', 'suspended', 'rejected', 'left')
           THEN tontine_members.joined_at
         ELSE NULL
       END,
       rules_accepted_at = now(),
       rules_version = EXCLUDED.rules_version,
       identity_confirmed_at = CASE
-        WHEN tontine_members.membership_status = 'active'
+        WHEN tontine_members.membership_status IN ('active', 'suspended', 'rejected', 'left')
           THEN tontine_members.identity_confirmed_at
         ELSE NULL
       END,
       identity_confirmation_method = CASE
-        WHEN tontine_members.membership_status = 'active'
+        WHEN tontine_members.membership_status IN ('active', 'suspended', 'rejected', 'left')
           THEN tontine_members.identity_confirmation_method
         ELSE NULL
       END,
@@ -124,7 +124,7 @@ BEGIN
     'tontine_member', v_member::text,
     jsonb_build_object(
       'tontine_id', v_tontine.id,
-      'membership_request_created', true,
+      'membership_request_created', NOT v_existing,
       'membership_status_after_request', (
         SELECT membership_status FROM public.tontine_members WHERE id = v_member
       ),
