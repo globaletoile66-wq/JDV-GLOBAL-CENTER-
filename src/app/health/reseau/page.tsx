@@ -112,7 +112,7 @@ export default function HealthNetworkPage() {
         <h1 className="mt-3 max-w-3xl text-3xl font-black sm:text-5xl">Les soins autour de vous, plus simplement.</h1>
         <p className="mt-4 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">Recherchez des professionnels et établissements publiés dans l’annuaire JDV. La distance est calculée uniquement lorsque vous autorisez la localisation et que l’établissement possède des coordonnées.</p>
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-          <label className="flex flex-1 items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-slate-900"><Search size={19} className="shrink-0 text-slate-400}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Spécialité, établissement, ville…" className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"/></label>
+          <label className="flex flex-1 items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-slate-900"><Search size={19} className="shrink-0 text-slate-400"/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Spécialité, établissement, ville…" className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"/></label>
           <button onClick={locate} disabled={locating} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-400 px-5 py-3.5 text-sm font-bold text-slate-950 disabled:opacity-60"><LocateFixed size={18}/>{locating ? 'Localisation…' : position ? 'Position activée' : 'Autour de moi'}</button>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
