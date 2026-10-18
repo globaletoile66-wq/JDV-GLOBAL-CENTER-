@@ -697,16 +697,63 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public', 'pg_catalog'
 AS $function$
-DECLARE v_t public.tontines; v_prev public.tontine_cycles;
+DECLARE
+  v_prev public.tontine_cycles; v_t public.tontines; v_id uuid; v_num integer;
+  v_members integer; v_start date; v_end date; v_duration integer;
 BEGIN
   IF current_user <> 'service_role' THEN RAISE EXCEPTION 'SYSTEM_ONLY_TONTINE_ENGINE'; END IF;
-  SELECT * INTO v_t FROM public.tontines WHERE id=p_tontine_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'TONTINE_NOT_FOUND'; END IF;
-  SELECT * INTO v_prev FROM public.tontine_cycles WHERE id=p_previous_cycle_id AND tontine_id=p_tontine_id FOR UPDATE;
+  SELECT * INTO v_prev FROM public.tontine_cycles
+  WHERE id=p_previous_cycle_id AND tontine_id=p_tontine_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'PREVIOUS_CYCLE_NOT_FOUND'; END IF;
   IF v_prev.status <> 'closed' THEN RAISE EXCEPTION 'PREVIOUS_CYCLE_NOT_CLOSED'; END IF;
+  SELECT * INTO v_t FROM public.tontines WHERE id=p_tontine_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'TONTINE_NOT_FOUND'; END IF;
+  IF v_t.status NOT IN ('open','active','paused') THEN RETURN NULL; END IF;
+  -- An individual plan is one maturity cycle; it never creates an automatic second cycle.
   IF v_t.tontine_type='individual' THEN RETURN NULL; END IF;
-  RAISE EXCEPTION 'GROUP_NEXT_CYCLE_REQUIRES_EXISTING_SCHEDULED_ENGINE';
+
+  IF EXISTS (SELECT 1 FROM public.tontine_cycles WHERE tontine_id=p_tontine_id AND starts_on=v_prev.ends_on+1) THEN
+    SELECT id INTO v_id FROM public.tontine_cycles
+    WHERE tontine_id=p_tontine_id AND starts_on=v_prev.ends_on+1 ORDER BY cycle_number DESC LIMIT 1;
+    RETURN v_id;
+  END IF;
+
+  SELECT count(*) INTO v_members FROM public.tontine_members
+  WHERE tontine_id=p_tontine_id AND membership_status='active';
+  IF v_members < 2 THEN RAISE EXCEPTION 'MINIMUM_MEMBERS_REQUIRED_FOR_NEXT_CYCLE'; END IF;
+  v_start:=v_prev.ends_on+1;
+  v_duration:=greatest(0,v_prev.ends_on-v_prev.starts_on);
+  v_end:=v_start+v_duration;
+  SELECT coalesce(max(cycle_number),0)+1 INTO v_num FROM public.tontine_cycles WHERE tontine_id=p_tontine_id;
+
+  INSERT INTO public.tontine_cycles(tontine_id,cycle_number,starts_on,ends_on,status,total_expected,total_collected)
+  VALUES(p_tontine_id,v_num,v_start,v_end,CASE WHEN v_start<=current_date THEN 'active' ELSE 'open' END,
+    v_t.contribution_amount*v_members*v_t.cycle_periods,0) RETURNING id INTO v_id;
+
+  INSERT INTO public.tontine_contribution_schedules(cycle_id,member_id,period_number,due_on,expected_amount,late_fee_amount)
+  SELECT v_id,tm.id,g,
+    v_start+CASE WHEN v_t.frequency='daily' THEN g-1 WHEN v_t.frequency='weekly' THEN 7*(g-1)
+      WHEN v_t.frequency='biweekly' THEN 14*(g-1) WHEN v_t.frequency='quarterly' THEN 90*(g-1) ELSE 30*(g-1) END,
+    v_t.contribution_amount,v_t.late_fee_amount
+  FROM public.tontine_members tm CROSS JOIN generate_series(1,v_t.cycle_periods) g
+  WHERE tm.tontine_id=p_tontine_id AND tm.membership_status='active';
+
+  INSERT INTO public.tontine_rotations(cycle_id,member_id,rotation_order,planned_payout_on,expected_amount,beneficiary_phone)
+  SELECT v_id,tm.id,
+    row_number() OVER(ORDER BY tm.joined_at,tm.created_at,tm.id)::int,
+    v_start+CASE WHEN v_t.frequency='daily' THEN row_number() OVER(ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1
+      WHEN v_t.frequency='weekly' THEN 7*(row_number() OVER(ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1)
+      WHEN v_t.frequency='biweekly' THEN 14*(row_number() OVER(ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1)
+      WHEN v_t.frequency='quarterly' THEN 90*(row_number() OVER(ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1)
+      ELSE 30*(row_number() OVER(ORDER BY tm.joined_at,tm.created_at,tm.id)::int-1) END,
+    v_t.contribution_amount*v_members,p.phone
+  FROM public.tontine_members tm JOIN public.profiles p ON p.id=tm.user_id
+  WHERE tm.tontine_id=p_tontine_id AND tm.membership_status='active';
+
+  INSERT INTO public.audit_logs(user_id,organization_id,module_code,action,entity_type,entity_id,new_data)
+  VALUES(v_t.created_by,v_t.organization_id,'jdv_tontine','automatic_next_cycle','tontine_cycle',v_id::text,
+    jsonb_build_object('previous_cycle_id',p_previous_cycle_id,'cycle_number',v_num,'starts_on',v_start,'ends_on',v_end,'automatic',true));
+  RETURN v_id;
 END;
 $function$;
 
