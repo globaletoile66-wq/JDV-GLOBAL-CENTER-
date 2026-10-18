@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ClipboardList, FileText, RefreshCw, Search, ShieldCheck, ShieldPlus, UserRoundCheck } from 'lucide-react';
+import { ArrowLeft, ClipboardList, CreditCard, FileText, RefreshCw, Search, ShieldCheck, ShieldPlus, UserRoundCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
@@ -86,6 +86,10 @@ export default function InsurancePage() {
             <Link href="/insurance/sinistres" className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 transition hover:border-[#F28C28]/50">
               <div className="rounded-xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><ClipboardList size={22} /></div>
               <div><h2 className="font-bold">Sinistres</h2><p className="mt-1 text-xs text-white/45">Déclarer un sinistre sur un contrat actif et suivre le dossier.</p></div>
+            </Link>
+            <Link href="/insurance/echeances" className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 transition hover:border-[#F28C28]/50 sm:col-span-2">
+              <div className="rounded-xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><CreditCard size={22} /></div>
+              <div><h2 className="font-bold">Échéances et paiements</h2><p className="mt-1 text-xs text-white/45">Voir les primes dues et les transactions déjà enregistrées, sans déclencher de paiement.</p></div>
             </Link>
           </div>
           <section className="mt-7 flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 sm:flex-row sm:items-center">
