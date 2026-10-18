@@ -17,7 +17,7 @@ Ils doivent être exécutés dans un environnement de test isolé avec des utili
    - la fonction échoue avec `RULES_ACCEPTANCE_REQUIRED`;
    - aucun membre ni consommation de lien n'est écrit.
 
-3. **Téléphone absent ou non confirmé**
+3. **Téléphone absent, non confirmé ou différent du téléphone invité**
    - la fonction échoue;
    - aucun membre ni consommation de lien n'est écrit.
 
