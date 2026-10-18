@@ -556,7 +556,7 @@ AS $function$
 DECLARE
   t public.tontines; v_cycle uuid; v_president uuid; v_num integer;
   v_members integer; v_amount numeric; v_periods integer; v_frequency text;
-  v_owner public.tontine_members; v_phone text; v_expected numeric;
+  v_owner public.tontine_members; v_phone text; v_expected numeric; v_required_days integer;
 BEGIN
   SELECT * INTO t FROM public.tontines WHERE id=p_tontine_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'TONTINE_NOT_FOUND'; END IF;
@@ -580,6 +580,14 @@ BEGIN
   v_periods:=t.cycle_periods;
   v_frequency:=t.frequency;
   v_expected:=v_amount*v_periods*v_members;
+  v_required_days:=CASE
+    WHEN v_frequency='daily' THEN greatest(v_periods, CASE WHEN t.tontine_type='individual' THEN 1 ELSE v_members END)-1
+    WHEN v_frequency='weekly' THEN 7*(greatest(v_periods, CASE WHEN t.tontine_type='individual' THEN 1 ELSE v_members END)-1)
+    WHEN v_frequency='biweekly' THEN 14*(greatest(v_periods, CASE WHEN t.tontine_type='individual' THEN 1 ELSE v_members END)-1)
+    WHEN v_frequency='quarterly' THEN 90*(greatest(v_periods, CASE WHEN t.tontine_type='individual' THEN 1 ELSE v_members END)-1)
+    ELSE 30*(greatest(v_periods, CASE WHEN t.tontine_type='individual' THEN 1 ELSE v_members END)-1)
+  END;
+  IF p_ends_on < p_starts_on + v_required_days THEN RAISE EXCEPTION 'CYCLE_ENDS_BEFORE_LAST_DUE_DATE'; END IF;
   SELECT coalesce(max(cycle_number),0)+1 INTO v_num FROM public.tontine_cycles WHERE tontine_id=t.id;
 
   INSERT INTO public.tontine_cycles(tontine_id,cycle_number,starts_on,ends_on,status,total_expected,total_collected)
