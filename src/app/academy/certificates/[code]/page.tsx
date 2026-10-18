@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import AcademyNavigation from '@/components/academy/AcademyNavigation';
 import { useParams } from 'next/navigation';
@@ -20,7 +20,7 @@ type Verification = {
 export default function AcademyCertificateVerificationPage() {
   const params = useParams<{ code: string }>();
   const code = decodeURIComponent(params.code || '');
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [result, setResult] = useState<Verification | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
