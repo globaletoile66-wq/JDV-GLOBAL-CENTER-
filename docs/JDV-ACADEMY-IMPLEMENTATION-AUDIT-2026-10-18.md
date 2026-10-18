@@ -74,3 +74,7 @@ La lecture initiale des politiques actives ne montrait pas les quatre politiques
 - La page de cours a maintenant une interface pour démarrer une leçon et la marquer comme terminée. Le build indépendant TypeScript/Next.js passe après correction du JSX.
 - Les parcours avec des comptes réels de différents rôles n'ont pas encore été exécutés ; les règles ont été vérifiées dans la base mais il reste à tester le comportement bout en bout.
 - Les previews `shiny-khapse-609dec` et `comfy-bienenstitch-ab9522` ont réussi pour cette version. Le projet Netlify `jdv-global-center` continue de signaler un échec de preview ; son accès de configuration n'est pas disponible via la connexion Netlify actuelle et son journal détaillé reste à consulter.
+
+- La migration `20261018161619_jdv_academy_lesson_media` est enregistrée dans Supabase. Les colonnes `content_type`, `media_url` et `resource_links` existent sur `academy_lessons`; les leçons existantes restent de type texte par défaut.
+- La page de cours permet d'afficher un lien vidéo direct MP4/WebM ou d'ouvrir un document/lien externe. Ces URL ne sont pas privées automatiquement ; il faut utiliser un fournisseur et des droits de partage adaptés aux apprenants.
+- La compilation indépendante passe et les prévisualisations Netlify `shiny-khapse-609dec` et `comfy-bienenstitch-ab9522` sont prêtes pour la version de supports médias. Le projet `jdv-global-center` reste en échec côté Netlify et nécessite un accès à sa configuration/journaux.
