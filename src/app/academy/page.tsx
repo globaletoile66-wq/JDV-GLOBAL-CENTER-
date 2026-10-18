@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, GraduationCap, RefreshCw, Search, Plus, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +18,7 @@ const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-x
 
 export default function AcademyPage() {
   const { user, loading: authLoading, isSuperAdmin } = useAuth();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
