@@ -367,7 +367,7 @@ export default function CheckoutPage() {
                   </div>
                   {wallet.available_balance < subtotal && (
                     <div className="mt-3 pt-3 border-t border-border">
-                      <p className="text-xs text-warning mb-2">Solde insuffisant. Rechargez votre portefeuille pour continuer.</p>
+                      <p className="text-xs text-warning mb-2">Vous pourrez régler la commande via le parcours JDV PAY après sa création.</p>
                       <Link href="/pay" className="btn-outline text-xs">Recharger mon portefeuille</Link>
                     </div>
                   )}
@@ -381,18 +381,18 @@ export default function CheckoutPage() {
 
               <div className="bg-muted/20 rounded-xl p-3 flex items-center gap-2 text-xs text-muted-foreground">
                 <Shield size={14} className="text-success flex-shrink-0" />
-                <span>Paiement sécurisé et protégé par JDV PAY. Votre argent est retenu jusqu'à la livraison confirmée.</span>
+                <span>Le paiement n’est pas lancé ici. La commande reste en attente jusqu’à confirmation réelle par JDV PAY.</span>
               </div>
 
               <div className="flex gap-3">
                 <button onClick={() => setStep('address')} className="btn-outline flex-1 text-sm">Retour</button>
                 <button
                   onClick={placeOrder}
-                  disabled={placing || !wallet || wallet.available_balance < subtotal}
+                  disabled={placing || cartItems.length === 0 || !selectedAddress}
                   className="btn-primary flex-1 text-sm flex items-center justify-center gap-2"
                 >
                   {placing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  Confirmer la commande
+                  Créer la commande en attente
                 </button>
               </div>
             </div>
