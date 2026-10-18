@@ -38,12 +38,21 @@ export default function LoginPageContent() {
     setAuthError(null);
     try {
       await signIn(data.email, data.password);
+
+      // Conceivers must land in the full platform control center, not the
+      // generic dashboard that routes ordinary users to a single workspace.
+      const { data: superAdmin } = await createClient().rpc('is_super_admin');
+      const destination = superAdmin === true
+        ? '/hidden-concepteur-gate/dashboard'
+        : redirectTo;
+
       toast.success('Connexion réussie — Bienvenue sur JDV GLOBAL CENTER');
       if (await needsMfaChallenge(createClient())) {
-        router.push(`/auth/mfa?redirect=${encodeURIComponent(redirectTo)}`);
+        router.replace(`/auth/mfa?redirect=${encodeURIComponent(destination)}`);
         return;
       }
-      router.push(safeRedirect(redirectTo));
+      router.replace(safeRedirect(destination));
+      router.refresh();
     } catch (err: any) {
       const msg = err?.message || 'Erreur de connexion';
       if (msg.includes('Invalid login credentials')) {
