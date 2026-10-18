@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import AcademyNavigation from '@/components/academy/AcademyNavigation';
 import { ArrowLeft, CalendarDays, Clock3, ExternalLink, RefreshCw, Video } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -75,6 +76,7 @@ export default function AcademyLivePage() {
   return (
     <main className="min-h-screen bg-[#0B1B3D] px-4 py-6 text-white sm:px-8 sm:py-8">
       <div className="mx-auto max-w-6xl">
+        <AcademyNavigation current="live" />
         <header className="flex flex-wrap items-center justify-between gap-3"><Link href="/academy" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> JDV Academy</Link><button type="button" onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''}/> Actualiser</button></header>
         <section className="mt-7 rounded-3xl border border-white/10 bg-gradient-to-br from-[#122b57] to-[#0b1b3d] p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV ACADEMY · LIVE</p><h1 className="mt-3 flex items-center gap-3 text-3xl font-black sm:text-4xl"><CalendarDays size={32} className="text-[#F28C28]"/> Séances en direct</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">Retrouve les séances accessibles pour tes cours. Les liens de réunion ne sont affichés qu’aux apprenants inscrits et aux responsables autorisés. La visioconférence est fournie par un service externe.</p>{error && <p role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p>}</section>
         {!user ? <section className="mt-6 rounded-2xl border border-white/10 p-6 text-sm text-white/60">Connecte-toi pour consulter tes séances privées. <Link className="ml-1 underline" href="/auth/login">Se connecter</Link></section> : busy ? <div className="mt-6 rounded-2xl border border-white/10 p-8 text-sm text-white/50">Chargement des séances…</div> : <div className="mt-6 space-y-8"><section><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">À venir</h2><span className="text-sm text-white/40">{upcoming.length} séance(s)</span></div>{upcoming.length ? <div className="grid gap-4 md:grid-cols-2">{upcoming.map(sessionCard)}</div> : <p className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-white/45">Aucune séance à venir accessible.</p>}</section><section><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">Historique</h2><span className="text-sm text-white/40">{past.length} séance(s)</span></div>{past.length ? <div className="grid gap-4 md:grid-cols-2">{past.map(sessionCard)}</div> : <p className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-white/45">Aucune séance passée.</p>}</section></div>}
