@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, GraduationCap, RefreshCw, Search, Plus, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,10 +20,13 @@ const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-x
 export default function AcademyPage() {
   const { user, loading: authLoading, isSuperAdmin } = useAuth();
   const supabase = useMemo(() => createClient(), []);
+
   const [programs, setPrograms] = useState<Program[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [manageableCourseIds, setManageableCourseIds] = useState<string[]>([]);
+  const [manageableOrganizationIds, setManageableOrganizationIds] = useState<string[]>([]);
+  const [manageableProgramIds, setManageableProgramIds] = useState<string[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [query, setQuery] = useState('');
@@ -71,12 +75,16 @@ export default function AcademyPage() {
       const adminOrganizationIds = memberships.filter((membership) => roleCodesById[membership.role_id] === 'admin').map((membership) => membership.organization_id);
       const accessiblePrograms = (programResult.data || []) as Program[];
       const accessibleCourses = (courseResult.data || []) as Course[];
+      setManageableOrganizationIds(isSuperAdmin ? organizationIds : adminOrganizationIds);
+      setManageableProgramIds(isSuperAdmin ? accessiblePrograms.map((program) => program.id) : accessiblePrograms.filter((program) => adminOrganizationIds.includes(program.organization_id || '')).map((program) => program.id));
       setManageableCourseIds(isSuperAdmin ? accessibleCourses.map((course) => course.id) : accessibleCourses.filter((course) =>
         course.instructor_user_id === user.id ||
         adminOrganizationIds.includes(accessiblePrograms.find((program) => program.id === course.program_id)?.organization_id || '')
       ).map((course) => course.id));
     } else {
       setManageableCourseIds([]);
+      setManageableOrganizationIds([]);
+      setManageableProgramIds([]);
       setCurrencies([]);
     }
 
@@ -98,6 +106,11 @@ export default function AcademyPage() {
 
   useEffect(() => { if (!authLoading) void load(); }, [authLoading, load]);
 
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    if (requestedTab === 'catalog' || requestedTab === 'learning' || requestedTab === 'manage') setTab(requestedTab);
+  }, []);
+
   const programName = (id: string) => programs.find((program) => program.id === id)?.name || 'Programme non visible';
   const enrolledIds = new Set(enrollments.filter((enrollment) => enrollment.enrollment_status !== 'cancelled').map((enrollment) => enrollment.course_id));
   const visibleCourses = courses.filter((course) => {
@@ -109,6 +122,7 @@ export default function AcademyPage() {
   const saveProgram = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user || !programForm.name.trim()) return;
+    if (!isSuperAdmin && !manageableOrganizationIds.includes(programForm.organization_id)) { setError('La création de programmes est réservée aux administrateurs de l’organisation.'); return; }
     const price = programForm.price.trim() ? Number(programForm.price) : null;
     const durationHours = programForm.duration_hours.trim() ? Number(programForm.duration_hours) : null;
     if (price !== null && (!Number.isFinite(price) || price < 0)) { setError('Le tarif doit être un nombre positif ou nul.'); return; }
@@ -138,6 +152,7 @@ export default function AcademyPage() {
   const saveCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user || !courseForm.program_id || !courseForm.title.trim()) return;
+    if (!isSuperAdmin && !manageableProgramIds.includes(courseForm.program_id)) { setError('La création de cours est réservée aux administrateurs autorisés du programme.'); return; }
     setSaving(true); setError(''); setNotice('');
     const { error: saveError } = await supabase.from('academy_courses').insert({
       program_id: courseForm.program_id,
@@ -158,8 +173,10 @@ export default function AcademyPage() {
   };
 
   const updateEnrollmentStatus = async (enrollment: Enrollment, status: 'confirmed' | 'completed' | 'cancelled') => {
+    if (!user || (!isSuperAdmin && !manageableCourseIds.includes(enrollment.course_id) && enrollment.student_user_id !== user.id)) { setError('Tu ne disposes pas des droits nécessaires pour modifier cette inscription.'); return; }
+    if (enrollment.student_user_id === user.id && status !== 'cancelled') { setError('Un apprenant ne peut ni confirmer ni terminer sa propre inscription depuis cette action.'); return; }
     setSaving(true); setError(''); setNotice('');
-    const { error: updateError } = await supabase.from('academy_enrollments').update({ enrollment_status: status }).eq('id', enrollment.id);
+    const { error: updateError } = await supabase.from('academy_enrollments').update({ enrollment_status: status, completed_at: status === 'completed' ? new Date().toISOString() : null }).eq('id', enrollment.id);
     if (updateError) setError(updateError.message);
     else {
       setNotice(status === 'confirmed' ? 'Inscription confirmée.' : status === 'completed' ? 'Formation marquée comme terminée pour cet apprenant.' : 'Demande d’inscription annulée.');
@@ -169,6 +186,7 @@ export default function AcademyPage() {
   };
 
   const publishProgram = async (program: Program) => {
+    if (!isSuperAdmin && !manageableProgramIds.includes(program.id)) { setError('Seul un administrateur autorisé peut publier ce programme.'); return; }
     setSaving(true); setError(''); setNotice('');
     const { error: publishError } = await supabase
       .from('academy_programs')
@@ -181,6 +199,7 @@ export default function AcademyPage() {
 
   const enroll = async (course: Course) => {
     if (!user) { setError('Connecte-toi pour demander une inscription.'); return; }
+    if (course.status !== 'open') { setError('Les inscriptions ne sont pas ouvertes pour ce cours.'); return; }
     setSaving(true); setError(''); setNotice('');
     const { error: enrollError } = await supabase.from('academy_enrollments').insert({
       course_id: course.id, student_user_id: user.id, enrollment_status: 'pending',
@@ -224,17 +243,17 @@ export default function AcademyPage() {
             </div>
 
             {tab === 'manage' && <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5"><h2 className="font-bold">Créer un programme</h2><p className="mt-1 text-xs text-white/50">Le programme est enregistré en brouillon.</p><button onClick={() => { setProgramFormOpen(!programFormOpen); setCourseFormOpen(false); setError(''); }} className={secondaryButton + ' mt-4 w-full'}><Plus size={16} />{programFormOpen ? 'Fermer' : 'Nouveau programme'}</button>
-                {programFormOpen && <form onSubmit={saveProgram} className="mt-4 space-y-3"><input className={inputClass} required maxLength={120} placeholder="Nom du programme" value={programForm.name} onChange={(e) => setProgramForm({...programForm,name:e.target.value})} /><textarea className={inputClass} rows={3} maxLength={2000} placeholder="Description" value={programForm.description} onChange={(e) => setProgramForm({...programForm,description:e.target.value})} /><div className="grid grid-cols-2 gap-3"><label className="text-xs text-white/50">Durée (heures)<input className={inputClass + ' mt-1'} type="number" min="0" step="0.5" placeholder="Facultative" value={programForm.duration_hours} onChange={(e) => setProgramForm({...programForm,duration_hours:e.target.value})}/></label><label className="text-xs text-white/50">Tarif du programme<input className={inputClass + ' mt-1'} type="number" min="0" step="0.01" placeholder="0 = gratuit" value={programForm.price} onChange={(e) => setProgramForm({...programForm,price:e.target.value})}/></label></div><label className="block text-xs text-white/50">Devise<select className={inputClass + ' mt-1'} value={programForm.currency_id} onChange={(e) => setProgramForm({...programForm,currency_id:e.target.value})}><option value="">Sans devise / gratuit</option>{currencies.map((currency) => <option key={currency.id} value={currency.id}>{currency.code} · {currency.name}</option>)}</select></label><select className={inputClass} required={!isSuperAdmin} value={programForm.organization_id} onChange={(e) => setProgramForm({...programForm,organization_id:e.target.value})}><option value="">Choisir une organisation</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}</select><select className={inputClass} value={programForm.program_type} onChange={(e) => setProgramForm({...programForm,program_type:e.target.value})}><option value="course">Cours</option><option value="certification">Certification</option><option value="workshop">Atelier</option><option value="degree">Diplôme</option></select><button className={primaryButton + ' w-full'} disabled={saving}>Enregistrer le programme</button></form>}
+              <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5"><h2 className="font-bold">Créer un programme</h2><p className="mt-1 text-xs text-white/50">Le programme est enregistré en brouillon.</p>{(isSuperAdmin || manageableOrganizationIds.length > 0) ? <button onClick={() => { setProgramFormOpen(!programFormOpen); setCourseFormOpen(false); setError(''); }} className={secondaryButton + ' mt-4 w-full'}><Plus size={16} />{programFormOpen ? 'Fermer' : 'Nouveau programme'}</button> : <p className="mt-4 text-xs text-white/45">Création réservée aux administrateurs d’organisation.</p>}
+                {programFormOpen && (isSuperAdmin || manageableOrganizationIds.length > 0) && <form onSubmit={saveProgram} className="mt-4 space-y-3"><input className={inputClass} required maxLength={120} placeholder="Nom du programme" value={programForm.name} onChange={(e) => setProgramForm({...programForm,name:e.target.value})} /><textarea className={inputClass} rows={3} maxLength={2000} placeholder="Description" value={programForm.description} onChange={(e) => setProgramForm({...programForm,description:e.target.value})} /><div className="grid grid-cols-2 gap-3"><label className="text-xs text-white/50">Durée (heures)<input className={inputClass + ' mt-1'} type="number" min="0" step="0.5" placeholder="Facultative" value={programForm.duration_hours} onChange={(e) => setProgramForm({...programForm,duration_hours:e.target.value})}/></label><label className="text-xs text-white/50">Tarif du programme<input className={inputClass + ' mt-1'} type="number" min="0" step="0.01" placeholder="0 = gratuit" value={programForm.price} onChange={(e) => setProgramForm({...programForm,price:e.target.value})}/></label></div><label className="block text-xs text-white/50">Devise<select className={inputClass + ' mt-1'} value={programForm.currency_id} onChange={(e) => setProgramForm({...programForm,currency_id:e.target.value})}><option value="">Sans devise / gratuit</option>{currencies.map((currency) => <option key={currency.id} value={currency.id}>{currency.code} · {currency.name}</option>)}</select></label><select className={inputClass} required={!isSuperAdmin} value={programForm.organization_id} onChange={(e) => setProgramForm({...programForm,organization_id:e.target.value})}><option value="">Choisir une organisation</option>{organizations.filter((org) => isSuperAdmin || manageableOrganizationIds.includes(org.id)).map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}</select><select className={inputClass} value={programForm.program_type} onChange={(e) => setProgramForm({...programForm,program_type:e.target.value})}><option value="course">Cours</option><option value="certification">Certification</option><option value="workshop">Atelier</option><option value="degree">Diplôme</option></select><button className={primaryButton + ' w-full'} disabled={saving}>Enregistrer le programme</button></form>}
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5"><h2 className="font-bold">Créer un cours</h2><p className="mt-1 text-xs text-white/50">Un cours doit être lié à un programme accessible.</p><button onClick={() => { setCourseFormOpen(!courseFormOpen); setProgramFormOpen(false); setError(''); }} disabled={!programs.length} className={secondaryButton + ' mt-4 w-full'}><Plus size={16} />{courseFormOpen ? 'Fermer' : 'Nouveau cours'}</button>
-                {!programs.length && <p className="mt-3 text-xs text-white/45">Aucun programme visible pour le moment.</p>}
-                {courseFormOpen && <form onSubmit={saveCourse} className="mt-4 space-y-3"><select className={inputClass} required value={courseForm.program_id} onChange={(e) => setCourseForm({...courseForm,program_id:e.target.value})}><option value="">Choisir un programme</option>{programs.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}</select><input className={inputClass} required maxLength={160} placeholder="Titre du cours" value={courseForm.title} onChange={(e) => setCourseForm({...courseForm,title:e.target.value})} /><textarea className={inputClass} rows={3} maxLength={4000} placeholder="Description du cours" value={courseForm.description} onChange={(e) => setCourseForm({...courseForm,description:e.target.value})} /><select className={inputClass} value={courseForm.status} onChange={(e) => setCourseForm({...courseForm,status:e.target.value})}><option value="planned">Planifié</option><option value="open">Inscriptions ouvertes</option></select><input className={inputClass} type="number" min="1" placeholder="Capacité facultative" value={courseForm.capacity} onChange={(e) => setCourseForm({...courseForm,capacity:e.target.value})} /><label className="block text-xs text-white/50">Date de début<input className={inputClass + ' mt-1'} type="datetime-local" value={courseForm.starts_at} onChange={(e) => setCourseForm({...courseForm,starts_at:e.target.value})} /></label><button className={primaryButton + ' w-full'} disabled={saving}>Enregistrer le cours</button></form>}
+              <div className="rounded-2xl border border-white/10 bg-white/[.03] p-5"><h2 className="font-bold">Créer un cours</h2><p className="mt-1 text-xs text-white/50">Un cours doit être lié à un programme accessible.</p><button onClick={() => { setCourseFormOpen(!courseFormOpen); setProgramFormOpen(false); setError(''); }} disabled={!manageableProgramIds.length} className={secondaryButton + ' mt-4 w-full'}><Plus size={16} />{courseFormOpen ? 'Fermer' : 'Nouveau cours'}</button>
+                {!manageableProgramIds.length && <p className="mt-3 text-xs text-white/45">Aucun programme gérable par ce compte. Un rôle administrateur est nécessaire pour créer un cours.</p>}
+                {courseFormOpen && manageableProgramIds.length > 0 && <form onSubmit={saveCourse} className="mt-4 space-y-3"><select className={inputClass} required value={courseForm.program_id} onChange={(e) => setCourseForm({...courseForm,program_id:e.target.value})}><option value="">Choisir un programme</option>{programs.filter((program) => isSuperAdmin || manageableProgramIds.includes(program.id)).map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}</select><input className={inputClass} required maxLength={160} placeholder="Titre du cours" value={courseForm.title} onChange={(e) => setCourseForm({...courseForm,title:e.target.value})} /><textarea className={inputClass} rows={3} maxLength={4000} placeholder="Description du cours" value={courseForm.description} onChange={(e) => setCourseForm({...courseForm,description:e.target.value})} /><select className={inputClass} value={courseForm.status} onChange={(e) => setCourseForm({...courseForm,status:e.target.value})}><option value="planned">Planifié</option><option value="open">Inscriptions ouvertes</option></select><input className={inputClass} type="number" min="1" placeholder="Capacité facultative" value={courseForm.capacity} onChange={(e) => setCourseForm({...courseForm,capacity:e.target.value})} /><label className="block text-xs text-white/50">Date de début<input className={inputClass + ' mt-1'} type="datetime-local" value={courseForm.starts_at} onChange={(e) => setCourseForm({...courseForm,starts_at:e.target.value})} /></label><button className={primaryButton + ' w-full'} disabled={saving}>Enregistrer le cours</button></form>}
               </div>
             </div>}
 
             {busy ? <div className="grid gap-4 py-8 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3].map((item) => <div key={item} className="h-44 animate-pulse rounded-2xl border border-white/10 bg-white/[.03]" />)}</div> : tab === 'manage' ? <div className="mt-6 space-y-7">
-              <section className="space-y-3">{programs.map((program) => <article key={program.id} className="flex flex-col justify-between gap-3 rounded-2xl border border-white/10 p-4 sm:flex-row sm:items-center"><div><h3 className="font-bold">{program.name}</h3><p className="mt-1 text-sm text-white/50">{program.description || 'Sans description'} · {courses.filter((course) => course.program_id === program.id).length} cours</p>{program.duration_hours !== null && <p className="mt-1 text-xs text-white/40">{program.duration_hours} h de formation</p>}{program.price !== null && <p className="mt-1 text-sm font-semibold text-[#F28C28]">{program.price === 0 ? 'Gratuit' : `${program.price.toLocaleString('fr-FR')} ${currencies.find((currency) => currency.id === program.currency_id)?.code || ''}`}</p>}</div><div className="flex items-center gap-2"><span className="w-fit rounded-full border border-white/10 px-3 py-1 text-xs">{program.status === 'published' ? 'Publié' : program.status === 'archived' ? 'Archivé' : 'Brouillon'}</span>{program.status === 'draft' && <button onClick={() => void publishProgram(program)} disabled={saving} className="rounded-xl border border-[#F28C28]/30 px-3 py-1.5 text-xs font-semibold text-[#F28C28] disabled:opacity-50">Publier</button>}</div></article>)}{!programs.length && <p className="py-8 text-center text-sm text-white/45">Aucun programme accessible. Crée un programme si tu disposes des droits nécessaires.</p>}</section>
+              <section className="space-y-3">{programs.map((program) => <article key={program.id} className="flex flex-col justify-between gap-3 rounded-2xl border border-white/10 p-4 sm:flex-row sm:items-center"><div><h3 className="font-bold">{program.name}</h3><p className="mt-1 text-sm text-white/50">{program.description || 'Sans description'} · {courses.filter((course) => course.program_id === program.id).length} cours</p>{program.duration_hours !== null && <p className="mt-1 text-xs text-white/40">{program.duration_hours} h de formation</p>}{program.price !== null && <p className="mt-1 text-sm font-semibold text-[#F28C28]">{program.price === 0 ? 'Gratuit' : `${program.price.toLocaleString('fr-FR')} ${currencies.find((currency) => currency.id === program.currency_id)?.code || ''}`}</p>}</div><div className="flex items-center gap-2"><span className="w-fit rounded-full border border-white/10 px-3 py-1 text-xs">{program.status === 'published' ? 'Publié' : program.status === 'archived' ? 'Archivé' : 'Brouillon'}</span>{program.status === 'draft' && (isSuperAdmin || manageableProgramIds.includes(program.id)) && <button onClick={() => void publishProgram(program)} disabled={saving} className="rounded-xl border border-[#F28C28]/30 px-3 py-1.5 text-xs font-semibold text-[#F28C28] disabled:opacity-50">Publier</button>}</div></article>)}{!programs.length && <p className="py-8 text-center text-sm text-white/45">Aucun programme accessible. Crée un programme si tu disposes des droits nécessaires.</p>}</section>
               <section className="rounded-2xl border border-white/10 p-5"><h2 className="text-lg font-bold">Demandes d’inscription</h2><p className="mt-1 text-sm text-white/50">Seuls les instructeurs affectés et administrateurs autorisés peuvent confirmer une inscription. Les apprenants ne peuvent pas se confirmer eux-mêmes.</p>
                 <div className="mt-4 space-y-3">{enrollments.filter((enrollment) => enrollment.enrollment_status === 'pending' && (isSuperAdmin || manageableCourseIds.includes(enrollment.course_id) || enrollment.student_user_id === user?.id)).map((enrollment) => {
                   const canManage = isSuperAdmin || manageableCourseIds.includes(enrollment.course_id);

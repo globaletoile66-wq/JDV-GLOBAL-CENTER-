@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import AcademyNavigation from '@/components/academy/AcademyNavigation';
 import { ArrowLeft, Banknote, BookOpen, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -43,6 +44,7 @@ export default function AcademyRevenuePage() {
   return (
     <main className="min-h-screen bg-[#0B1B3D] px-4 py-6 text-white sm:px-8 sm:py-8">
       <div className="mx-auto max-w-7xl">
+        <AcademyNavigation current="revenue" />
         <header className="flex flex-wrap items-center justify-between gap-3"><Link href="/academy" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> JDV Academy</Link><button type="button" onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''}/> Actualiser</button></header>
         <section className="mt-7 rounded-3xl border border-white/10 bg-gradient-to-br from-[#122b57] to-[#0b1b3d] p-6 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV ACADEMY · REVENUE</p><h1 className="mt-3 flex items-center gap-3 text-3xl font-black sm:text-4xl"><Banknote size={32} className="text-[#F28C28]"/> Tarification des formations</h1>
