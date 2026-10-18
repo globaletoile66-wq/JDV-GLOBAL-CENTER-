@@ -34,27 +34,43 @@ export default function AcademyPage() {
   const [courseForm, setCourseForm] = useState({ program_id: '', title: '', description: '', capacity: '', starts_at: '', status: 'planned' });
 
   const load = useCallback(async () => {
-    if (!user) {
-      setPrograms([]); setCourses([]); setEnrollments([]); setOrganizations([]); setBusy(false);
-      return;
-    }
-    setBusy(true); setError('');
-    const [programResult, courseResult, enrollmentResult, memberResult] = await Promise.all([
+    setBusy(true);
+    setError('');
+
+    // The RLS policies intentionally expose only published programmes and open
+    // courses to visitors. Load that public catalogue even before sign-in.
+    const [programResult, courseResult] = await Promise.all([
       supabase.from('academy_programs').select('id,organization_id,name,description,program_type,status').order('created_at', { ascending: false }),
       supabase.from('academy_courses').select('id,program_id,title,description,starts_at,capacity,status').order('created_at', { ascending: false }).limit(200),
-      supabase.from('academy_enrollments').select('id,course_id,enrollment_status').eq('student_user_id', user.id),
-      supabase.from('organization_members').select('organization_id').eq('user_id', user.id).eq('member_status', 'active'),
     ]);
-    const firstError = programResult.error || courseResult.error || enrollmentResult.error;
+
+    let learnerEnrollments: Enrollment[] = [];
+    let organizationIds: string[] = [];
+    let enrollmentError: { message: string } | null = null;
+
+    if (user) {
+      const [enrollmentResult, memberResult] = await Promise.all([
+        supabase.from('academy_enrollments').select('id,course_id,enrollment_status').eq('student_user_id', user.id),
+        supabase.from('organization_members').select('organization_id').eq('user_id', user.id).eq('member_status', 'active'),
+      ]);
+      learnerEnrollments = (enrollmentResult.data || []) as Enrollment[];
+      enrollmentError = enrollmentResult.error;
+      organizationIds = [...new Set((memberResult.data || []).map((row: { organization_id: string }) => row.organization_id))];
+    }
+
+    const firstError = programResult.error || courseResult.error || enrollmentError;
     if (firstError) setError(firstError.message);
     setPrograms((programResult.data || []) as Program[]);
     setCourses((courseResult.data || []) as Course[]);
-    setEnrollments((enrollmentResult.data || []) as Enrollment[]);
-    const ids = [...new Set((memberResult.data || []).map((row: { organization_id: string }) => row.organization_id))];
-    if (ids.length) {
-      const { data } = await supabase.from('organizations').select('id,name').in('id', ids).order('name');
+    setEnrollments(learnerEnrollments);
+
+    if (organizationIds.length) {
+      const { data, error: organizationError } = await supabase.from('organizations').select('id,name').in('id', organizationIds).order('name');
+      if (organizationError) setError(organizationError.message);
       setOrganizations((data || []) as Organization[]);
-    } else setOrganizations([]);
+    } else {
+      setOrganizations([]);
+    }
     setBusy(false);
   }, [supabase, user]);
 
@@ -160,8 +176,8 @@ export default function AcademyPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => setTab('catalog')} className={tab === 'catalog' ? primaryButton : secondaryButton}><BookOpen size={16} /> Catalogue</button>
-                <button onClick={() => setTab('learning')} className={tab === 'learning' ? primaryButton : secondaryButton}><GraduationCap size={16} /> Mes apprentissages</button>
-                <button onClick={() => setTab('manage')} className={tab === 'manage' ? primaryButton : secondaryButton}>Gestion</button>
+                <button onClick={() => setTab('learning')} disabled={!user} title={!user ? 'Connecte-toi pour consulter tes apprentissages' : undefined} className={tab === 'learning' ? primaryButton : secondaryButton}><GraduationCap size={16} /> Mes apprentissages</button>
+                <button onClick={() => setTab('manage')} disabled={!user} title={!user ? 'Connecte-toi pour accéder à la gestion' : undefined} className={tab === 'manage' ? primaryButton : secondaryButton}>Gestion</button>
               </div>
               <label className="flex min-w-0 items-center gap-3 rounded-xl border border-white/10 bg-black/10 px-4 py-3 lg:w-80"><Search size={17} className="text-white/40" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un cours" className="min-w-0 w-full bg-transparent text-sm outline-none placeholder:text-white/30" /></label>
             </div>
@@ -179,7 +195,7 @@ export default function AcademyPage() {
             {busy ? <div className="grid gap-4 py-8 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3].map((item) => <div key={item} className="h-44 animate-pulse rounded-2xl border border-white/10 bg-white/[.03]" />)}</div> : tab === 'manage' ? <div className="mt-6 space-y-3">{programs.map((program) => <article key={program.id} className="flex flex-col justify-between gap-3 rounded-2xl border border-white/10 p-4 sm:flex-row sm:items-center"><div><h3 className="font-bold">{program.name}</h3><p className="mt-1 text-sm text-white/50">{program.description || 'Sans description'} · {courses.filter((course) => course.program_id === program.id).length} cours</p></div><div className="flex items-center gap-2"><span className="w-fit rounded-full border border-white/10 px-3 py-1 text-xs">{program.status === 'published' ? 'Publié' : program.status === 'archived' ? 'Archivé' : 'Brouillon'}</span>{program.status === 'draft' && <button onClick={() => void publishProgram(program)} disabled={saving} className="rounded-xl border border-[#F28C28]/30 px-3 py-1.5 text-xs font-semibold text-[#F28C28] disabled:opacity-50">Publier</button>}</div></article>)}{!programs.length && <p className="py-8 text-center text-sm text-white/45">Aucun programme accessible. Crée un programme si tu disposes des droits nécessaires.</p>}</div> : <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visibleCourses.map((course) => {
                 const enrolled = enrolledIds.has(course.id);
-                return <article key={course.id} className="flex flex-col rounded-2xl border border-white/10 bg-white/[.035] p-5 hover:border-[#F28C28]/35"><div className="flex items-start justify-between gap-3"><div className="rounded-xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><BookOpen size={21} /></div><span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/65">{course.status}</span></div><p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#F28C28]">{programName(course.program_id)}</p><h2 className="mt-1 text-lg font-bold"><Link href={'/academy/courses/' + course.id}>{course.title}</Link></h2><p className="mt-2 flex-1 text-sm leading-6 text-white/55">{course.description || 'Aucune description renseignée.'}</p><div className="mt-4 flex flex-wrap gap-3 border-t border-white/10 pt-4 text-xs text-white/45">{course.starts_at && <span>{new Date(course.starts_at).toLocaleDateString('fr-FR')}</span>}{course.capacity && <span className="inline-flex items-center gap-1"><Users size={14}/>{course.capacity} places</span>}</div>{tab === 'catalog' && <button onClick={() => void enroll(course)} disabled={!user || saving || enrolled || course.status !== 'open'} className={(enrolled ? secondaryButton : primaryButton) + ' mt-4 w-full'}>{enrolled ? 'Inscription demandée' : course.status === 'open' ? 'Demander une inscription' : 'Inscriptions non ouvertes'}</button>}{tab === 'learning' && <div className="mt-4 flex items-center gap-2 text-sm text-emerald-200"><CheckCircle2 size={16}/>{enrollments.find((item) => item.course_id === course.id)?.enrollment_status || 'Inscrit'}</div>}</article>;
+                return <article key={course.id} className="flex flex-col rounded-2xl border border-white/10 bg-white/[.035] p-5 hover:border-[#F28C28]/35"><div className="flex items-start justify-between gap-3"><div className="rounded-xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><BookOpen size={21} /></div><span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/65">{course.status}</span></div><p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#F28C28]">{programName(course.program_id)}</p><h2 className="mt-1 text-lg font-bold"><Link href={'/academy/courses/' + course.id}>{course.title}</Link></h2><p className="mt-2 flex-1 text-sm leading-6 text-white/55">{course.description || 'Aucune description renseignée.'}</p><div className="mt-4 flex flex-wrap gap-3 border-t border-white/10 pt-4 text-xs text-white/45">{course.starts_at && <span>{new Date(course.starts_at).toLocaleDateString('fr-FR')}</span>}{course.capacity && <span className="inline-flex items-center gap-1"><Users size={14}/>{course.capacity} places</span>}</div>{tab === 'catalog' && (user ? <button onClick={() => void enroll(course)} disabled={saving || enrolled || course.status !== 'open'} className={(enrolled ? secondaryButton : primaryButton) + ' mt-4 w-full'}>{enrolled ? 'Inscription demandée' : course.status === 'open' ? 'Demander une inscription' : 'Inscriptions non ouvertes'}</button> : <Link href="/auth/login" className={primaryButton + ' mt-4 w-full'}>Se connecter pour s’inscrire</Link>)}{tab === 'learning' && <div className="mt-4 flex items-center gap-2 text-sm text-emerald-200"><CheckCircle2 size={16}/>{enrollments.find((item) => item.course_id === course.id)?.enrollment_status || 'Inscrit'}</div>}</article>;
               })}
               {visibleCourses.length === 0 && <div className="col-span-full rounded-2xl border border-dashed border-white/15 p-10 text-center"><BookOpen size={30} className="mx-auto text-white/35"/><h2 className="mt-3 font-bold">Aucun cours à afficher</h2><p className="mt-1 text-sm text-white/45">{tab === 'learning' ? 'Tes inscriptions apparaîtront ici après une demande.' : 'Les cours accessibles apparaîtront ici dès qu’un programme et ses cours seront enregistrés.'}</p></div>}
             </div>}
