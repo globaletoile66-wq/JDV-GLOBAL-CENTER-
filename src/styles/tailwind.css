@@ -23,7 +23,8 @@
   --input: #1E2D5A;
   --ring: #F97316;
   --radius: 0.75rem;
-  --font-sans: var(--font-manrope), 'Manrope', sans-serif;
+  --font-manrope: 'Manrope', 'Aptos', 'Segoe UI';
+  --font-sans: var(--font-manrope), sans-serif;
   --success: #10B981;
   --warning: #F59E0B;
   --danger: #EF4444;
