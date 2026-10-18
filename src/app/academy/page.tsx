@@ -184,7 +184,7 @@ export default function AcademyPage() {
       <div className="mx-auto max-w-7xl">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <Link href="/services" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Tous les services</Link>
-          <div className="flex flex-wrap gap-2"><Link href="/academy/intelligence" className={secondaryButton}>Intelligence</Link><button onClick={() => void load()} disabled={busy} className={secondaryButton}><RefreshCw size={16} /> Actualiser</button><Link href="/dashboard" className={secondaryButton}>Mon tableau de bord</Link></div>
+          <div className="flex flex-wrap gap-2"><Link href="/academy/live" className={secondaryButton}>JDV Academy Live</Link><Link href="/academy/intelligence" className={secondaryButton}>Intelligence</Link><button onClick={() => void load()} disabled={busy} className={secondaryButton}><RefreshCw size={16} /> Actualiser</button><Link href="/dashboard" className={secondaryButton}>Mon tableau de bord</Link></div>
         </header>
         <section className="mt-7 overflow-hidden rounded-3xl border border-white/10 bg-white/[.05] shadow-2xl">
           <div className="border-b border-white/10 bg-gradient-to-br from-[#122b57] to-[#0b1b3d] p-6 sm:p-8">
