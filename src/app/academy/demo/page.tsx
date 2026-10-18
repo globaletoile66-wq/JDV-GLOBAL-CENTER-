@@ -12,7 +12,7 @@ const sectors = [
   { id: 'catalogue', name: 'Catalogue & programmes', tables: ['academy_programs', 'academy_courses'], route: '/academy', detail: 'Lecture du catalogue et disponibilité des programmes publiés.' },
   { id: 'learning', name: 'Cours & progression', tables: ['academy_lessons', 'academy_lesson_progress'], route: '/academy', detail: 'Structure des leçons et sauvegarde de la progression.' },
   { id: 'enrollments', name: 'Inscriptions', tables: ['academy_enrollments'], route: '/academy', detail: 'Demandes d’inscription et suivi du statut.' },
-  { id: 'assessments', name: 'Évaluations & résultats', tables: ['academy_assessments', 'academy_results'], route: '/academy', detail: 'Disponibilité des évaluations et des résultats.' },
+  { id: 'assessments', name: 'Évaluations & résultats', tables: ['academy_assessments', 'academy_assessment_questions', 'academy_assessment_submissions', 'academy_results'], route: '/academy', detail: 'Disponibilité des évaluations, questions, soumissions et résultats.' },
   { id: 'certificates', name: 'Attestations', tables: ['academy_certificates'], route: '/academy', detail: 'Présence de la table des attestations; aucune attestation réelle n’est créée.' },
   { id: 'live', name: 'JDV Academy Live', tables: ['academy_live_sessions'], route: '/academy/live', detail: 'Accès à la page Live et structure des séances.' },
   { id: 'tutor', name: 'Tuteur IA', tables: ['ai_conversations', 'ai_messages'], route: '/academy/ai', detail: 'Structure des conversations et messages; aucun appel IA n’est déclenché.' },
