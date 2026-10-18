@@ -111,6 +111,17 @@ export default function AcademyPage() {
     setSaving(false);
   };
 
+  const publishProgram = async (program: Program) => {
+    setSaving(true); setError(''); setNotice('');
+    const { error: publishError } = await supabase
+      .from('academy_programs')
+      .update({ status: 'published', updated_at: new Date().toISOString() })
+      .eq('id', program.id);
+    if (publishError) setError(publishError.message);
+    else { setNotice('Programme publié. Les cours ouverts peuvent maintenant apparaître dans le catalogue public.'); await load(); }
+    setSaving(false);
+  };
+
   const enroll = async (course: Course) => {
     if (!user) { setError('Connecte-toi pour demander une inscription.'); return; }
     setSaving(true); setError(''); setNotice('');
@@ -165,7 +176,7 @@ export default function AcademyPage() {
               </div>
             </div>}
 
-            {busy ? <div className="grid gap-4 py-8 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3].map((item) => <div key={item} className="h-44 animate-pulse rounded-2xl border border-white/10 bg-white/[.03]" />)}</div> : tab === 'manage' ? <div className="mt-6 space-y-3">{programs.map((program) => <article key={program.id} className="flex flex-col justify-between gap-3 rounded-2xl border border-white/10 p-4 sm:flex-row sm:items-center"><div><h3 className="font-bold">{program.name}</h3><p className="mt-1 text-sm text-white/50">{program.description || 'Sans description'} · {courses.filter((course) => course.program_id === program.id).length} cours</p></div><span className="w-fit rounded-full border border-white/10 px-3 py-1 text-xs">{program.status === 'published' ? 'Publié' : program.status === 'archived' ? 'Archivé' : 'Brouillon'}</span></article>)}{!programs.length && <p className="py-8 text-center text-sm text-white/45">Aucun programme accessible. Crée un programme si tu disposes des droits nécessaires.</p>}</div> : <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {busy ? <div className="grid gap-4 py-8 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3].map((item) => <div key={item} className="h-44 animate-pulse rounded-2xl border border-white/10 bg-white/[.03]" />)}</div> : tab === 'manage' ? <div className="mt-6 space-y-3">{programs.map((program) => <article key={program.id} className="flex flex-col justify-between gap-3 rounded-2xl border border-white/10 p-4 sm:flex-row sm:items-center"><div><h3 className="font-bold">{program.name}</h3><p className="mt-1 text-sm text-white/50">{program.description || 'Sans description'} · {courses.filter((course) => course.program_id === program.id).length} cours</p></div><div className="flex items-center gap-2"><span className="w-fit rounded-full border border-white/10 px-3 py-1 text-xs">{program.status === 'published' ? 'Publié' : program.status === 'archived' ? 'Archivé' : 'Brouillon'}</span>{program.status === 'draft' && <button onClick={() => void publishProgram(program)} disabled={saving} className="rounded-xl border border-[#F28C28]/30 px-3 py-1.5 text-xs font-semibold text-[#F28C28] disabled:opacity-50">Publier</button>}</div></article>)}{!programs.length && <p className="py-8 text-center text-sm text-white/45">Aucun programme accessible. Crée un programme si tu disposes des droits nécessaires.</p>}</div> : <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visibleCourses.map((course) => {
                 const enrolled = enrolledIds.has(course.id);
                 return <article key={course.id} className="flex flex-col rounded-2xl border border-white/10 bg-white/[.035] p-5 hover:border-[#F28C28]/35"><div className="flex items-start justify-between gap-3"><div className="rounded-xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><BookOpen size={21} /></div><span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/65">{course.status}</span></div><p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#F28C28]">{programName(course.program_id)}</p><h2 className="mt-1 text-lg font-bold"><Link href={'/academy/courses/' + course.id}>{course.title}</Link></h2><p className="mt-2 flex-1 text-sm leading-6 text-white/55">{course.description || 'Aucune description renseignée.'}</p><div className="mt-4 flex flex-wrap gap-3 border-t border-white/10 pt-4 text-xs text-white/45">{course.starts_at && <span>{new Date(course.starts_at).toLocaleDateString('fr-FR')}</span>}{course.capacity && <span className="inline-flex items-center gap-1"><Users size={14}/>{course.capacity} places</span>}</div>{tab === 'catalog' && <button onClick={() => void enroll(course)} disabled={!user || saving || enrolled || course.status !== 'open'} className={(enrolled ? secondaryButton : primaryButton) + ' mt-4 w-full'}>{enrolled ? 'Inscription demandée' : course.status === 'open' ? 'Demander une inscription' : 'Inscriptions non ouvertes'}</button>}{tab === 'learning' && <div className="mt-4 flex items-center gap-2 text-sm text-emerald-200"><CheckCircle2 size={16}/>{enrollments.find((item) => item.course_id === course.id)?.enrollment_status || 'Inscrit'}</div>}</article>;
