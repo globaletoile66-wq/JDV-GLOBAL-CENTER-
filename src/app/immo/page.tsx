@@ -62,7 +62,7 @@ export default function ImmoPage() {
     if (furnishedFilter) propertyQuery = propertyQuery.eq('furnished', furnishedFilter === 'true');
     if (query.trim()) {
       const term = query.trim().replace(/[%,()\\\\]/g, ' ');
-      propertyQuery = propertyQuery.or('title.ilike.%' + term + '%,city.ilike.%' + term + '%,district.ilike.%' + term + '%');
+      propertyQuery = propertyQuery.or('title.ilike.%' + term + '%,description.ilike.%' + term + '%,city.ilike.%' + term + '%,district.ilike.%' + term + '%');
     }
     const [propertyResult, typeResult, currencyResult, countryResult, favoriteResult, appointmentResult] = await Promise.all([
       user ? propertyQuery : propertyQuery.eq('property_status', 'published'),
