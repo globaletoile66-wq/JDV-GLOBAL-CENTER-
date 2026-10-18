@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import AcademyNavigation from '@/components/academy/AcademyNavigation';
 import { ArrowLeft, BookOpen, GraduationCap, Award, CheckCircle2, ClipboardCheck, RefreshCw, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -61,6 +62,7 @@ export default function AcademyIntelligencePage() {
   return (
     <main className="min-h-screen bg-[#0B1B3D] px-4 py-6 text-white sm:px-8 sm:py-8">
       <div className="mx-auto max-w-7xl">
+        <AcademyNavigation current="intelligence" />
         <header className="flex flex-wrap items-center justify-between gap-3">
           <Link href="/academy" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> Retour à JDV Academy</Link>
           <button type="button" onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''}/> Actualiser</button>
