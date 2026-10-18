@@ -130,17 +130,20 @@ export default function AcademyCoursePage() {
       setLiveSessions((liveData || []) as LiveSession[]);
       if (liveError) setError((current) => current || liveError.message);
 
-      let mayManage = isSuperAdmin || currentCourse.instructor_user_id === user.id;
+      const isCourseInstructor = currentCourse.instructor_user_id === user.id;
+      let isOrganizationAdmin = false;
       const organizationId = programResult.data?.organization_id || null;
-      if (!mayManage && organizationId) {
+      if (!isSuperAdmin && organizationId) {
         const { data: membership } = await supabase.from('organization_members').select('role_id').eq('organization_id', organizationId).eq('user_id', user.id).eq('member_status', 'active').maybeSingle();
         if (membership?.role_id) {
           const { data: role } = await supabase.from('roles').select('code').eq('id', membership.role_id).maybeSingle();
-          mayManage = role?.code === 'admin';
+          isOrganizationAdmin = role?.code === 'admin';
         }
       }
-      setCanManageCourse(Boolean(mayManage));
-      setCanManageLive(Boolean(mayManage));
+      // Content authoring follows the database RLS policy (organization admin or super-admin).
+      // Live-session management also permits the assigned instructor.
+      setCanManageCourse(Boolean(isSuperAdmin || isOrganizationAdmin));
+      setCanManageLive(Boolean(isSuperAdmin || isOrganizationAdmin || isCourseInstructor));
     } else {
       setCertificate(null);
       setLiveSessions([]);
