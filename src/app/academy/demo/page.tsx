@@ -45,15 +45,30 @@ export default function AcademyDemoPage() {
 
     const checked = await Promise.all(sectors.map(async (sector): Promise<CheckResult> => {
       const routeCheck = await fetch(sector.route, { method: 'GET', cache: 'no-store', redirect: 'follow' })
-        .then((response) => ({ ok: response.status < 500, status: response.status }))
-        .catch(() => ({ ok: false, status: 0 }));
+        .then((response) => {
+          const finalPath = new URL(response.url, window.location.origin).pathname.replace(/\\/$/, '') || '/';
+          const expectedPath = sector.route.replace(/\\/$/, '') || '/';
+          const redirectedAway = response.redirected && finalPath !== expectedPath;
+          return {
+            ok: response.status >= 200 && response.status < 400 && !redirectedAway,
+            redirectedAway,
+            status: response.status,
+            finalPath,
+          };
+        })
+        .catch(() => ({ ok: false, redirectedAway: false, status: 0, finalPath: '' }));
       const tableChecks = await Promise.all(sector.tables.map(async (table) => {
         const { error } = await supabase.from(table).select('*', { count: 'exact', head: true }).limit(1);
         return { table, ok: !error, error: error?.message };
       }));
 
       const failedTables = tableChecks.filter((item) => !item.ok);
-      if (!routeCheck.ok) return { id: sector.id, sector: sector.name, detail: sector.detail, status: 'failed', result: `Page inaccessible ou erreur serveur (HTTP ${routeCheck.status || 'réseau'}).` };
+      if (!routeCheck.ok) {
+        const detail = routeCheck.redirectedAway
+          ? `Redirection détectée vers ${routeCheck.finalPath} (authentification ou route différente).`
+          : `Page inaccessible ou réponse HTTP invalide (HTTP ${routeCheck.status || 'réseau'}).`;
+        return { id: sector.id, sector: sector.name, detail: sector.detail, status: 'failed', result: detail };
+      }
       if (failedTables.length) {
         const messages = failedTables.map((item) => `${item.table}: ${item.error || 'indisponible'}`).join(' · ');
         return { id: sector.id, sector: sector.name, detail: sector.detail, status: 'blocked', result: `Page accessible; vérification Supabase bloquée : ${messages}` };
