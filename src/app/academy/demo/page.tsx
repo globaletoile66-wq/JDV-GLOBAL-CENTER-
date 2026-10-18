@@ -10,15 +10,15 @@ type CheckStatus = 'idle' | 'running' | 'passed' | 'failed' | 'blocked';
 type CheckResult = { id: string; sector: string; detail: string; status: CheckStatus; result: string };
 
 const sectors = [
-  { id: 'catalogue', name: 'Catalogue & programmes', tables: ['academy_programs', 'academy_courses'], route: '/academy', detail: 'Lecture du catalogue et disponibilité des programmes publiés.' },
-  { id: 'learning', name: 'Cours & progression', tables: ['academy_lessons', 'academy_lesson_progress'], route: '/academy', detail: 'Structure des leçons et sauvegarde de la progression.' },
-  { id: 'enrollments', name: 'Inscriptions', tables: ['academy_enrollments'], route: '/academy', detail: 'Demandes d’inscription et suivi du statut.' },
-  { id: 'assessments', name: 'Évaluations & résultats', tables: ['academy_assessments', 'academy_assessment_questions', 'academy_assessment_submissions', 'academy_results'], route: '/academy', detail: 'Disponibilité des évaluations, questions, soumissions et résultats.' },
-  { id: 'certificates', name: 'Attestations', tables: ['academy_certificates'], route: '/academy', detail: 'Présence de la table des attestations; aucune attestation réelle n’est créée.' },
-  { id: 'live', name: 'JDV Academy Live', tables: ['academy_live_sessions'], route: '/academy/live', detail: 'Accès à la page Live et structure des séances.' },
-  { id: 'tutor', name: 'Tuteur IA', tables: ['ai_conversations', 'ai_messages'], route: '/academy/ai', detail: 'Structure des conversations et messages; aucun appel IA n’est déclenché.' },
-  { id: 'revenue', name: 'Revenue', tables: ['currencies', 'academy_programs'], route: '/academy/revenue', detail: 'Accès aux données de tarifs et aux devises.' },
-  { id: 'intelligence', name: 'Intelligence & indicateurs', tables: ['academy_enrollments', 'academy_lesson_progress', 'academy_results', 'academy_certificates'], route: '/academy/intelligence', detail: 'Disponibilité des sources de données des indicateurs.' },
+  { id: 'catalogue', name: 'Catalogue & programmes', tables: ['academy_programs', 'academy_courses'], route: '/academy?tab=catalog', detail: 'Page catalogue et disponibilité des programmes publiés.' },
+  { id: 'learning', name: 'Cours & progression', tables: ['academy_lessons', 'academy_lesson_progress'], route: '/academy?tab=learning', requiresCourse: true, detail: 'Page réelle du cours, leçons et progression.' },
+  { id: 'enrollments', name: 'Inscriptions', tables: ['academy_enrollments'], route: '/academy?tab=manage', requiresCourse: true, detail: 'Page du cours liée aux inscriptions et suivi du statut.' },
+  { id: 'assessments', name: 'Évaluations & résultats', tables: ['academy_assessments', 'academy_assessment_questions', 'academy_assessment_submissions', 'academy_results'], route: '/academy?tab=manage', requiresCourse: true, detail: 'Page du cours avec évaluations, questions, soumissions et résultats.' },
+  { id: 'certificates', name: 'Attestations', tables: ['academy_certificates'], route: null, requiresCertificate: true, detail: 'Vérification publique d’une attestation réelle; aucun certificat fictif n’est créé.' },
+  { id: 'live', name: 'JDV Academy Live', tables: ['academy_live_sessions'], route: '/academy/live', detail: 'Page Live et structure des séances.' },
+  { id: 'tutor', name: 'Tuteur IA', tables: ['ai_conversations', 'ai_messages'], route: '/academy/ai', detail: 'Page du tuteur et structure des conversations; aucun appel IA n’est déclenché.' },
+  { id: 'revenue', name: 'Revenue', tables: ['currencies', 'academy_programs'], route: '/academy/revenue', detail: 'Page des tarifs et des devises; les encaissements ne sont pas simulés.' },
+  { id: 'intelligence', name: 'Intelligence & indicateurs', tables: ['academy_enrollments', 'academy_lesson_progress', 'academy_results', 'academy_certificates'], route: '/academy/intelligence', detail: 'Page des indicateurs et disponibilité de leurs sources.' },
 ] as const;
 
 const fixtures = [
@@ -45,21 +45,31 @@ export default function AcademyDemoPage() {
     setResults(sectors.map((sector) => ({ id: sector.id, sector: sector.name, detail: sector.detail, status: 'running', result: 'Vérification en cours…' })));
 
     const checked = await Promise.all(sectors.map(async (sector): Promise<CheckResult> => {
-      const routeCheck = await fetch(sector.route, { method: 'GET', cache: 'no-store', redirect: 'follow' })
-        .then((response) => {
-          const rawFinalPath = new URL(response.url, window.location.origin).pathname;
-          const finalPath = rawFinalPath.length > 1 && rawFinalPath.endsWith('/') ? rawFinalPath.slice(0, -1) : rawFinalPath;
-          const rawExpectedPath = sector.route;
-          const expectedPath = rawExpectedPath.length > 1 && rawExpectedPath.endsWith('/') ? rawExpectedPath.slice(0, -1) : rawExpectedPath;
-          const redirectedAway = response.redirected && finalPath !== expectedPath;
-          return {
-            ok: response.status >= 200 && response.status < 400 && !redirectedAway,
-            redirectedAway,
-            status: response.status,
-            finalPath,
-          };
-        })
-        .catch(() => ({ ok: false, redirectedAway: false, status: 0, finalPath: '' }));
+      let targetRoute: string | null = sector.route;
+      let preconditionMessage = '';
+      if ('requiresCourse' in sector && sector.requiresCourse) {
+        const { data: courseRow, error: courseLookupError } = await supabase.from('academy_courses').select('id').limit(1).maybeSingle();
+        if (courseLookupError) { targetRoute = null; preconditionMessage = 'Impossible de choisir un cours accessible : ' + courseLookupError.message; }
+        else if (!courseRow?.id) { targetRoute = null; preconditionMessage = 'Aucun cours accessible : le test du parcours dynamique est bloqué jusqu’à la création d’un cours réel.'; }
+        else targetRoute = '/academy/courses/' + courseRow.id;
+      }
+      if ('requiresCertificate' in sector && sector.requiresCertificate) {
+        const { data: certificateRow, error: certificateLookupError } = await supabase.from('academy_certificates').select('certificate_code').limit(1).maybeSingle();
+        if (certificateLookupError) { targetRoute = null; preconditionMessage = 'Impossible de sélectionner une attestation accessible : ' + certificateLookupError.message; }
+        else if (!certificateRow?.certificate_code) { targetRoute = null; preconditionMessage = 'Aucune attestation réelle disponible : le contrôle de la route de vérification est bloqué, sans fabriquer de certificat.'; }
+        else targetRoute = '/academy/certificates/' + encodeURIComponent(certificateRow.certificate_code);
+      }
+      const routeCheck = targetRoute
+        ? await fetch(targetRoute, { method: 'GET', cache: 'no-store', redirect: 'follow' })
+            .then((response) => {
+              const finalUrl = new URL(response.url, window.location.origin);
+              const finalPath = finalUrl.pathname.length > 1 && finalUrl.pathname.endsWith('/') ? finalUrl.pathname.slice(0, -1) : finalUrl.pathname;
+              const expectedPath = new URL(targetRoute as string, window.location.origin).pathname.replace(/\\/$/, '') || '/';
+              const redirectedAway = response.redirected && finalPath !== expectedPath;
+              return { ok: response.status >= 200 && response.status < 400 && !redirectedAway, blocked: false, redirectedAway, status: response.status, finalPath };
+            })
+            .catch(() => ({ ok: false, blocked: false, redirectedAway: false, status: 0, finalPath: '' }))
+        : { ok: false, blocked: true, redirectedAway: false, status: 0, finalPath: '' };
       const tableChecks = await Promise.all(sector.tables.map(async (table) => {
         const { error } = await supabase.from(table).select('*', { count: 'exact', head: true }).limit(1);
         return { table, ok: !error, error: error?.message };
@@ -67,6 +77,7 @@ export default function AcademyDemoPage() {
 
       const failedTables = tableChecks.filter((item) => !item.ok);
       if (!routeCheck.ok) {
+        if (routeCheck.blocked) return { id: sector.id, sector: sector.name, detail: sector.detail, status: 'blocked', result: preconditionMessage || 'Précondition de test non satisfaite; aucune donnée de démonstration n’a été créée.' };
         const detail = routeCheck.redirectedAway
           ? `Redirection détectée vers ${routeCheck.finalPath} (authentification ou route différente).`
           : `Page inaccessible ou réponse HTTP invalide (HTTP ${routeCheck.status || 'réseau'}).`;
