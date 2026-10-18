@@ -60,6 +60,10 @@ export default function ImmoPage() {
     if (minBedrooms.trim() && Number.isFinite(Number(minBedrooms))) propertyQuery = propertyQuery.gte('bedrooms', Number(minBedrooms));
     if (minSurface.trim() && Number.isFinite(Number(minSurface))) propertyQuery = propertyQuery.gte('surface', Number(minSurface));
     if (furnishedFilter) propertyQuery = propertyQuery.eq('furnished', furnishedFilter === 'true');
+    if (query.trim()) {
+      const term = query.trim().replace(/[%,()\\\\]/g, ' ');
+      propertyQuery = propertyQuery.or('title.ilike.%' + term + '%,city.ilike.%' + term + '%,district.ilike.%' + term + '%');
+    }
     const [propertyResult, typeResult, currencyResult, countryResult, favoriteResult, appointmentResult] = await Promise.all([
       user ? propertyQuery.or('property_status.eq.published,owner_user_id.eq.' + user.id) : propertyQuery.eq('property_status', 'published'),
       supabase.from('immo_property_types').select('id,name,code').eq('is_active', true).order('sort_order'),
@@ -75,7 +79,7 @@ export default function ImmoPage() {
     if (favoriteResult.error) setError((current) => current || favoriteResult.error!.message); else setFavorites((favoriteResult.data ?? []).map((row: { property_id: string }) => row.property_id));
     if (appointmentResult.error) setError((current) => current || appointmentResult.error!.message); else setAppointments((appointmentResult.data ?? []) as Appointment[]);
     setBusy(false);
-  }, [supabase, user, typeFilter, transactionFilter, countryFilter, cityFilter, minPrice, maxPrice, minBedrooms, minSurface, furnishedFilter]);
+  }, [supabase, user, typeFilter, transactionFilter, countryFilter, cityFilter, minPrice, maxPrice, minBedrooms, minSurface, furnishedFilter, query]);
 
   useEffect(() => { if (!loading) void load(); }, [loading, load]);
 
