@@ -12,6 +12,8 @@ type Lesson = { id: string; title: string; lesson_order: number; content: string
 type Assessment = { id: string; title: string; max_score: number; created_at: string };
 type AssessmentQuestion = { id: string; assessment_id: string; question_order: number; question_type: 'single_choice' | 'true_false' | 'short_answer' | 'essay'; prompt: string; options: string[]; points: number };
 type AssessmentSubmission = { id: string; assessment_id: string; student_user_id: string; attempt_number: number; answers: Record<string, string>; submission_status: 'submitted' | 'graded'; submitted_at: string };
+type AssessmentResult = { assessment_id: string; student_user_id: string; score: number; graded_at: string | null };
+type GradeResponse = { graded: boolean; score?: number; max_score?: number; already_graded?: boolean; reason?: string };
 type Enrollment = { enrollment_status: string };
 type LessonProgress = { lesson_id: string; progress_status: 'in_progress' | 'completed'; last_position_seconds: number; completed_at: string | null };
 
@@ -30,6 +32,7 @@ export default function AcademyCoursePage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [assessmentQuestions, setAssessmentQuestions] = useState<AssessmentQuestion[]>([]);
   const [assessmentSubmissions, setAssessmentSubmissions] = useState<AssessmentSubmission[]>([]);
+  const [assessmentResults, setAssessmentResults] = useState<AssessmentResult[]>([]);
   const [studentAnswers, setStudentAnswers] = useState<Record<string, string>>({});
   const [questionFormOpenFor, setQuestionFormOpenFor] = useState<string | null>(null);
   const [questionForm, setQuestionForm] = useState({ prompt: '', question_type: 'short_answer' as AssessmentQuestion['question_type'], options: '', points: '1', correct_answer: '' });
@@ -65,16 +68,19 @@ export default function AcademyCoursePage() {
     if (lessonResult.error || assessmentResult.error) setError((lessonResult.error || assessmentResult.error)?.message || 'Erreur de chargement du contenu.');
     const assessmentIds = ((assessmentResult.data || []) as Assessment[]).map((assessment) => assessment.id);
     if (user && assessmentIds.length) {
-      const [questionResult, submissionResult] = await Promise.all([
+      const [questionResult, submissionResult, resultResult] = await Promise.all([
         supabase.from('academy_assessment_questions').select('id,assessment_id,question_order,question_type,prompt,options,points').in('assessment_id', assessmentIds).order('question_order'),
         supabase.from('academy_assessment_submissions').select('id,assessment_id,student_user_id,attempt_number,answers,submission_status,submitted_at').in('assessment_id', assessmentIds).order('submitted_at', { ascending: false }),
+        supabase.from('academy_results').select('assessment_id,student_user_id,score,graded_at').in('assessment_id', assessmentIds).eq('student_user_id', user.id),
       ]);
       setAssessmentQuestions((questionResult.data || []) as AssessmentQuestion[]);
       setAssessmentSubmissions((submissionResult.data || []) as AssessmentSubmission[]);
-      if (questionResult.error || submissionResult.error) setError((current) => current || (questionResult.error || submissionResult.error)?.message || 'Erreur de chargement des évaluations.');
+      setAssessmentResults((resultResult.data || []) as AssessmentResult[]);
+      if (questionResult.error || submissionResult.error || resultResult.error) setError((current) => current || (questionResult.error || submissionResult.error || resultResult.error)?.message || 'Erreur de chargement des évaluations.');
     } else {
       setAssessmentQuestions([]);
       setAssessmentSubmissions([]);
+      setAssessmentResults([]);
     }
     if (user) {
       const { data: enrollmentData, error: enrollmentError } = await supabase.from('academy_enrollments').select('enrollment_status').eq('course_id', courseId).eq('student_user_id', user.id).maybeSingle();
@@ -212,15 +218,27 @@ export default function AcademyCoursePage() {
     }
     const ownAttempts = assessmentSubmissions.filter((submission) => submission.assessment_id === assessment.id && submission.student_user_id === user.id);
     setSaving(true); setError(''); setNotice('');
-    const { error: submitError } = await supabase.from('academy_assessment_submissions').insert({
+    const { data: submittedCopy, error: submitError } = await supabase.from('academy_assessment_submissions').insert({
       assessment_id: assessment.id,
       student_user_id: user.id,
       attempt_number: ownAttempts.length + 1,
       answers: Object.fromEntries(questions.map((question) => [question.id, studentAnswers[question.id].trim()])),
-    });
-    if (submitError) setError(submitError.message);
+    }).select('id').single();
+    if (submitError || !submittedCopy) setError(submitError?.message || 'La copie n’a pas pu être envoyée.');
     else {
-      setNotice('Ta copie a été envoyée. Le résultat sera affiché après correction.');
+      const { data: gradingData, error: gradingError } = await supabase.rpc('academy_grade_submission', { p_submission_id: submittedCopy.id });
+      const grade = (gradingData || null) as GradeResponse | null;
+      if (gradingError) {
+        setNotice('Copie envoyée. La correction automatique est indisponible ; la copie reste en attente de correction.');
+      } else if (grade?.graded) {
+        setNotice(`Copie corrigée automatiquement : ${grade.score} / ${grade.max_score} points.`);
+      } else {
+        setNotice(grade?.reason === 'answer_key_incomplete'
+          ? 'Copie envoyée. Les réponses attendues sont incomplètes ; une correction par le formateur est nécessaire.'
+          : grade?.reason === 'answers_incomplete'
+            ? 'Copie envoyée. Certaines réponses sont manquantes ; la correction reste en attente.'
+            : 'Copie envoyée. Cette évaluation nécessite une correction manuelle.');
+      }
       setStudentAnswers((current) => {
         const next = { ...current };
         questions.forEach((question) => delete next[question.id]);
@@ -280,6 +298,7 @@ export default function AcademyCoursePage() {
                 const questions = assessmentQuestions.filter((question) => question.assessment_id === assessment.id);
                 const visibleSubmissions = assessmentSubmissions.filter((submission) => submission.assessment_id === assessment.id);
                 const ownSubmissions = visibleSubmissions.filter((submission) => submission.student_user_id === user?.id);
+                const ownResult = assessmentResults.find((result) => result.assessment_id === assessment.id && result.student_user_id === user?.id);
                 const canSubmit = Boolean(user && enrollment && ['confirmed', 'completed'].includes(enrollment.enrollment_status));
                 return <article key={assessment.id} className="rounded-2xl border border-white/10 p-4">
                   <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{assessment.title}</h3><p className="mt-2 text-sm text-white/50">Barème : {assessment.max_score} points · {questions.length} question(s)</p></div><button type="button" onClick={() => { setQuestionFormOpenFor(questionFormOpenFor === assessment.id ? null : assessment.id); setQuestionForm({ prompt: '', question_type: 'short_answer', options: '', points: '1', correct_answer: '' }); }} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-white/80">Ajouter une question</button></div>
@@ -294,6 +313,7 @@ export default function AcademyCoursePage() {
                   {questions.length > 0 && <div className="mt-4 space-y-3">{questions.map((question)=><div key={question.id} className="rounded-xl border border-white/10 bg-white/[.02] p-3"><p className="text-sm font-medium">{question.question_order}. {question.prompt} <span className="text-xs text-white/40">({question.points} pt)</span></p>{canSubmit && <div className="mt-2">{question.question_type === 'single_choice' ? <select className={fieldClass} required value={studentAnswers[question.id] || ''} onChange={(e)=>setStudentAnswers({...studentAnswers,[question.id]:e.target.value})}><option value="">Choisir une réponse</option>{question.options.map((option)=><option key={option} value={option}>{option}</option>)}</select> : question.question_type === 'true_false' ? <select className={fieldClass} required value={studentAnswers[question.id] || ''} onChange={(e)=>setStudentAnswers({...studentAnswers,[question.id]:e.target.value})}><option value="">Choisir</option><option value="true">Vrai</option><option value="false">Faux</option></select> : <textarea className={fieldClass} required rows={question.question_type === 'essay' ? 5 : 2} maxLength={10000} placeholder="Ta réponse" value={studentAnswers[question.id] || ''} onChange={(e)=>setStudentAnswers({...studentAnswers,[question.id]:e.target.value})}/>}</div>}</div>)}</div>}
                   {canSubmit && questions.length > 0 && <form onSubmit={(event) => void submitAssessment(event, assessment)} className="mt-4"><button disabled={saving} className={actionClass+' w-full'}>{saving?'Envoi…':'Soumettre ma copie'}</button></form>}
                   {ownSubmissions.length > 0 && <p className="mt-3 text-xs text-emerald-100/80">Tes copies : {ownSubmissions.length} · dernière soumission : {ownSubmissions[0].submission_status === 'graded' ? 'corrigée' : 'en attente de correction'}</p>}
+                  {ownResult && <p className="mt-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-100">Dernier résultat enregistré : <strong>{ownResult.score} / {assessment.max_score}</strong>{ownResult.graded_at ? ` · corrigé le ${new Date(ownResult.graded_at).toLocaleDateString('fr-FR')}` : ''}</p>}
                   {user && visibleSubmissions.some((submission) => submission.student_user_id !== user.id) && <div className="mt-4 rounded-xl border border-white/10 p-3"><p className="text-xs font-semibold text-white/60">Copies à examiner</p><ul className="mt-2 space-y-1 text-xs text-white/50">{visibleSubmissions.filter((submission) => submission.student_user_id !== user.id).map((submission)=><li key={submission.id}>Copie reçue · {new Date(submission.submitted_at).toLocaleString('fr-FR')} · {submission.submission_status === 'graded' ? 'corrigée' : 'en attente'}</li>)}</ul></div>}
                   {questions.length === 0 && <p className="mt-4 text-sm text-white/45">Aucune question pour le moment.</p>}
                 </article>;
