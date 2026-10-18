@@ -141,25 +141,11 @@ ALTER TABLE public.tontine_members
   ADD COLUMN IF NOT EXISTS contract_version text;
 
 -- Do not permit direct self-editing of membership status or deletion of membership history.
+DROP POLICY IF EXISTS tontine_members_insert ON public.tontine_members;
 DROP POLICY IF EXISTS tontine_members_update ON public.tontine_members;
 DROP POLICY IF EXISTS tontine_members_delete ON public.tontine_members;
-CREATE POLICY tontine_members_update ON public.tontine_members
-  FOR UPDATE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.tontines t
-      WHERE t.id = tontine_members.tontine_id
-        AND (public.is_org_admin(t.organization_id) OR public.is_super_admin())
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.tontines t
-      WHERE t.id = tontine_members.tontine_id
-        AND (public.is_org_admin(t.organization_id) OR public.is_super_admin())
-    )
-  );
--- Intentionally no authenticated DELETE policy: membership history is retained.
+-- Membership rows can only be created or changed through the controlled SECURITY DEFINER RPCs.
+-- There is intentionally no authenticated INSERT, UPDATE, or DELETE policy on this table.
 
 -- Group invitations cannot be created for a personal savings plan.
 CREATE OR REPLACE FUNCTION public.tontine_guard_group_join_link()
@@ -225,7 +211,7 @@ BEGIN
   SELECT * INTO v_tontine FROM public.tontines WHERE id = v_link.tontine_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'TONTINE_NOT_FOUND'; END IF;
   IF v_tontine.tontine_type <> 'group' THEN RAISE EXCEPTION 'JOIN_LINKS_REQUIRE_GROUP_TONTINE'; END IF;
-  IF v_tontine.status IN ('cancelled', 'completed') THEN RAISE EXCEPTION 'TONTINE_CLOSED'; END IF;
+  IF v_tontine.status NOT IN ('draft', 'open', 'active') THEN RAISE EXCEPTION 'TONTINE_NOT_OPEN_FOR_ADMISSION'; END IF;
 
   SELECT phone, phone_confirmed_at INTO v_phone, v_phone_confirmed
   FROM auth.users WHERE id = v_user;
@@ -348,7 +334,14 @@ BEGIN
   IF NOT (
     coalesce(public.is_super_admin(), false)
     OR coalesce(public.is_org_admin(t.organization_id), false)
-    OR coalesce(v_president = auth.uid(), false)
+    OR (
+      coalesce(v_president = auth.uid(), false)
+      AND EXISTS (
+        SELECT 1 FROM public.tontine_members pm
+        WHERE pm.id = t.president_member_id AND pm.membership_status = 'active'
+          AND pm.identity_confirmed_at IS NOT NULL AND pm.contract_accepted_at IS NOT NULL
+      )
+    )
   ) THEN RAISE EXCEPTION 'MEMBER_APPROVAL_NOT_AUTHORIZED'; END IF;
   IF m.membership_status NOT IN ('pending', 'approved') THEN RAISE EXCEPTION 'MEMBER_NOT_PENDING'; END IF;
 
@@ -789,3 +782,16 @@ BEGIN
   );
 END;
 $function$;
+
+
+-- Keep function execution explicit; the system scheduler is the only next-cycle caller.
+REVOKE ALL ON FUNCTION public.tontine_create(uuid, uuid, uuid, text, text, numeric, text, integer, integer, date, numeric, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.tontine_create(uuid, uuid, uuid, text, text, numeric, text, integer, integer, date, numeric, jsonb) TO authenticated;
+REVOKE ALL ON FUNCTION public.tontine_create_group(uuid, uuid, uuid, text, text, numeric, text, integer, integer, date, numeric, jsonb, timestamptz) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.tontine_create_group(uuid, uuid, uuid, text, text, numeric, text, integer, integer, date, numeric, jsonb, timestamptz) TO authenticated;
+REVOKE ALL ON FUNCTION public.tontine_open_cycle(uuid, date, date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.tontine_open_cycle(uuid, date, date) TO authenticated;
+REVOKE ALL ON FUNCTION public.tontine_set_status(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.tontine_set_status(uuid, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.tontine_open_next_cycle_system(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.tontine_open_next_cycle_system(uuid, uuid) TO service_role;
