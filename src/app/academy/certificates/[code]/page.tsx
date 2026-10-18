@@ -13,8 +13,6 @@ type Verification = {
   learner_name?: string;
   course_title?: string;
   issued_at?: string;
-  completion_percent?: number;
-  average_score_percent?: number | null;
   status?: string;
 };
 
@@ -64,8 +62,6 @@ export default function AcademyCertificateVerificationPage() {
                 <div><dt className="text-xs text-white/45">Formation</dt><dd className="mt-1 text-lg font-semibold">{result.course_title}</dd></div>
                 <div><dt className="text-xs text-white/45">Code d’attestation</dt><dd className="mt-1 break-all font-mono text-sm">{result.certificate_code}</dd></div>
                 <div><dt className="text-xs text-white/45">Date de délivrance</dt><dd className="mt-1 text-sm">{result.issued_at ? new Date(result.issued_at).toLocaleDateString('fr-FR') : '—'}</dd></div>
-                <div><dt className="text-xs text-white/45">Complétion</dt><dd className="mt-1 text-sm">{result.completion_percent ?? 100} %</dd></div>
-                {result.average_score_percent !== null && result.average_score_percent !== undefined && <div><dt className="text-xs text-white/45">Moyenne des évaluations</dt><dd className="mt-1 text-sm">{Number(result.average_score_percent).toFixed(1)} %</dd></div>}
               </dl>
               <div className="mt-6 flex items-center gap-2 border-t border-white/10 pt-4 text-xs text-emerald-100/70"><ShieldCheck size={15}/> Statut officiel : actif</div>
             </div>
