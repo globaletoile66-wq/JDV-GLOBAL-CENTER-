@@ -773,7 +773,7 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'INVALID_OR_EXPIRED_JOIN_LINK'; END IF;
   SELECT * INTO t FROM public.tontines WHERE id=l.tontine_id;
   IF NOT FOUND OR t.tontine_type<>'group' THEN RAISE EXCEPTION 'JOIN_LINKS_REQUIRE_GROUP_TONTINE'; END IF;
-  IF t.status NOT IN ('open','active') THEN RAISE EXCEPTION 'TONTINE_NOT_OPEN_FOR_ADMISSION'; END IF;
+  IF t.status NOT IN ('draft','open','active') THEN RAISE EXCEPTION 'TONTINE_NOT_OPEN_FOR_ADMISSION'; END IF;
   SELECT user_id INTO v_pres FROM public.tontine_members WHERE id=t.president_member_id;
   SELECT code INTO v_code FROM public.currencies WHERE id=t.currency_id;
   SELECT (phone IS NOT NULL AND btrim(phone)<>'' AND phone_confirmed_at IS NOT NULL)
