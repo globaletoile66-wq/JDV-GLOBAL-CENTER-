@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ClipboardList, CreditCard, FileText, RefreshCw, Search, ShieldCheck, ShieldPlus, UserRoundCheck } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, ClipboardList, CreditCard, FileText, RefreshCw, Search, ShieldCheck, ShieldPlus, UserRoundCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
@@ -92,6 +92,10 @@ export default function InsurancePage() {
               <div><h2 className="font-bold">Échéances et paiements</h2><p className="mt-1 text-xs text-white/45">Voir les primes dues et les transactions déjà enregistrées, sans déclencher de paiement.</p></div>
             </Link>
           </div>
+          <Link href="/insurance/gestion" className="group mt-3 flex items-center gap-4 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 transition hover:border-[#F28C28]/50">
+            <div className="rounded-xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><ClipboardCheck size={22} /></div>
+            <div><h2 className="font-bold">Espace professionnel</h2><p className="mt-1 text-xs text-white/45">Examiner les déclarations et enregistrer une décision selon les autorisations.</p></div>
+          </Link>
           <section className="mt-7 flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 sm:flex-row sm:items-center">
             <div className="flex items-start gap-3"><UserRoundCheck className="mt-1 text-[#F28C28]" size={22} /><div><h2 className="font-bold">Mon profil assuré</h2><p className="mt-1 text-sm text-white/50">{!user ? 'Connectez-vous pour créer un profil assuré.' : customerId ? 'Un profil assuré est associé à votre compte.' : 'Créez votre profil avant de poursuivre vers une future souscription.'}</p></div></div>
             {user && <button onClick={() => void createCustomerProfile()} disabled={creating || Boolean(customerId)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F28C28] px-4 py-3 text-sm font-bold text-[#0B1B3D] disabled:cursor-not-allowed disabled:opacity-50"><ShieldPlus size={16} />{creating ? 'Création…' : customerId ? 'Profil créé' : 'Créer mon profil'}</button>}
