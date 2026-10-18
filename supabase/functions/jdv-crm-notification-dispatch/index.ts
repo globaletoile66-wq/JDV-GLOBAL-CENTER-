@@ -106,7 +106,7 @@ Deno.serve(async (req: Request) => {
         .select("id").single();
       if (upsert.error) { failed++; errors.push("could not reserve delivery"); continue; }
 
-      const textBody = [alert.title, alert.message, alert.action_url ? `Open in JDV Global Center: ${url.replace(/\/$/, "")}${alert.action_url}` : ""].filter(Boolean).join("\n");
+      const textBody = [alert.title, alert.message, alert.action_url ? `Open in JDV Global Center: ${appBaseUrl}${alert.action_url}` : ""].filter(Boolean).join("\n");
       let providerId: string | null = null;
       let errorText: string | null = null;
       try {
