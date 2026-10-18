@@ -86,7 +86,7 @@ export default function TransitPage() {
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Accueil</Link>
-          <button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button>
+          <div className="flex flex-wrap items-center gap-2">\n            <Link href="/transit/operations" className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-white/80 hover:border-[#F28C28]/60">Cockpit opérations</Link>\n            <Link href="/transit/documents" className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-white/80 hover:border-[#F28C28]/60">Passeport documentaire</Link>\n          </div>\n          <button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button>
         </div>
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
