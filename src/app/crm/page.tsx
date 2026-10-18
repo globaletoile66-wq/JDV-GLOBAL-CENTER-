@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Users, Loader2, TrendingUp, Clock, AlertTriangle,
-  DollarSign, ChevronRight, Flame, Snowflake, Thermometer, Wallet, Bell,
+  DollarSign, ChevronRight, Flame, Snowflake, Thermometer, Wallet, Bell, Boxes,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -93,6 +93,7 @@ export default function CrmDashboardPage() {
     { href: '/crm/prospects?filter=today', label: 'Relances aujourd\'hui', value: stats?.followUpToday ?? 0, icon: Clock, color: '#3B82F6' },
     { href: '/crm/collections', label: 'Échéances en retard', value: stats?.overdueSchedules ?? 0, icon: AlertTriangle, color: '#EF4444' },
     { href: '/crm/alerts', label: 'Alertes automatiques', value: 'Ouvrir', icon: Bell, color: '#F59E0B' },
+    { href: '/crm/stock', label: 'Seuils de stock', value: 'Gérer', icon: Boxes, color: '#10B981' },
   ];
 
   return (
