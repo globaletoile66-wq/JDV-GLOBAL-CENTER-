@@ -660,6 +660,26 @@ BEGIN
     END IF;
   END IF;
 
+  IF p_status='completed' THEN
+    IF EXISTS (
+      SELECT 1 FROM public.tontine_contribution_schedules s
+      JOIN public.tontine_cycles cy ON cy.id=s.cycle_id
+      WHERE cy.tontine_id=t.id
+        AND (s.status NOT IN ('paid','completed') OR s.penalty_status IN ('due','partially_paid'))
+    ) THEN RAISE EXCEPTION 'UNPAID_SCHEDULES_REMAIN'; END IF;
+    IF EXISTS (
+      SELECT 1 FROM public.tontine_rotations r
+      JOIN public.tontine_cycles cy ON cy.id=r.cycle_id
+      WHERE cy.tontine_id=t.id AND r.status NOT IN ('paid','cancelled')
+    ) THEN RAISE EXCEPTION 'UNPAID_ROTATIONS_REMAIN'; END IF;
+    IF t.tontine_type='individual' AND NOT EXISTS (
+      SELECT 1 FROM public.tontine_payouts p
+      JOIN public.tontine_rotations r ON r.id=p.rotation_id
+      JOIN public.tontine_cycles cy ON cy.id=r.cycle_id
+      WHERE cy.tontine_id=t.id AND p.status='paid'
+    ) THEN RAISE EXCEPTION 'INDIVIDUAL_MATURITY_NOT_PAID'; END IF;
+  END IF;
+
   IF p_status IN ('completed','cancelled') THEN
     v_pool:=public.tontine_pool_balance(t.id);
     IF v_pool<>0 THEN RAISE EXCEPTION 'POOL_NOT_EMPTY'; END IF;
