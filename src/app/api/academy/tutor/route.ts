@@ -115,8 +115,7 @@ export async function POST(request: Request) {
     completion = await openai.chat.completions.create({
       model,
       messages: [{ role: 'system', content: systemPrompt }, ...history],
-      temperature: 0.35,
-      max_tokens: 1200,
+      max_completion_tokens: 1200,
     });
   } catch {
     await supabase.rpc('ai_log_access', { p_action_type: 'message', p_scope: 'academy_tutor', p_organization_id: null, p_conversation_id: conversationId, p_result_count: 0, p_success: false });
