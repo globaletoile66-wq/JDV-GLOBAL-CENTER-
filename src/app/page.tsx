@@ -7,7 +7,8 @@ import AppLogo from '@/components/ui/AppLogo';
 
 const modules = [
   ['JDV PAY','Paiements, transferts et services financiers','/pay',CreditCard],
-  ['JDV CRM','Gestion commerciale et relation client','/business',Building2],
+  ['JDV CORE','Espace central et services personnels','/dashboard',BriefcaseBusiness],
+  ['JDV BUSINESS','Gestion commerciale et opérations','/business',Building2],
   ['JDV MARKETPLACE','Commerce et vente en ligne','/marketplace',ShoppingBag],
   ['JDV IMMO','Immobilier et gestion de biens','/immo',Home],
   ['JDV TRAVEL','Voyage, tourisme et réservation','/travel',Plane],
