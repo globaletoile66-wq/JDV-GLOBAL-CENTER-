@@ -40,9 +40,11 @@ Ils doivent être exécutés dans un environnement de test isolé avec des utili
    - le compteur n'augmente qu'une fois par nouvel adhérent;
    - les verrous empêchent de dépasser `max_uses` ou `member_limit`.
 
-## Limite connue — activation
+## Limites et prérequis de recette
 
-Le schéma inspecté expose des champs de validation sur `tontine_members`, mais aucune table spécifique d'éléments KYC/contrats rattachés à une adhésion tontine n'a été identifiée dans l'inventaire. Cette modification empêche l'activation automatique par lien; elle ne doit pas être considérée comme une implémentation complète de l'approbation contractuelle. Avant de livrer l'activation, il faut relier les exigences des règles (`tontines.rules`) aux preuves réellement stockées et à leur état de revue, puis ajouter une RPC d'approbation autorisée et des tests d'accès/paiement.
+Le parcours d'approbation est maintenant proposé dans la migration, mais il doit être testé sur une base isolée avec de vrais rôles de test. L'approbation positive exige un profil `kyc_profiles.kyc_status='approved'`, au moins un document d'identité approuvé, l'acceptation des règles et l'acceptation du contrat pour la même version. Aucun écran ne doit permettre de contourner la RPC.
+
+La validation juridique du contrat, la configuration de stockage KYC, la revue des grants/RLS effectifs et les essais du worker restent des prérequis avant toute mise en production. Les migrations de cette PR n'ont pas été appliquées à Supabase.
 
 ## Cas complémentaires — groupe et individuel
 
