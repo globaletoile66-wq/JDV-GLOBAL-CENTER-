@@ -3,13 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
-type ConversationRow = {
-  id: string;
-  title: string | null;
-  context: Record<string, unknown> | null;
-  organization_id: string | null;
-};
-
 type HistoryMessage = { role: 'user' | 'assistant'; content: string };
 
 export async function POST(request: Request) {
