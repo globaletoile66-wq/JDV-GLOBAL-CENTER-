@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
+import AcademyNavigation from '@/components/academy/AcademyNavigation';
 import { Activity, ArrowLeft, CheckCircle2, CircleHelp, Database, FlaskConical, Play, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -90,6 +91,7 @@ export default function AcademyDemoPage() {
   return (
     <main className="min-h-screen bg-[#0B1B3D] px-4 py-6 text-white sm:px-8 sm:py-8">
       <div className="mx-auto max-w-7xl">
+        <AcademyNavigation current="demo" />
         <header className="flex flex-wrap items-center justify-between gap-3">
           <Link href="/academy" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> JDV Academy</Link>
           <span className="inline-flex items-center gap-2 rounded-full border border-[#F28C28]/30 bg-[#F28C28]/10 px-3 py-2 text-xs font-bold text-[#ffd4a5]"><FlaskConical size={15} /> ENVIRONNEMENT DE DÉMO</span>
