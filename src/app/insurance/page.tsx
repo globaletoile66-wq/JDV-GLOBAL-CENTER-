@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, RefreshCw, Search, ShieldCheck, ShieldPlus, UserRoundCheck } from 'lucide-react';
+import { ArrowLeft, ClipboardList, FileText, RefreshCw, Search, ShieldCheck, ShieldPlus, UserRoundCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
@@ -78,6 +78,16 @@ export default function InsurancePage() {
           </div>
           {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
           {message && <div role="status" className="mt-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-4 text-sm text-[#F28C28]">{message}</div>}
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <Link href="/insurance/mes-contrats" className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 transition hover:border-[#F28C28]/50">
+              <div className="rounded-xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><FileText size={22} /></div>
+              <div><h2 className="font-bold">Mes contrats</h2><p className="mt-1 text-xs text-white/45">Consulter les contrats émis et leurs échéances.</p></div>
+            </Link>
+            <Link href="/insurance/sinistres" className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 transition hover:border-[#F28C28]/50">
+              <div className="rounded-xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><ClipboardList size={22} /></div>
+              <div><h2 className="font-bold">Sinistres</h2><p className="mt-1 text-xs text-white/45">Déclarer un sinistre sur un contrat actif et suivre le dossier.</p></div>
+            </Link>
+          </div>
           <section className="mt-7 flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 sm:flex-row sm:items-center">
             <div className="flex items-start gap-3"><UserRoundCheck className="mt-1 text-[#F28C28]" size={22} /><div><h2 className="font-bold">Mon profil assuré</h2><p className="mt-1 text-sm text-white/50">{!user ? 'Connectez-vous pour créer un profil assuré.' : customerId ? 'Un profil assuré est associé à votre compte.' : 'Créez votre profil avant de poursuivre vers une future souscription.'}</p></div></div>
             {user && <button onClick={() => void createCustomerProfile()} disabled={creating || Boolean(customerId)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F28C28] px-4 py-3 text-sm font-bold text-[#0B1B3D] disabled:cursor-not-allowed disabled:opacity-50"><ShieldPlus size={16} />{creating ? 'Création…' : customerId ? 'Profil créé' : 'Créer mon profil'}</button>}
