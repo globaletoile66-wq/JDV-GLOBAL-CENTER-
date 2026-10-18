@@ -66,3 +66,11 @@ La lecture initiale des politiques actives ne montrait pas les quatre politiques
 - Aucune suppression de données ou de tables.
 - Migration RLS additive appliquée après revue ; aucun objet ou aucune ligne supprimés.
 - Vérification post-application des quatre politiques RLS et de l'entrée dans l'historique Supabase.
+
+## État après les premières corrections — 18 octobre 2026
+
+- La migration `20261018160533_jdv_academy_public_catalog_and_enrolled_content_rls` est enregistrée dans Supabase. Les quatre politiques de catalogue/lecture apprenant ont été vérifiées dans `pg_policies`.
+- La migration `20261018161227_jdv_academy_lesson_progress` est enregistrée dans Supabase. La table `academy_lesson_progress` existe, RLS est activé, et les politiques SELECT/INSERT/UPDATE sont présentes. Elle contenait 0 ligne lors de la vérification.
+- La page de cours a maintenant une interface pour démarrer une leçon et la marquer comme terminée. Le build indépendant TypeScript/Next.js passe après correction du JSX.
+- Les parcours avec des comptes réels de différents rôles n'ont pas encore été exécutés ; les règles ont été vérifiées dans la base mais il reste à tester le comportement bout en bout.
+- Les previews `shiny-khapse-609dec` et `comfy-bienenstitch-ab9522` ont réussi pour cette version. Le projet Netlify `jdv-global-center` continue de signaler un échec de preview ; son accès de configuration n'est pas disponible via la connexion Netlify actuelle et son journal détaillé reste à consulter.
