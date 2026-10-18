@@ -21,6 +21,8 @@ interface Prospect {
   temperature: 'hot' | 'warm' | 'cold';
   status: string;
   next_follow_up_at: string | null;
+  last_contact_at?: string | null;
+  created_at?: string;
 }
 
 interface ProspectForm {
@@ -163,7 +165,7 @@ export default function CrmProspectsPage() {
 
       let query = supabase
         .from('prospects')
-        .select('id, first_name, last_name, phone, email, desired_article, estimated_amount, temperature, status, next_follow_up_at')
+        .select('id, first_name, last_name, phone, email, desired_article, estimated_amount, temperature, status, next_follow_up_at, last_contact_at, created_at')
         .order('created_at', { ascending: false });
 
       if (portfolioId) {
@@ -185,7 +187,7 @@ export default function CrmProspectsPage() {
   useEffect(() => {
     if (!user) { router.push('/auth/login'); return; }
     const urlFilter = searchParams.get('filter');
-    if (urlFilter === 'hot' || urlFilter === 'warm' || urlFilter === 'cold') setTempFilter(urlFilter);
+    if (['hot', 'warm', 'cold', 'today', 'overdue', 'stale'].includes(urlFilter || '')) setTempFilter(urlFilter || 'all');
     load();
   }, [user, load, router, searchParams]);
 
@@ -227,7 +229,15 @@ export default function CrmProspectsPage() {
   };
 
   const filtered = useMemo(() => prospects.filter((p) => {
-    if (tempFilter !== 'all' && p.temperature !== tempFilter) return false;
+    const now = Date.now();
+    const today = new Date().toISOString().slice(0, 10);
+    const followUpTime = p.next_follow_up_at ? new Date(p.next_follow_up_at).getTime() : null;
+    const lastActivityTime = p.last_contact_at ? new Date(p.last_contact_at).getTime()
+      : p.created_at ? new Date(p.created_at).getTime() : null;
+    if (['hot', 'warm', 'cold'].includes(tempFilter) && p.temperature !== tempFilter) return false;
+    if (tempFilter === 'today' && (!p.next_follow_up_at || p.next_follow_up_at.slice(0, 10) !== today)) return false;
+    if (tempFilter === 'overdue' && (followUpTime === null || followUpTime >= now)) return false;
+    if (tempFilter === 'stale' && (lastActivityTime === null || now - lastActivityTime < 7 * 86400000)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return `${p.first_name} ${p.last_name || ''}`.toLowerCase().includes(q) ||
@@ -266,10 +276,18 @@ export default function CrmProspectsPage() {
               className="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#F97316]" />
           </div>
           <div className="flex gap-2">
-            {(['all', 'hot', 'warm', 'cold'] as const).map((t) => (
-              <button key={t} onClick={() => setTempFilter(t)}
-                className={`px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${tempFilter === t ? 'bg-[#F97316] border-[#F97316] text-white' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}>
-                {t === 'all' ? 'Tous' : TEMP_CONFIG[t].label}
+            {([
+              { value: 'all', label: 'Tous' },
+              { value: 'hot', label: 'Chaud' },
+              { value: 'warm', label: 'Tiède' },
+              { value: 'cold', label: 'Froid' },
+              { value: 'today', label: "Aujourd'hui" },
+              { value: 'overdue', label: 'Relances en retard' },
+              { value: 'stale', label: 'Sans contact 7 j+' },
+            ] as const).map((t) => (
+              <button key={t.value} onClick={() => setTempFilter(t.value)}
+                className={`px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${tempFilter === t.value ? 'bg-[#F97316] border-[#F97316] text-white' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}>
+                {t.label}
               </button>
             ))}
           </div>

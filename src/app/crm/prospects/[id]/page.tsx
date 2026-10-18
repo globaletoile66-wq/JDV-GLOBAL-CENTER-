@@ -18,6 +18,7 @@ interface Prospect {
   first_name: string;
   last_name: string | null;
   phone: string | null;
+  whatsapp?: string | null;
   email: string | null;
   address: string | null;
   city: string | null;
@@ -207,7 +208,20 @@ export default function ProspectDetailPage() {
 
           <div className="grid sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/10">
             {prospect.phone && (
-              <div className="flex items-center gap-2 text-white/70 text-sm"><Phone size={14} className="text-white/40" /> {prospect.phone}</div>
+              <a href={`tel:${prospect.phone.replace(/[^+\d]/g, '')}`} className="flex items-center gap-2 text-white/70 text-sm hover:text-white">
+                <Phone size={14} className="text-white/40" /> {prospect.phone}
+              </a>
+            )}
+            {(prospect.whatsapp || prospect.phone) && (
+              <a
+                href={`https://wa.me/${(prospect.whatsapp || prospect.phone || '').replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-400/20"
+                aria-label={`Contacter ${prospect.first_name} sur WhatsApp`}
+              >
+                <MessageCircle size={15} /> Ouvrir WhatsApp
+              </a>
             )}
             {prospect.email && (
               <div className="flex items-center gap-2 text-white/70 text-sm"><Mail size={14} className="text-white/40" /> {prospect.email}</div>
