@@ -46,6 +46,21 @@ Ces éléments peuvent être partiellement couverts par des tables génériques 
 - Le worker `jdv-tontine-payout-worker` vérifie le bearer service-role avant de lire la file ou d'appeler le prestataire. Ne jamais tester cette fonction avec une demande susceptible de déclencher un paiement réel.
 - L'inventaire de migrations contient un placeholder historique pour `20260920005905_jdv_tontine_phase4e_security_policy`, indiquant que le corps SQL source n'est pas récupérable à cet emplacement. Le snapshot et le schéma réel doivent servir de référence ; ne pas rejouer cette migration.
 
+### 4.1 Fonctions Tontine à priorité de revue élevée
+
+Le contrôle des privilèges indique que les fonctions suivantes sont déclarées SECURITY DEFINER et que le rôle `authenticated` peut les exécuter au niveau PostgreSQL :
+- `tontine_set_status(p_tontine_id, p_status)`
+- `tontine_apply_late_penalties(p_cycle_id)`
+- `tontine_pay_contribution(p_schedule_id, p_wallet_id, p_amount)`
+- `tontine_record_contribution(...)`
+- `tontine_create_join_link(...)`
+- `tontine_join_by_link(...)`
+- `tontine_request_membership(...)`
+
+Ce constat n'établit pas que les fonctions sont exploitables : il faut lire le corps de chacune et confirmer les contrôles d'identité, d'appartenance, de rôle, de statut et de montant. Néanmoins, les fonctions qui changent le statut, appliquent les pénalités ou écrivent des mouvements financiers sont prioritaires. Ne pas leur ajouter de nouveaux pouvoirs avant cette revue.
+
+Les fonctions sensibles de dispatch/rapprochement, notamment `tontine_queue_due_payouts`, `tontine_claim_due_dispatch` et `tontine_reconcile_dispatch`, ne sont pas exécutables directement par `authenticated` selon le contrôle des privilèges effectué. Le worker doit continuer à les appeler exclusivement côté serveur.
+
 ## 5. Interface actuelle observée
 
 `src/app/tontine/page.tsx` charge les tontines, les adhésions de l'utilisateur et ses échéances. Le texte de l'écran indique explicitement qu'aucun paiement n'est déclenché depuis cette page. C'est une vue consultative, pas une preuve d'un parcours de paiement de bout en bout.
