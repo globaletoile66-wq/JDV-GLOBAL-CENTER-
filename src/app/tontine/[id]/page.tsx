@@ -37,7 +37,7 @@ export default function TontineDetailPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(() => {
-    const date = new Date(); date.setMonth(date.getMonth() + 1); return date.toISOString().slice(0, 10);
+    const date = new Date(); date.setMonth(date.getMonth() + 24); return date.toISOString().slice(0, 10);
   });
   const [busy, setBusy] = useState(true);
   const [working, setWorking] = useState('');
