@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Compass, Hotel, RefreshCw, Search, Send } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Compass, Hotel, RefreshCw, Search, Send, Heart, BriefcaseBusiness, ShieldCheck, MapPinned } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
@@ -12,6 +12,7 @@ type Accommodation = { id: string; name: string; accommodation_type: string; des
 type Activity = { id: string; name: string; description: string | null; duration_minutes: number | null; price: number; currency_id: string | null; destination_id: string | null; publish_status: string };
 type Currency = { id: string; code: string; symbol: string | null };
 type TravelRequest = { id: string; destination_id: string | null; travel_type: string | null; start_date: string | null; end_date: string | null; travelers_count: number; budget_max: number | null; currency_id: string | null; request_status: string; created_at: string };
+type FavoriteRow = { target_id: string };
 
 const inputClass = 'w-full rounded-xl border border-white/10 bg-[#09152f] px-3 py-3 text-sm text-white outline-none focus:border-[#F28C28]';
 const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50';
@@ -25,6 +26,8 @@ export default function TravelPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [requests, setRequests] = useState<TravelRequest[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [favoriteBusyId, setFavoriteBusyId] = useState('');
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [destinationId, setDestinationId] = useState('');
@@ -42,13 +45,14 @@ export default function TravelPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    const [destinationResult, tourResult, accommodationResult, activityResult, currencyResult, requestResult] = await Promise.all([
+    const [destinationResult, tourResult, accommodationResult, activityResult, currencyResult, requestResult, favoriteResult] = await Promise.all([
       supabase.from('travel_destinations').select('id,name,city,short_description,description,image_url,is_active').eq('is_active', true).order('name').limit(100),
       supabase.from('travel_tours').select('id,title,description,duration_days,capacity,price,currency_id,publish_status').eq('publish_status', 'published').order('created_at', { ascending: false }).limit(100),
       supabase.from('travel_accommodations').select('id,name,accommodation_type,description,destination_id,capacity,publish_status').eq('publish_status', 'published').order('name').limit(100),
       supabase.from('travel_activities').select('id,name,description,duration_minutes,price,currency_id,destination_id,publish_status').eq('publish_status', 'published').order('name').limit(100),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
       user ? supabase.from('travel_requests').select('id,destination_id,travel_type,start_date,end_date,travelers_count,budget_max,currency_id,request_status,created_at').eq('requester_user_id', user.id).order('created_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null } as any),
+      user ? supabase.from('travel_favorites').select('target_id').eq('user_id', user.id).eq('target_type', 'destination') : Promise.resolve({ data: [], error: null } as any),
     ]);
     if (destinationResult.error) setError(destinationResult.error.message); else { const rows = (destinationResult.data ?? []) as Destination[]; setDestinations(rows); setDestinationId((current) => current || rows[0]?.id || ''); }
     if (tourResult.error) setError((current) => current || tourResult.error!.message); else setTours((tourResult.data ?? []) as Tour[]);
@@ -56,10 +60,23 @@ export default function TravelPage() {
     if (activityResult.error) setError((current) => current || activityResult.error!.message); else setActivities((activityResult.data ?? []) as Activity[]);
     if (currencyResult.error) setError((current) => current || currencyResult.error!.message); else setCurrencies((currencyResult.data ?? []) as Currency[]);
     if (requestResult.error) setError((current) => current || requestResult.error!.message); else setRequests((requestResult.data ?? []) as TravelRequest[]);
+    if (favoriteResult.error) setError((current) => current || favoriteResult.error!.message); else setFavoriteIds(((favoriteResult.data ?? []) as FavoriteRow[]).map((item) => item.target_id));
     setBusy(false);
   }, [supabase, user]);
 
   useEffect(() => { if (!loading) void load(); }, [loading, load]);
+
+  const toggleFavorite = async (destinationIdToToggle: string) => {
+    if (!user) { setError('Connectez-vous pour enregistrer vos destinations favorites.'); return; }
+    setFavoriteBusyId(destinationIdToToggle); setError('');
+    const isFavorite = favoriteIds.includes(destinationIdToToggle);
+    const result = isFavorite
+      ? await supabase.from('travel_favorites').delete().eq('user_id', user.id).eq('target_type', 'destination').eq('target_id', destinationIdToToggle)
+      : await supabase.from('travel_favorites').insert({ user_id: user.id, target_type: 'destination', target_id: destinationIdToToggle });
+    if (result.error) setError(result.error.message);
+    else setFavoriteIds((current) => isFavorite ? current.filter((id) => id !== destinationIdToToggle) : [...current, destinationIdToToggle]);
+    setFavoriteBusyId('');
+  };
 
   const money = (amount: number, id: string | null) => {
     const cur = currencies.find((item) => item.id === id);
@@ -101,7 +118,7 @@ export default function TravelPage() {
           {message && <div role="status" className="mt-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-4 text-sm text-[#F28C28]">{message}</div>}
           <div className="mt-7 flex items-center gap-3 rounded-xl border border-white/10 px-3 py-2.5"><Search size={16} className="text-white/40" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une destination, un circuit ou une activité…" className="w-full bg-transparent text-sm outline-none placeholder:text-white/30" /></div>
           <nav id="travel-catalogue" aria-label="Catégories JDV Travel" className="mt-4 flex flex-wrap gap-2">{[{id:'all',label:'Tout explorer'},{id:'destinations',label:'Destinations'},{id:'tours',label:'Circuits et séjours'},{id:'accommodations',label:'Hébergements'},{id:'activities',label:'Activités'}].map((item) => <button key={item.id} type="button" onClick={() => setActiveCategory(item.id)} aria-pressed={activeCategory === item.id} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (activeCategory === item.id ? 'border-[#F28C28] bg-[#F28C28] text-[#0B1B3D]' : 'border-white/10 text-white/65 hover:bg-white/5')}>{item.label}</button>)}</nav>
-          { (activeCategory === 'all' || activeCategory === 'destinations') && <section className="mt-7"><div className="flex items-center gap-2"><Compass size={20} className="text-[#F28C28]" /><h2 className="text-xl font-bold">Destinations</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{filteredDestinations.map((item) => <article key={item.id} className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5">{item.image_url && <img src={item.image_url} alt="" className="mb-4 h-36 w-full rounded-xl object-cover" loading="lazy" />}<p className="text-xs uppercase tracking-wide text-[#F28C28]">{item.city || 'Destination'}</p><h3 className="mt-2 font-bold">{item.name}</h3><p className="mt-2 text-sm leading-6 text-white/55">{item.short_description || item.description || 'Description à venir.'}</p><button type="button" onClick={() => setDestinationId(item.id)} className={'mt-4 rounded-xl border px-3 py-2 text-xs font-semibold ' + (destinationId === item.id ? 'border-[#F28C28] text-[#F28C28]' : 'border-white/10 text-white/60')}>{destinationId === item.id ? 'Destination sélectionnée' : 'Choisir cette destination'}</button></article>)}{!busy && filteredDestinations.length === 0 && <p className="text-sm text-white/40">Aucune destination trouvée.</p>}</div></section>}
+          { (activeCategory === 'all' || activeCategory === 'destinations') && <section className="mt-7"><div className="flex items-center gap-2"><Compass size={20} className="text-[#F28C28]" /><h2 className="text-xl font-bold">Destinations</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{filteredDestinations.map((item) => <article key={item.id} className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5">{item.image_url && <img src={item.image_url} alt="" className="mb-4 h-36 w-full rounded-xl object-cover" loading="lazy" />}<p className="text-xs uppercase tracking-wide text-[#F28C28]">{item.city || 'Destination'}</p><h3 className="mt-2 font-bold">{item.name}</h3><p className="mt-2 text-sm leading-6 text-white/55">{item.short_description || item.description || 'Description à venir.'}</p><div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => setDestinationId(item.id)} className={'rounded-xl border px-3 py-2 text-xs font-semibold ' + (destinationId === item.id ? 'border-[#F28C28] text-[#F28C28]' : 'border-white/10 text-white/60')}>{destinationId === item.id ? 'Destination sélectionnée' : 'Choisir cette destination'}</button><button type="button" onClick={() => void toggleFavorite(item.id)} disabled={favoriteBusyId === item.id} aria-label={favoriteIds.includes(item.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 disabled:opacity-50"><Heart size={14} className={favoriteIds.includes(item.id) ? 'fill-[#F28C28] text-[#F28C28]' : ''}/>{favoriteIds.includes(item.id) ? 'Enregistrée' : 'Favori'}</button></div></article>)}{!busy && filteredDestinations.length === 0 && <p className="text-sm text-white/40">Aucune destination trouvée.</p>}</div></section>}
           { (activeCategory === 'all' || activeCategory === 'tours') && <section className="mt-8"><h2 className="text-xl font-bold">Circuits et séjours</h2><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{filteredTours.map((item) => <article key={item.id} className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[#F28C28]">{item.duration_days} jour(s)</p><h3 className="mt-2 font-bold">{item.title}</h3><p className="mt-2 text-sm text-white/55">{item.description || 'Programme à confirmer.'}</p><p className="mt-4 text-xl font-black">{money(item.price, item.currency_id)}</p>{item.capacity != null && <p className="mt-1 text-xs text-white/40">Capacité annoncée : {item.capacity}</p>}</article>)}{!busy && filteredTours.length === 0 && <p className="text-sm text-white/40">Aucun circuit publié trouvé.</p>}</div></section>}
           { (activeCategory === 'all' || activeCategory === 'accommodations') && <section className="mt-8"><div className="flex items-center gap-2"><Hotel size={20} className="text-[#F28C28]" /><h2 className="text-xl font-bold">Hébergements</h2></div><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{filteredAccommodations.map((item) => <article key={item.id} className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5"><p className="text-xs uppercase tracking-wide text-[#F28C28]">{item.accommodation_type}</p><h3 className="mt-2 font-bold">{item.name}</h3><p className="mt-2 text-sm text-white/55">{item.description || 'Description à venir.'}</p>{item.capacity != null && <p className="mt-3 text-xs text-white/40">Capacité : {item.capacity}</p>}</article>)}{!busy && filteredAccommodations.length === 0 && <p className="text-sm text-white/40">Aucun hébergement publié trouvé.</p>}</div></section>}
           { (activeCategory === 'all' || activeCategory === 'activities') && <section className="mt-8"><h2 className="text-xl font-bold">Activités</h2><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{filteredActivities.map((item) => <article key={item.id} className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5"><h3 className="font-bold">{item.name}</h3><p className="mt-2 text-sm text-white/55">{item.description || 'Description à venir.'}</p><p className="mt-4 text-xl font-black">{money(item.price, item.currency_id)}</p>{item.duration_minutes != null && <p className="mt-1 text-xs text-white/40">Durée : {item.duration_minutes} min</p>}</article>)}{!busy && filteredActivities.length === 0 && <p className="text-sm text-white/40">Aucune activité publiée trouvée.</p>}</div></section>}
