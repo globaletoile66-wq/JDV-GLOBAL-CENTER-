@@ -79,25 +79,25 @@ BEGIN
   ON CONFLICT (tontine_id, user_id) DO UPDATE
   SET membership_status = CASE
         -- Never downgrade a fully active member or bypass a restriction by reusing a link.
-        WHEN public.tontine_members.membership_status IN ('active', 'suspended', 'rejected', 'left')
-          THEN public.tontine_members.membership_status
+        WHEN tontine_members.membership_status IN ('active', 'suspended', 'rejected', 'left')
+          THEN tontine_members.membership_status
         ELSE 'pending'
       END,
       joined_at = CASE
-        WHEN public.tontine_members.membership_status = 'active'
-          THEN public.tontine_members.joined_at
+        WHEN tontine_members.membership_status = 'active'
+          THEN tontine_members.joined_at
         ELSE NULL
       END,
       rules_accepted_at = now(),
       rules_version = EXCLUDED.rules_version,
       identity_confirmed_at = CASE
-        WHEN public.tontine_members.membership_status = 'active'
-          THEN public.tontine_members.identity_confirmed_at
+        WHEN tontine_members.membership_status = 'active'
+          THEN tontine_members.identity_confirmed_at
         ELSE NULL
       END,
       identity_confirmation_method = CASE
-        WHEN public.tontine_members.membership_status = 'active'
-          THEN public.tontine_members.identity_confirmation_method
+        WHEN tontine_members.membership_status = 'active'
+          THEN tontine_members.identity_confirmation_method
         ELSE NULL
       END,
       updated_at = now()
