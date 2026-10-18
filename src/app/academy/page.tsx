@@ -71,6 +71,8 @@ export default function AcademyPage() {
         course.instructor_user_id === user.id ||
         adminOrganizationIds.includes(accessiblePrograms.find((program) => program.id === course.program_id)?.organization_id || '')
       ).map((course) => course.id));
+    } else {
+      setManageableCourseIds([]);
     }
 
     const firstError = programResult.error || courseResult.error || enrollmentError;
