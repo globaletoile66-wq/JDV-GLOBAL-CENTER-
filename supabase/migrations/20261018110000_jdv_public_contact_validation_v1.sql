@@ -58,4 +58,4 @@ END
 $function$;
 
 REVOKE ALL ON FUNCTION public.public_submit_contact_message(text, text, text, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.public_submit_contact_message(text, text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.public_submit_contact_message(text, text, text, text) TO anon, authenticated, service_role;
