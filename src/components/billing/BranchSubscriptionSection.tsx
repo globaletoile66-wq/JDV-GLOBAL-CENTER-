@@ -38,7 +38,7 @@ export default function BranchSubscriptionSection({ moduleCode, branchName: name
   const current = subs.find((s) => ['trial', 'active', 'past_due', 'pending'].includes(s.status));
   const everSubscribed = subs.length > 0;
 
-  async function run(key: string, fn: () => Promise<{ error: { message: string } | null }>, okText: string) {
+  async function run(key: string, fn: () => PromiseLike<{ error: { message: string } | null }>, okText: string) {
     setBusy(key); setMsg(null);
     const { error } = await fn();
     setBusy(null);
