@@ -22,6 +22,7 @@ export default function AcademyTutorPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [gatewayReady, setGatewayReady] = useState<boolean | null>(null);
 
   const loadConversations = useCallback(async () => {
     if (!user) { setConversations([]); setMessages([]); setSelectedId(''); setBusy(false); return; }
@@ -45,6 +46,14 @@ export default function AcademyTutorPage() {
 
   useEffect(() => { if (!authLoading) void loadConversations(); }, [authLoading, loadConversations]);
   useEffect(() => { if (selectedId) void loadMessages(selectedId); else setMessages([]); }, [selectedId, loadMessages]);
+  useEffect(() => {
+    if (!user) { setGatewayReady(null); return; }
+    let cancelled = false;
+    fetch('/api/academy/tutor').then((response) => response.json()).then((data: { configured?: boolean }) => {
+      if (!cancelled) setGatewayReady(Boolean(data.configured));
+    }).catch(() => { if (!cancelled) setGatewayReady(false); });
+    return () => { cancelled = true; };
+  }, [user]);
 
   const createConversation = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -99,7 +108,7 @@ export default function AcademyTutorPage() {
     <main className="min-h-screen bg-[#0B1B3D] px-4 py-6 text-white sm:px-8 sm:py-8">
       <div className="mx-auto max-w-7xl">
         <header className="flex flex-wrap items-center justify-between gap-3"><Link href="/academy" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> JDV Academy</Link><button type="button" onClick={() => void loadConversations()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''}/> Actualiser</button></header>
-        <section className="mt-7 rounded-3xl border border-white/10 bg-gradient-to-br from-[#122b57] to-[#0b1b3d] p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV ACADEMY · AI</p><h1 className="mt-3 flex items-center gap-3 text-3xl font-black sm:text-4xl"><Bot size={32} className="text-[#F28C28]"/> Tuteur pédagogique IA</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">Pose des questions sur un cours, demande une explication étape par étape ou un exercice d’entraînement. Les échanges sont privés et conservés dans tes sessions. Le tuteur n’invente pas de notes et ne révèle pas les corrigés privés.</p>{error && <p role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p>}{notice && <p role="status" className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-100">{notice}</p>}</section>
+        <section className="mt-7 rounded-3xl border border-white/10 bg-gradient-to-br from-[#122b57] to-[#0b1b3d] p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV ACADEMY · AI</p><h1 className="mt-3 flex items-center gap-3 text-3xl font-black sm:text-4xl"><Bot size={32} className="text-[#F28C28]"/> Tuteur pédagogique IA</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">Pose des questions sur un cours, demande une explication étape par étape ou un exercice d’entraînement. Les échanges sont privés et conservés dans tes sessions. Le tuteur n’invente pas de notes et ne révèle pas les corrigés privés.</p>{error && <p role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-300/10 p-3 text-sm text-red-100">{error}</p>}{notice && <p role="status" className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-100">{notice}</p>}{gatewayReady === false && user && <p role="status" className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">Netlify AI Gateway n’est pas encore disponible sur ce déploiement. Ta question ne sera pas envoyée tant que le service n’est pas actif.</p>}</section>
         {!user ? <section className="mt-6 rounded-2xl border border-white/10 p-6 text-sm text-white/60">Connecte-toi pour ouvrir une session privée de tutorat. <Link href="/auth/login" className="underline">Se connecter</Link></section> : <div className="mt-6 grid gap-5 lg:grid-cols-[340px_1fr]">
           <aside className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
             <h2 className="flex items-center gap-2 font-bold"><Plus size={18} className="text-[#F28C28]"/> Nouvelle session</h2>
