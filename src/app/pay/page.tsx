@@ -15,13 +15,23 @@ export default function PayHome() {
   const { wallets } = usePayWallets();
   const [txs, setTxs] = useState<PayTx[] | null>(null);
   const [all, setAll] = useState(false);
+  const [txError, setTxError] = useState('');
 
   useEffect(() => { if (!loading && !user) router.push('/auth/login?redirect=/pay'); }, [loading, user, router]);
   useEffect(() => {
-    if (!user) return;
-    createClient().from('wallet_transactions')
-      .select('id,transaction_type,amount,fee_amount,transaction_status,description,reference,created_at,balance_after,currencies:currency_id(code)')
-      .order('created_at', { ascending: false }).limit(6).then(({ data }) => setTxs((data ?? []) as unknown as PayTx[]));
+    if (!user) { setTxs([]); return; }
+    let active = true;
+    async function loadRecentTransactions() {
+      setTxError('');
+      const { data, error } = await createClient().from('wallet_transactions')
+        .select('id,transaction_type,amount,fee_amount,transaction_status,description,reference,created_at,balance_after,currencies:currency_id(code)')
+        .order('created_at', { ascending: false }).limit(6);
+      if (!active) return;
+      if (error) { setTxError(error.message); setTxs([]); }
+      else setTxs((data ?? []) as unknown as PayTx[]);
+    }
+    void loadRecentTransactions();
+    return () => { active = false; };
   }, [user]);
 
   const shown = (wallets ?? []).filter((w) => all || w.balance > 0 || w.currencies.code === 'XOF');
@@ -55,7 +65,7 @@ export default function PayHome() {
 
       <section aria-labelledby="r-title" className="jdv-card mt-6 p-5">
         <div className="flex items-center justify-between"><h2 id="r-title" className="font-bold text-foreground">Dernières opérations</h2><Link href="/pay/history" className="text-xs font-medium text-accent hover:underline">Tout voir</Link></div>
-        {txs === null ? <p className="mt-3 text-sm text-muted-foreground">Chargement…</p> : txs.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">Aucune opération pour le moment.</p> : (
+        {txError ? <div role="alert" className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">Impossible de charger les dernières opérations. {txError}<button type="button" onClick={() => { setTxs(null); setTxError(''); if (user) createClient().from('wallet_transactions').select('id,transaction_type,amount,fee_amount,transaction_status,description,reference,created_at,balance_after,currencies:currency_id(code)').order('created_at', { ascending: false }).limit(6).then(({ data, error }) => { if (error) setTxError(error.message); else setTxs((data ?? []) as unknown as PayTx[]); }); }} className="ml-2 underline">Réessayer</button></div> : txs === null ? <p className="mt-3 text-sm text-muted-foreground">Chargement…</p> : txs.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">Aucune opération pour le moment.</p> : (
           <ul className="mt-3 divide-y divide-border">
             {txs.map((t) => {
               const inn = IN_TYPES.includes(t.transaction_type);
