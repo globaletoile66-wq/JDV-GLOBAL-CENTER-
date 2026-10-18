@@ -80,6 +80,7 @@ export default function AcademyTutorPage() {
       });
       const result = await response.json().catch(() => null) as { answer?: string; error?: string; code?: string; model?: string } | null;
       if (!response.ok || !result?.answer) {
+        if (result?.code === 'AI_GATEWAY_NOT_ACTIVE') setPrompt(submittedPrompt);
         setError(result?.error || 'Le tuteur IA n’a pas pu répondre.');
         await loadMessages(selectedId);
       } else {
