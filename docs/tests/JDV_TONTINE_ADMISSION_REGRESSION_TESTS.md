@@ -44,6 +44,38 @@ Ils doivent être exécutés dans un environnement de test isolé avec des utili
 
 Le schéma inspecté expose des champs de validation sur `tontine_members`, mais aucune table spécifique d'éléments KYC/contrats rattachés à une adhésion tontine n'a été identifiée dans l'inventaire. Cette modification empêche l'activation automatique par lien; elle ne doit pas être considérée comme une implémentation complète de l'approbation contractuelle. Avant de livrer l'activation, il faut relier les exigences des règles (`tontines.rules`) aux preuves réellement stockées et à leur état de revue, puis ajouter une RPC d'approbation autorisée et des tests d'accès/paiement.
 
+## Cas complémentaires — groupe et individuel
+
+9. **Création d'un groupe**
+   - le groupe démarre en `draft`;
+   - le créateur est `pending`, sans `identity_confirmed_at`, `approved_by` ni `approved_at`;
+   - l'acceptation des règles et du contrat est enregistrée séparément;
+   - le lien d'invitation ne peut créer qu'une demande, jamais activer le membre.
+
+10. **Création d'une tontine individuelle**
+    - `tontine_type='individual'`, `member_limit=1`, statut `draft`;
+    - un seul titulaire `owner` est créé en `pending`;
+    - aucun lien de groupe n'est créé et aucune rotation partagée n'est générée;
+    - l'ouverture du cycle génère les échéances individuelles et une rotation de maturité unique dont le montant correspond au total des cotisations prévues;
+    - le versement de maturité doit passer par le worker de paiement portefeuille existant, attendre la collecte complète et utiliser le portefeuille personnel JDV PAY;
+    - aucun cycle individuel supplémentaire n'est ouvert automatiquement après maturité.
+
+11. **Validation KYC et activation**
+    - l'approbation positive échoue si le profil KYC n'est pas approuvé;
+    - elle échoue si aucun document d'identité approuvé n'existe;
+    - elle échoue si l'acceptation contractuelle est absente ou si sa version diffère de celle des règles;
+    - l'auto-approbation est interdite;
+    - une fois validé par un responsable autorisé, le membre devient actif et la méthode d'identité indique une vérification KYC revue.
+
+12. **Écritures directes**
+    - un utilisateur ne peut pas insérer, modifier le statut ou supprimer directement une ligne `tontine_members`;
+    - les transitions d'activation d'une tontine échouent si le responsable n'est pas actif, KYC-vérifié et contractuellement validé;
+    - les liens d'invitation ne peuvent pas être créés pour une tontine individuelle.
+
+13. **Fréquence trimestrielle**
+    - la fréquence trimestrielle est acceptée par le schéma;
+    - les échéances utilisent un intervalle de 90 jours, et non l'intervalle mensuel par défaut.
+
 ## Vérifications avant fusion
 
 - vérifier la signature, le `search_path`, les grants EXECUTE et les politiques RLS effectives;
