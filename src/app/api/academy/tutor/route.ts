@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -14,11 +15,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Connexion requise.' }, { status: 401 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  if (!process.env.OPENAI_BASE_URL) {
     return NextResponse.json({
-      error: 'Le tuteur IA est prêt, mais le fournisseur IA n’est pas configuré. Ajoute OPENAI_API_KEY comme variable secrète Netlify (scope Functions/Runtime), puis redéploie.',
-      code: 'AI_PROVIDER_NOT_CONFIGURED',
+      error: 'Le tuteur IA est prêt, mais Netlify AI Gateway n’est pas actif sur ce déploiement. Vérifie que les fonctions Netlify AI sont activées et qu’un déploiement de production a été effectué.',
+      code: 'AI_GATEWAY_NOT_ACTIVE',
     }, { status: 503 });
   }
 
@@ -100,42 +100,29 @@ export async function POST(request: Request) {
     .map((message) => ({ role: message.role as 'user' | 'assistant', content: message.content }));
   history.push({ role: 'user', content: prompt });
 
-  const model = process.env.JDV_ACADEMY_TUTOR_MODEL || 'gpt-4o-mini';
-  let response: Response;
+  const model = process.env.JDV_ACADEMY_TUTOR_MODEL || 'gpt-5-mini';
+  let completion;
   try {
-    response = await fetch(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'system', content: systemPrompt }, ...history],
-        temperature: 0.35,
-        max_tokens: 1200,
-      }),
-      signal: AbortSignal.timeout(30000),
+    const openai = new OpenAI({ timeout: 30000 });
+    completion = await openai.chat.completions.create({
+      model,
+      messages: [{ role: 'system', content: systemPrompt }, ...history],
+      temperature: 0.35,
+      max_tokens: 1200,
     });
   } catch {
     await supabase.rpc('ai_log_access', { p_action_type: 'message', p_scope: 'academy_tutor', p_organization_id: null, p_conversation_id: conversationId, p_result_count: 0, p_success: false });
-    return NextResponse.json({ error: 'Le service IA n’a pas répondu. Ta question est enregistrée ; réessaie dans un instant.' }, { status: 502 });
+    return NextResponse.json({ error: 'Le service IA n’a pas répondu. Ta question est enregistrée ; réessaie dans un instant.', code: 'AI_PROVIDER_REQUEST_FAILED' }, { status: 502 });
   }
 
-  const payload = await response.json().catch(() => null) as {
-    error?: { message?: string };
-    choices?: Array<{ message?: { content?: string } }>;
-    usage?: { prompt_tokens?: number; completion_tokens?: number };
-  } | null;
-
-  if (!response.ok || !payload?.choices?.[0]?.message?.content) {
+  const answer = completion.choices[0]?.message?.content?.trim();
+  if (!answer) {
     await supabase.rpc('ai_log_access', { p_action_type: 'message', p_scope: 'academy_tutor', p_organization_id: null, p_conversation_id: conversationId, p_result_count: 0, p_success: false });
-    return NextResponse.json({
-      error: response.status === 401 ? 'Le secret du fournisseur IA est invalide.' : 'Le service IA a refusé la demande. Vérifie la clé et le modèle configurés.',
-      code: 'AI_PROVIDER_REQUEST_FAILED',
-    }, { status: response.status === 401 ? 503 : 502 });
+    return NextResponse.json({ error: 'Le modèle n’a pas retourné de réponse exploitable.', code: 'AI_EMPTY_RESPONSE' }, { status: 502 });
   }
 
-  const answer = payload.choices[0].message.content.trim();
-  const inputTokens = Math.max(0, payload.usage?.prompt_tokens || 0);
-  const outputTokens = Math.max(0, payload.usage?.completion_tokens || 0);
+  const inputTokens = Math.max(0, completion.usage?.prompt_tokens || 0);
+  const outputTokens = Math.max(0, completion.usage?.completion_tokens || 0);
   const { data: assistantMessageId, error: assistantMessageError } = await supabase.rpc('ai_add_message', {
     p_conversation_id: conversationId,
     p_role: 'assistant',
