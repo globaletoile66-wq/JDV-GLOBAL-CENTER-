@@ -13,6 +13,7 @@ type TontineRow = {
   id: string; name: string; organization_id: string; contribution_amount: number;
   frequency: string; cycle_periods: number; member_limit: number; status: string; tontine_type: 'group' | 'individual';
 };
+type CreatedTontine = { id: string; name: string; tontine_type?: string; status?: string; membership_status?: string; join_path?: string };
 
 const frequencyLabels: Record<string, string> = {
   daily: 'Quotidienne', weekly: 'Hebdomadaire', biweekly: 'Toutes les deux semaines',
@@ -41,6 +42,7 @@ export default function TontineConcepteurPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [joinPath, setJoinPath] = useState('');
 
   const load = useCallback(async () => {
     if (!user || !isSuperAdmin) return;
@@ -77,6 +79,7 @@ export default function TontineConcepteurPage() {
     if (!user || !isSuperAdmin) return;
     setError('');
     setSuccess('');
+    setJoinPath('');
     if (!organizationId || !currencyId) {
       setError('Choisis une organisation et une devise avant de continuer.');
       return;
@@ -93,7 +96,7 @@ export default function TontineConcepteurPage() {
     }
 
     setSaving(true);
-    let created: { id: string; name: string; tontine_type?: string; status?: string; membership_status?: string } | null = null;
+    let created: CreatedTontine | null = null;
     let createError: { message: string } | null = null;
 
     if (tontineType === 'individual') {
@@ -112,30 +115,33 @@ export default function TontineConcepteurPage() {
       if (result.error) createError = result.error;
       else created = result.data as typeof created;
     } else {
-      const result = await supabase.from('tontines').insert({
-        organization_id: organizationId,
-        currency_id: currencyId,
-        name: name.trim(),
-        description: description.trim() || null,
-        contribution_amount: Number(amount),
-        frequency,
-        cycle_periods: Number(periods),
-        member_limit: Number(memberLimit),
-        late_fee_amount: Number(lateFee),
-        created_by: user.id,
-        status: 'draft',
-        tontine_type: 'group',
-        rules: {
+      const result = await supabase.rpc('tontine_create_group', {
+        p_organization_id: organizationId,
+        p_country_id: null,
+        p_currency_id: currencyId,
+        p_name: name.trim(),
+        p_description: description.trim() || null,
+        p_contribution_amount: Number(amount),
+        p_frequency: frequency,
+        p_cycle_periods: Number(periods),
+        p_member_limit: Number(memberLimit),
+        p_starts_on: null,
+        p_late_fee_amount: Number(lateFee),
+        p_rules: {
           created_from: 'concepteur',
           version: '1.0',
+          rules_accepted: acceptRules,
+          contract_accepted: acceptContract,
           review_required_before_activation: true,
-          rules_accepted_by_creator: acceptRules,
-          contract_accepted_by_creator: acceptContract,
         },
-        payout_mode: 'wallet',
-      }).select('id,name,tontine_type,status').single();
+        p_link_expires_at: null,
+      });
       if (result.error) createError = result.error;
-      else created = result.data as typeof created;
+      else {
+        const row = result.data as { tontine_id: string; join_path: string };
+        created = { id: row.tontine_id, name: name.trim(), tontine_type: 'group', status: 'draft', membership_status: 'pending', join_path: row.join_path };
+        setJoinPath(row.join_path);
+      }
     }
 
     setSaving(false);
@@ -145,7 +151,7 @@ export default function TontineConcepteurPage() {
     }
     setSuccess(tontineType === 'individual'
       ? 'Tontine individuelle « ' + created.name + ' » créée en brouillon. Votre adhésion reste en attente de vérification KYC et contractuelle ; aucun paiement n’a été déclenché.'
-      : 'Tontine de groupe « ' + created.name + ' » créée en brouillon. Elle n’est pas activée et aucun paiement n’a été déclenché.');
+      : 'Tontine de groupe « ' + created.name + ' » créée en brouillon. Le lien permet de déposer des demandes, mais le groupe ne peut démarrer qu’après validation du responsable, des membres et du cycle.');
     setName('');
     setDescription('');
     setAcceptRules(false);
@@ -166,7 +172,7 @@ export default function TontineConcepteurPage() {
         <div className="flex items-start gap-4"><div className="rounded-2xl bg-emerald-400/10 p-3 text-emerald-300"><ShieldCheck size={25}/></div><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#F28C28]">Espace concepteur · accès indépendant</p><h1 className="mt-2 text-3xl font-black">Atelier de vérification — Tontine</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">Créer des tontines de test en brouillon, vérifier les paramètres et examiner les tontines existantes. La création ne lance ni cycle, ni cotisation, ni paiement.</p></div></div>
       </header>
       {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-4 text-sm text-red-100">{error}</div>}
-      {success && <div role="status" className="mt-5 flex items-start gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100"><CheckCircle2 size={18} className="mt-0.5 shrink-0"/>{success}</div>}
+      {success && <div role="status" className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100"><div className="flex items-start gap-2"><CheckCircle2 size={18} className="mt-0.5 shrink-0"/><span>{success}</span></div>{joinPath && <p className="mt-3 break-all rounded-lg border border-white/10 bg-black/10 p-3 text-xs">Lien d’invitation du groupe : <Link className="underline" href={joinPath}>{joinPath}</Link><span className="mt-1 block text-white/60">Le lien ne permet pas d’activer l’adhésion automatiquement.</span></p>}</div>}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
         <form onSubmit={createDraft} className="space-y-5 rounded-2xl border border-white/10 bg-white/[.04] p-5 sm:p-7">
           <div className="flex items-center gap-2"><PlusCircle className="text-[#F28C28]" size={21}/><h2 className="text-xl font-bold">Créer une tontine (brouillon)</h2></div>
