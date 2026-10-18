@@ -229,6 +229,7 @@ export default function SellerDashboardPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             {seller.is_verified && <Shield size={14} className="text-success" />}
             <Link href="/marketplace/seller/settings" className="btn-ghost p-2"><Settings size={16} /></Link>
+            <Link href={`/marketplace/store/${seller.shop_slug}`} className="btn-ghost px-2 py-1.5 text-xs">Voir boutique</Link>
             <Link href="/marketplace/seller/listings/new" className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1">
               <Plus size={13} /> Produit
             </Link>
