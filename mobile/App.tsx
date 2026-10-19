@@ -6,7 +6,7 @@ import { supabase, supabaseConfigured } from './lib/supabase';
 
 type SocialApp = { key: string; name: string; url: string; color: string };
 type Preference = { app_key: string; is_added?: boolean; is_visible: boolean; sort_order: number; category: string; notifications_enabled: boolean };
-type SocialProfile = { user_id: string; username: string; display_name: string | null; bio?: string | null };
+type SocialProfile = { user_id: string; username: string; display_name: string | null; bio: string | null };
 type SocialPost = { id: string; author_user_id: string; body: string | null; media_url: string | null; visibility: string; status: string; created_at: string };
 type SocialReaction = { id: string; post_id: string; user_id: string; reaction_type: string };
 type SocialGroup = { id: string; name: string; description: string | null; visibility: 'public' | 'private'; created_by: string; created_at: string };
@@ -42,6 +42,9 @@ export default function App() {
   const [preferenceSaving, setPreferenceSaving] = useState('');
   const [socialProfile, setSocialProfile] = useState<SocialProfile | null>(null);
   const [profileUsername, setProfileUsername] = useState('');
+  const [profileDisplayName, setProfileDisplayName] = useState('');
+  const [profileBio, setProfileBio] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
   const [postBody, setPostBody] = useState('');
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
   const [socialAuthors, setSocialAuthors] = useState<Record<string, SocialProfile>>({});
@@ -118,7 +121,7 @@ export default function App() {
       else {
         const item = (profileResult.data ?? null) as SocialProfile | null;
         setSocialProfile(item);
-        if (item) setProfileUsername(item.username);
+        if (item) { setProfileUsername(item.username); setProfileDisplayName(item.display_name ?? ''); setProfileBio(item.bio ?? ''); }
         else if (!profileUsername) setProfileUsername((session.user.email?.split('@')[0] || 'membre').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20) + '_' + session.user.id.slice(0, 4));
       }
       if (postsResult.error) setMessage('Fil JDV Social indisponible : ' + postsResult.error.message);
@@ -171,7 +174,7 @@ export default function App() {
     setBusy(true); setMessage('');
     try {
       const { data, error } = await supabase.from('social_profiles')
-        .insert({ user_id: session.user.id, username, profile_status: 'active' })
+        .insert({ user_id: session.user.id, username, display_name: profileDisplayName.trim() || null, bio: profileBio.trim() || null, profile_status: 'active' })
         .select('user_id,username,display_name,bio').single();
       if (error) setMessage(error.message);
       else {
@@ -183,6 +186,33 @@ export default function App() {
       setMessage('Erreur réseau : impossible de créer le profil social.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const saveSocialProfile = async () => {
+    if (!session || !socialProfile) return;
+    const username = profileUsername.trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,30}$/.test(username)) {
+      setMessage('Le nom d’utilisateur doit contenir 3 à 30 caractères : lettres, chiffres ou _.');
+      return;
+    }
+    setProfileSaving(true); setMessage('');
+    try {
+      const { data, error } = await supabase.from('social_profiles')
+        .update({ username, display_name: profileDisplayName.trim() || null, bio: profileBio.trim() || null })
+        .eq('user_id', session.user.id)
+        .select('user_id,username,display_name,bio').single();
+      if (error) setMessage(error.message);
+      else {
+        const item = data as SocialProfile;
+        setSocialProfile(item);
+        setSocialAuthors((current) => ({ ...current, [session.user.id]: item }));
+        setMessage('Votre profil JDV Social a été mis à jour.');
+      }
+    } catch {
+      setMessage('Erreur réseau : le profil social n’a pas pu être mis à jour.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -489,11 +519,13 @@ export default function App() {
 
         {session && <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mon profil JDV Social</Text>
-          {socialProfile ? <Text style={styles.body}>Profil actif : @{socialProfile.username}{socialProfile.display_name ? ' · ' + socialProfile.display_name : ''}</Text> : <>
-            <Text style={styles.body}>Créez votre identifiant communautaire pour publier dans le fil commun avec la version Web.</Text>
-            <TextInput accessibilityLabel="Nom d’utilisateur JDV Social" autoCapitalize="none" autoCorrect={false} placeholder="nom_utilisateur" placeholderTextColor="#8799B6" value={profileUsername} onChangeText={setProfileUsername} maxLength={30} style={styles.input} />
-            <Pressable accessibilityRole="button" disabled={busy} style={styles.primaryButton} onPress={() => void createSocialProfile()}><Text style={styles.primaryButtonText}>{busy ? 'Création…' : 'Créer mon profil social'}</Text></Pressable>
-          </>}
+          <Text style={styles.body}>{socialProfile ? 'Votre profil est partagé avec la version Web.' : 'Créez votre identifiant communautaire pour publier dans le fil commun avec la version Web.'}</Text>
+          <TextInput accessibilityLabel="Nom d’utilisateur JDV Social" autoCapitalize="none" autoCorrect={false} placeholder="nom_utilisateur" placeholderTextColor="#8799B6" value={profileUsername} onChangeText={setProfileUsername} maxLength={30} style={styles.input} />
+          <TextInput accessibilityLabel="Nom affiché JDV Social" placeholder="Nom affiché (facultatif)" placeholderTextColor="#8799B6" value={profileDisplayName} onChangeText={setProfileDisplayName} maxLength={120} style={styles.input} />
+          <TextInput accessibilityLabel="Biographie JDV Social" multiline textAlignVertical="top" placeholder="Biographie (facultatif)" placeholderTextColor="#8799B6" value={profileBio} onChangeText={setProfileBio} maxLength={500} style={[styles.input, { minHeight: 72 }]} />
+          {socialProfile
+            ? <Pressable accessibilityRole="button" disabled={profileSaving} style={styles.primaryButton} onPress={() => void saveSocialProfile()}><Text style={styles.primaryButtonText}>{profileSaving ? 'Enregistrement…' : 'Enregistrer mon profil'}</Text></Pressable>
+            : <Pressable accessibilityRole="button" disabled={busy} style={styles.primaryButton} onPress={() => void createSocialProfile()}><Text style={styles.primaryButtonText}>{busy ? 'Création…' : 'Créer mon profil social'}</Text></Pressable>}
           <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Publier un message</Text>
           <TextInput accessibilityLabel="Texte de la publication" multiline textAlignVertical="top" placeholder="Que souhaitez-vous partager ?" placeholderTextColor="#8799B6" value={postBody} onChangeText={setPostBody} maxLength={5000} style={[styles.input, { minHeight: 90 }]} />
           <Pressable accessibilityRole="button" disabled={postBusy || !socialProfile} style={styles.primaryButton} onPress={() => void publishSocialPost()}><Text style={styles.primaryButtonText}>{postBusy ? 'Publication…' : 'Publier dans JDV Social'}</Text></Pressable>
