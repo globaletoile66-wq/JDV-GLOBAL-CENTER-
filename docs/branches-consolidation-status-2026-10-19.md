@@ -14,9 +14,9 @@
 | JDV SOCIAL | Existant à auditer | Les routes et tables sociales existantes sont réutilisées; tests de non-régression requis. |
 | JDV IA | À auditer | Vérifier les intégrations et secrets avant activation. |
 | JDV COMMUNITY | Première route créée | `/community` lit les groupes publics de `social_groups`; création et adhésion restent dans le workflow partagé `/social/groups`. |
-| JDV SERVICES | Première marketplace créée | `/service-marketplace` utilise une migration préparée pour les offres et demandes de devis; migration non appliquée à Supabase distant. `/services` reste le catalogue général. |
+| JDV SERVICES | Première marketplace créée | `/service-marketplace` utilise une migration préparée pour les offres et demandes de devis; migration non appliquée à Supabase distant. La compilation n'a pas encore été exécutée. `/services` reste le catalogue général. |
 | JDV EVENTS | Route de module créée | `/events` réutilise le workflow d'événements existant sous `/social/events`; la billetterie complète doit être auditée séparément. |
-| JDV JOBS | UI et migration préparées | `/jobs` propose consultation, publication et candidature. La migration `20261019190000_jdv_jobs_marketplace.sql` doit être relue, testée en préproduction puis appliquée avec autorisation explicite. |
+| JDV JOBS | UI et migration préparées | `/jobs` propose consultation, publication et candidature. La migration `20261019190000_jdv_jobs_marketplace.sql` doit être relue, testée en préproduction puis appliquée avec autorisation explicite. La compilation n'a pas encore été exécutée. |
 | JDV LEGAL | À développer | Ne pas exposer de documents privés; vérifier les rôles et le stockage privé avant toute fonctionnalité de dossier. |
 | JDV ACCOUNTING | À développer | Ne pas créer de ledger parallèle à JDV PAY. |
 | JDV HR | À développer | Séparer strictement les données RH de la place de marché JDV JOBS. |
@@ -45,7 +45,7 @@ Le fichier RAR contient 18 logos PNG originaux de 1024 × 1024 px. Ils ont été
 - JDV Agriculture
 - JDV Tourisme
 
-La correspondance visuelle est connue; l'intégration binaire dans `public/assets/branches/` et la vérification de rendu restent à terminer. Ne pas modifier les noms d'identifiants de logo déjà utilisés par l'application sans vérifier toutes leurs références.
+La correspondance visuelle est connue. Un paquet prêt à copier a été préparé avec les 18 PNG originaux renommés selon les noms canoniques. L'intégration binaire dans `public/assets/branches/` et la vérification de rendu restent à terminer. Ne pas modifier les noms d'identifiants de logo déjà utilisés par l'application sans vérifier toutes leurs références.
 
 ## Contrôles à effectuer avant fusion
 1. Installer les dépendances et exécuter `npm run type-check` puis `npm run build`.
