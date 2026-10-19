@@ -127,7 +127,7 @@ export default function SocialGroupsPage() {
         </header>
         {!user ? <section className="mt-6 rounded-2xl border border-white/10 p-6"><p className="text-sm text-white/60">Connectez-vous pour rejoindre ou créer une communauté.</p><Link href="/auth/login" className="mt-4 inline-flex rounded-xl bg-[#F28C28] px-4 py-2 font-bold text-[#0B1B3D]">Se connecter</Link></section> : <div className="mt-6 grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
           <section className="h-fit rounded-2xl border border-white/10 bg-white/[.04] p-5">
-            <h2 className="flex items-center gap-2 text-lg font-bold"><Plus size={19} className="text-[#F28C28}"/> Créer une communauté</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold"><Plus size={19} className="text-[#F28C28]"/> Créer une communauté</h2>
             <form onSubmit={createGroup} className="mt-4 space-y-4">
               <div><label htmlFor="group-name" className={labelClass}>Nom du groupe *</label><input id="group-name" required minLength={2} maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className={fieldClass} placeholder="Ex. Entrepreneurs d’Afrique de l’Ouest"/></div>
               <div><label htmlFor="group-description" className={labelClass}>Description</label><textarea id="group-description" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={4} className={fieldClass} placeholder="La mission de votre communauté…"/></div>
@@ -136,7 +136,7 @@ export default function SocialGroupsPage() {
             </form>
           </section>
           <section className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
-            <h2 className="flex items-center gap-2 text-lg font-bold"><Compass size={19} className="text-[#F28C28}"/> Découvrir les communautés <span className="rounded-full bg-white/10 px-2 py-1 text-xs">{groups.length}</span></h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold"><Compass size={19} className="text-[#F28C28]"/> Découvrir les communautés <span className="rounded-full bg-white/10 px-2 py-1 text-xs">{groups.length}</span></h2>
             {groups.length === 0 && !busy ? <p className="mt-4 rounded-xl border border-dashed border-white/15 p-7 text-center text-sm text-white/45">Aucun groupe visible pour le moment. Créez la première communauté.</p> : <div className="mt-4 grid gap-3 sm:grid-cols-2">{groups.map((group) => {
               const membership = memberships.find((item) => item.group_id === group.id);
               const active = membership?.status === 'active';
@@ -145,7 +145,7 @@ export default function SocialGroupsPage() {
                 <div className="flex items-start justify-between gap-3"><div><h3 className="font-bold">{group.name}</h3><p className="mt-1 text-xs text-white/40">/{group.slug}</p></div><span className="rounded-full bg-white/10 px-2 py-1 text-[11px]">{group.visibility === 'public' ? 'Public' : 'Privé'}</span></div>
                 <p className="mt-3 min-h-12 text-sm leading-5 text-white/60">{group.description || 'Communauté JDV Social.'}</p>
                 <div className="mt-4 flex items-center justify-between gap-2"><span className="inline-flex items-center gap-1.5 text-xs text-white/45"><Users size={14}/>{membership?.role === 'owner' ? 'Vous administrez' : active ? 'Membre actif' : pending ? 'Demande en attente' : 'Communauté'}</span>
-                  {!membership || membership.status === 'left' ? <button type="button" onClick={() => void joinGroup(group)} disabled={joining === group.id} className="rounded-lg bg-[#F28C28] px-3 py-2 text-xs font-bold text-[#0B1B3D] disabled:opacity-50">{joining === group.id ? 'En cours…' : group.visibility === 'public' ? 'Rejoindre' : 'Demander l’accès'}</button> : membership.role !== 'owner' && active ? <button type="button" onClick={() => void leaveGroup(group)} disabled={joining === group.id} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/60 disabled:opacity-50">Quitter</button> : null}
+                  {!membership || membership.status === 'left' ? <button type="button" onClick={() => void joinGroup(group)} disabled={joining === group.id} className="rounded-lg bg-[#F28C28] px-3 py-2 text-xs font-bold text-[#0B1B3D] disabled:opacity-50">{joining === group.id ? 'En cours…' : group.visibility === 'public' ? 'Rejoindre' : 'Demander l’accès'}</button> : membership.role !== 'owner' && (active || pending) ? <button type="button" onClick={() => void leaveGroup(group)} disabled={joining === group.id} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/60 disabled:opacity-50">{pending ? 'Annuler la demande' : 'Quitter'}</button> : null}
                 </div>
               </article>;
             })}</div>}
