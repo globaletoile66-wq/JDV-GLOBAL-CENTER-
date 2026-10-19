@@ -196,3 +196,26 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - La suite sans frais : déclencher les validations depuis GitHub Actions, corriger les erreurs de compilation éventuelles, puis continuer les tests fonctionnels. Ne pas appliquer la migration distante ni déployer sans validation distincte.
 
 - Vérification des contraintes d'unicité distantes : les inscriptions aux événements ont bien une clé unique `(event_id, user_id)`, les adhésions aux groupes `(group_id, user_id)`, et les réactions `(post_id, user_id, reaction_type)`. Les opérations d'inscription/adhésion prévues dans Mobile correspondent aux clés vérifiées.
+
+## Vérification complémentaire — navigation et messagerie (19 octobre 2026)
+
+### Constat confirmé sur Supabase (lecture seule)
+- Les tables sociales principales sont présentes : profils, publications, réactions, commentaires, groupes, adhésions, événements, inscriptions, abonnements et préférences des applications sociales.
+- La table `notifications` existe et sa politique de lecture/écriture limite les lignes à `user_id = auth.uid()`.
+- Les politiques des groupes et événements contrôlent les adhésions et les accès aux événements de groupe. Les inscriptions d'événement disposent d'une clé primaire composite `(event_id, user_id)`.
+- Les tables `marketplace_messages` et `ai_messages` existent, mais aucune table de conversation/message direct générique n'a été confirmée dans le schéma inspecté.
+- La page Web `/social/messages` est donc explicitement un écran d'attente et ne prétend pas envoyer des messages.
+
+### Décision de sécurité
+- Ne pas réutiliser `marketplace_messages` pour les messages privés sociaux.
+- Ne pas créer de messagerie active sans modèle de conversations, membres, messages et politiques RLS dédiées, puis validation des scénarios d'accès.
+- La migration candidate `20261019190000_jdv_social_public_reads.sql` reste non appliquée à la base distante.
+- Aucune donnée de production n'a été insérée, modifiée ou supprimée pendant ces contrôles.
+
+### Prochaines validations
+1. Exécuter le workflow GitHub Actions sur la branche de travail et examiner les logs Web et Mobile.
+2. Corriger chaque erreur TypeScript ou build à partir des logs réels, sans annoncer de réussite avant résultat vérifiable.
+3. Valider les politiques de lecture des profils, réactions et commentaires dans un environnement isolé avant toute application distante.
+4. Concevoir la messagerie sociale dans une migration séparée et une interface dédiée, avec accès strictement limité aux membres des conversations.
+5. Maintenir l'ancienne CRM hors périmètre.
+
