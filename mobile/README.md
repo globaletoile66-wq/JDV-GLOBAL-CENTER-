@@ -50,3 +50,6 @@ La synchronisation nécessite que le compte mobile soit le même utilisateur Sup
 - Confirmer que les paramètres d'inscription et de confirmation e-mail du projet correspondent au parcours souhaité.
 - Exécuter l'installation, le contrôle TypeScript, puis les tests sur navigateurs, Android et iOS.
 - Les notifications natives, les builds signés et la publication sur les stores ne sont pas inclus à ce stade.
+
+
+Fonctions ajoutées dans la tranche du 19 octobre 2026 : les profils des commentateurs sont chargés pour attribuer les commentaires, et un membre peut quitter un groupe ou annuler une demande d’adhésion en conservant l’historique d’adhésion (`status = left`). Ces fonctions doivent encore passer la compilation et les tests d’intégration.
