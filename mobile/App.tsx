@@ -9,6 +9,10 @@ type Preference = { app_key: string; is_added?: boolean; is_visible: boolean; so
 type SocialProfile = { user_id: string; username: string; display_name: string | null; bio?: string | null };
 type SocialPost = { id: string; author_user_id: string; body: string | null; media_url: string | null; visibility: string; status: string; created_at: string };
 type SocialReaction = { id: string; post_id: string; user_id: string; reaction_type: string };
+type SocialGroup = { id: string; name: string; description: string | null; visibility: 'public' | 'private'; created_by: string; created_at: string };
+type SocialMembership = { group_id: string; user_id: string; role: string; status: string };
+type SocialEvent = { id: string; title: string; description: string | null; starts_at: string; location: string | null; visibility: string; group_id: string | null };
+type SocialRegistration = { event_id: string; user_id: string; status: string };
 
 const webSpaceUrl = process.env.EXPO_PUBLIC_JDV_WEB_URL;
 const apps: SocialApp[] = [
@@ -42,6 +46,12 @@ export default function App() {
   const [socialAuthors, setSocialAuthors] = useState<Record<string, SocialProfile>>({});
   const [myReactions, setMyReactions] = useState<Record<string, string>>({});
   const [reactionBusy, setReactionBusy] = useState('');
+  const [socialGroups, setSocialGroups] = useState<SocialGroup[]>([]);
+  const [groupMemberships, setGroupMemberships] = useState<SocialMembership[]>([]);
+  const [socialEvents, setSocialEvents] = useState<SocialEvent[]>([]);
+  const [eventRegistrations, setEventRegistrations] = useState<SocialRegistration[]>([]);
+  const [communityBusy, setCommunityBusy] = useState(false);
+  const [communityAction, setCommunityAction] = useState('');
   const [feedBusy, setFeedBusy] = useState(false);
   const [postBusy, setPostBusy] = useState(false);
 
@@ -91,7 +101,7 @@ export default function App() {
 
   const loadSocialFeed = useCallback(async () => {
     if (!session?.user.id) {
-      setSocialProfile(null); setSocialPosts([]); setSocialAuthors({});
+      setSocialProfile(null); setSocialPosts([]); setSocialAuthors({}); setMyReactions({}); setSocialGroups([]); setGroupMemberships([]); setSocialEvents([]); setEventRegistrations([]);
       return;
     }
     setFeedBusy(true);
@@ -187,6 +197,78 @@ export default function App() {
       setMessage('Erreur réseau : la publication n’a pas pu être envoyée.');
     } finally {
       setPostBusy(false);
+    }
+  };
+
+  const loadCommunity = useCallback(async () => {
+    if (!session?.user.id) {
+      setSocialGroups([]); setGroupMemberships([]); setSocialEvents([]); setEventRegistrations([]);
+      return;
+    }
+    setCommunityBusy(true);
+    try {
+      const [groupsResult, membershipsResult, eventsResult, registrationsResult] = await Promise.all([
+        supabase.from('social_groups').select('id,name,description,visibility,created_by,created_at').eq('status', 'active').order('created_at', { ascending: false }).limit(50),
+        supabase.from('social_group_memberships').select('group_id,user_id,role,status').eq('user_id', session.user.id),
+        supabase.from('social_events').select('id,title,description,starts_at,location,visibility,group_id').eq('status', 'published').order('starts_at', { ascending: true }).limit(50),
+        supabase.from('social_event_registrations').select('event_id,user_id,status').eq('user_id', session.user.id),
+      ]);
+      if (groupsResult.error) setMessage((current) => current || 'Les groupes ne peuvent pas être chargés.');
+      else setSocialGroups((groupsResult.data ?? []) as SocialGroup[]);
+      if (membershipsResult.error) setMessage((current) => current || 'Vos adhésions ne peuvent pas être chargées.');
+      else setGroupMemberships((membershipsResult.data ?? []) as SocialMembership[]);
+      if (eventsResult.error) setMessage((current) => current || 'Les événements ne peuvent pas être chargés.');
+      else setSocialEvents((eventsResult.data ?? []) as SocialEvent[]);
+      if (registrationsResult.error) setMessage((current) => current || 'Vos inscriptions ne peuvent pas être chargées.');
+      else setEventRegistrations((registrationsResult.data ?? []) as SocialRegistration[]);
+    } catch {
+      setMessage('Erreur réseau lors du chargement des groupes et événements.');
+    } finally {
+      setCommunityBusy(false);
+    }
+  }, [session?.user.id]);
+
+  useEffect(() => { void loadCommunity(); }, [loadCommunity]);
+
+  const joinSocialGroup = async (group: SocialGroup) => {
+    if (!session || communityAction) return;
+    const existing = groupMemberships.find((item) => item.group_id === group.id);
+    const status = group.visibility === 'public' ? 'active' : 'pending';
+    setCommunityAction(group.id); setMessage('');
+    try {
+      const { error } = await supabase.from('social_group_memberships').upsert({
+        group_id: group.id, user_id: session.user.id, role: 'member', status,
+      }, { onConflict: 'group_id,user_id' });
+      if (error) setMessage(error.message);
+      else {
+        setGroupMemberships((current) => [...current.filter((item) => item.group_id !== group.id), { group_id: group.id, user_id: session.user.id, role: existing?.role ?? 'member', status }]);
+        setMessage(status === 'active' ? 'Vous avez rejoint le groupe.' : 'Demande d’adhésion envoyée.');
+      }
+    } catch {
+      setMessage('Erreur réseau : impossible de rejoindre ce groupe.');
+    } finally {
+      setCommunityAction('');
+    }
+  };
+
+  const registerSocialEvent = async (item: SocialEvent) => {
+    if (!session || communityAction) return;
+    const current = eventRegistrations.find((row) => row.event_id === item.id);
+    const status = current?.status === 'registered' ? 'cancelled' : 'registered';
+    setCommunityAction(item.id); setMessage('');
+    try {
+      const { error } = await supabase.from('social_event_registrations').upsert({
+        event_id: item.id, user_id: session.user.id, status,
+      }, { onConflict: 'event_id,user_id' });
+      if (error) setMessage(error.message);
+      else {
+        setEventRegistrations((rows) => [...rows.filter((row) => row.event_id !== item.id), { event_id: item.id, user_id: session.user.id, status }]);
+        setMessage(status === 'registered' ? 'Inscription à l’événement confirmée.' : 'Inscription annulée.');
+      }
+    } catch {
+      setMessage('Erreur réseau : impossible de modifier votre inscription.');
+    } finally {
+      setCommunityAction('');
     }
   };
 
@@ -394,6 +476,34 @@ export default function App() {
               <Text style={styles.visibilityText}>{reactionBusy === post.id ? 'Enregistrement…' : myReactions[post.id] ? '♥ J’aime' : '♡ J’aime'}</Text>
             </Pressable>
           </View>)}
+        </View>}
+        {session && <View style={styles.section}>
+          <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Groupes JDV Social</Text><Pressable accessibilityRole="button" disabled={communityBusy} onPress={() => void loadCommunity()}><Text style={styles.openLabel}>{communityBusy ? 'Actualisation…' : 'Actualiser'}</Text></Pressable></View>
+          {socialGroups.length === 0 && !communityBusy && <Text style={styles.body}>Aucun groupe disponible actuellement.</Text>}
+          {socialGroups.map((group) => {
+            const membership = groupMemberships.find((item) => item.group_id === group.id);
+            const active = membership?.status === 'active';
+            const pending = membership?.status === 'pending';
+            return <View key={group.id} style={styles.postCard}>
+              <Text style={styles.postAuthor}>{group.name}</Text>
+              {!!group.description && <Text style={styles.postBody}>{group.description}</Text>}
+              <Text style={styles.postDate}>{group.visibility === 'public' ? 'Groupe public' : 'Groupe privé'}</Text>
+              {!active && <Pressable accessibilityRole="button" disabled={Boolean(communityAction) || pending} onPress={() => void joinSocialGroup(group)} style={styles.likeButton}><Text style={styles.visibilityText}>{communityAction === group.id ? 'Enregistrement…' : pending ? 'Demande envoyée' : group.visibility === 'public' ? 'Rejoindre' : 'Demander l’accès'}</Text></Pressable>}
+              {active && <Text style={styles.openLabel}>Membre ✓</Text>}
+            </View>;
+          })}
+          <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Événements JDV Social</Text>
+          {socialEvents.length === 0 && !communityBusy && <Text style={styles.body}>Aucun événement publié actuellement.</Text>}
+          {socialEvents.map((item) => {
+            const registration = eventRegistrations.find((row) => row.event_id === item.id);
+            const registered = registration?.status === 'registered';
+            return <View key={item.id} style={styles.postCard}>
+              <Text style={styles.postAuthor}>{item.title}</Text>
+              <Text style={styles.postDate}>{new Date(item.starts_at).toLocaleString()}{item.location ? ' · ' + item.location : ''}</Text>
+              {!!item.description && <Text style={styles.postBody}>{item.description}</Text>}
+              <Pressable accessibilityRole="button" disabled={Boolean(communityAction)} onPress={() => void registerSocialEvent(item)} style={styles.likeButton}><Text style={styles.visibilityText}>{communityAction === item.id ? 'Enregistrement…' : registered ? 'Annuler mon inscription' : 'Participer'}</Text></Pressable>
+            </View>;
+          })}
         </View>}
         <View style={styles.section}>
           <View style={styles.sectionHeading}>
