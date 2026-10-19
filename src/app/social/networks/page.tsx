@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDown, ArrowLeft, ArrowUp, Bell, BellOff, Download, ExternalLink, Eye, EyeOff, Plus, RefreshCw, Share2, Smartphone, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Download, ExternalLink, Eye, EyeOff, Plus, RefreshCw, Share2, Smartphone, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
