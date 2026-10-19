@@ -326,6 +326,8 @@ const moduleRoutes: Record<string, string> = {
   jdv_media: '/media',
   jdv_social: '/social',
   jdv_ai: '/ai',
+  jdv_community: '/community',
+  jdv_inventory: '/inventory',
 };
 
 const statusLabels: Record<string, string> = {
