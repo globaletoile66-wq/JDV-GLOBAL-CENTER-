@@ -81,6 +81,7 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - [ ] Compte A peut annuler sa propre inscription en ne modifiant que `status`.
 - [ ] Compte A ne peut pas réactiver une inscription si l'événement n'est plus publié ou s'il n'a plus accès à l'événement réservé aux membres.
 - [ ] Compte B ne peut pas déplacer son commentaire vers une publication privée/non publiée qu'il ne peut pas consulter.
+- [ ] Compte B ne peut pas modifier directement `post_id` ou `user_id` sur un commentaire; seul le corps du commentaire est modifiable par son propriétaire.
 - [ ] Compte B ne peut pas modifier ni supprimer les commentaires d'un autre utilisateur; les droits éventuels de modération sont testés séparément.
 - [ ] Un compte non connecté ne peut pas lire les données réservées au rôle `authenticated`.
 - [ ] Vérifier chaque scénario avec deux comptes de test distincts et conserver les erreurs RLS attendues comme preuves.
