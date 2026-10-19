@@ -61,3 +61,7 @@ jobs:
           done
       - name: Assert expected RLS policies and effective privileges
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_social_migration_assertions.sql
+      - name: Seed disposable RLS test cases
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_social_rls_seed.sql
+      - name: Exercise RLS with distinct user identities
+        run: bash supabase/tests/jdv_social_rls_behavior.sh
