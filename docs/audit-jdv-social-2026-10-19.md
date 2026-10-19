@@ -106,3 +106,11 @@ Autres écarts à traiter dans les prochaines tranches :
 
 ## Accès aux sources de référence
 Le ZIP des spécifications A–Z et l'archive maître du 18 octobre sont présents dans la bibliothèque et ont été inspectés. Le dossier Rocket original et son organigramme séparé n'ont pas été retrouvés dans l'inventaire disponible pendant cette passe; la validation de synchronisation Rocket ↔ GitHub reste donc à confirmer, et n'est pas déclarée terminée.
+
+
+## Complément d'audit Supabase (lecture seule)
+- RLS est activé sur les cinq tables sociales existantes.
+- L'audit des index a relevé des index manquants sur les clés étrangères `social_profiles.user_id`, `social_comments.user_id` et `social_reactions.user_id`; la migration candidate ajoute ces index et impose l'unicité du profil par utilisateur. La requête de contrôle n'a détecté aucun utilisateur possédant plusieurs profils au moment de l'audit.
+- Des index de parcours fil/commentaires/abonnements existaient déjà. La migration candidate a été ajustée pour éviter de recréer certains index équivalents et pour utiliser `(select auth.uid())` dans les prédicats RLS afin de limiter leur réévaluation par ligne.
+- Les advisors globaux Supabase ont aussi signalé 12 fonctions SECURITY DEFINER accessibles au rôle anon, 120 accessibles au rôle authenticated, la protection des mots de passe compromis désactivée, 529 clés étrangères sans index couvrant au niveau global et 288 policies présentant un coût de réévaluation RLS. Ces alertes ne sont pas toutes propres à Social; elles doivent faire l'objet d'un chantier de sécurité transversal distinct. Aucun changement global n'a été appliqué dans le cadre de ce PR.
+- Ces contrôles sont issus de l'état réel de la base distante en lecture seule; les nouvelles policies/index ne seront effectifs qu'après test et application approuvée de la migration.
