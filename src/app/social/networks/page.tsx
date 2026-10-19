@@ -2,12 +2,26 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, Plus, RefreshCw, Share2, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Bell, BellOff, Download, ExternalLink, Eye, EyeOff, Plus, RefreshCw, Share2, Smartphone, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
 type Platform = 'whatsapp' | 'whatsapp_business' | 'facebook' | 'instagram' | 'x' | 'tiktok' | 'youtube' | 'telegram' | 'linkedin' | 'snapchat' | 'pinterest';
 type ExternalLink = { id: string; user_id: string; platform: Platform; label: string | null; handle: string | null; profile_url: string; visibility: 'public' | 'private'; created_at: string };
+type AppPreference = { id: string; user_id: string; app_key: Platform; is_added: boolean; is_visible: boolean; sort_order: number; category: string; notifications_enabled: boolean };
+const appCatalog: { value: Platform; description: string; website: string }[] = [
+  { value: 'whatsapp', description: 'Messagerie et appels privés', website: 'https://www.whatsapp.com/download' },
+  { value: 'whatsapp_business', description: 'Échanges avec les clients et activités professionnelles', website: 'https://www.whatsapp.com/business/' },
+  { value: 'facebook', description: 'Communautés, pages et publications', website: 'https://www.facebook.com/' },
+  { value: 'instagram', description: 'Photos, vidéos, stories et messages', website: 'https://www.instagram.com/' },
+  { value: 'x', description: 'Actualités, discussions et publications', website: 'https://x.com/' },
+  { value: 'tiktok', description: 'Vidéos courtes et créateurs', website: 'https://www.tiktok.com/download' },
+  { value: 'youtube', description: 'Vidéos, chaînes et diffusions en direct', website: 'https://www.youtube.com/' },
+  { value: 'telegram', description: 'Messagerie, groupes et chaînes', website: 'https://telegram.org/apps' },
+  { value: 'linkedin', description: 'Réseau professionnel et emploi', website: 'https://www.linkedin.com/' },
+  { value: 'snapchat', description: 'Messages, photos et vidéos éphémères', website: 'https://www.snapchat.com/download' },
+  { value: 'pinterest', description: 'Idées, inspirations et collections', website: 'https://www.pinterest.com/' },
+];
 const platforms: { value: Platform; label: string }[] = [
   { value: 'whatsapp', label: 'WhatsApp' },
   { value: 'whatsapp_business', label: 'WhatsApp Business' },
@@ -55,7 +69,7 @@ function BrandIcon({ platform, size = 24 }: { platform: Platform; size?: number 
 export default function SocialNetworksPage() {
   const { user, loading } = useAuth();
   const supabase = useMemo(() => createClient(), []);
-  const [links, setLinks] = useState<ExternalLink[]>([]);
+  const [links, setLinks] = useState<ExternalLink[]>([]);\n  const [appPreferences, setAppPreferences] = useState<AppPreference[]>([]);\n  const [appBusy, setAppBusy] = useState(false);\n  const [appNotice, setAppNotice] = useState('');
   const [platform, setPlatform] = useState<Platform>('whatsapp');
   const [label, setLabel] = useState('');
   const [handle, setHandle] = useState('');
@@ -69,17 +83,75 @@ export default function SocialNetworksPage() {
   const load = useCallback(async () => {
     if (!user) { setLinks([]); return; }
     setBusy(true); setError('');
-    const { data, error: queryError } = await supabase
-      .from('social_external_links')
-      .select('id,user_id,platform,label,handle,profile_url,visibility,created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    if (queryError) setError(queryError.message);
-    else setLinks((data ?? []) as ExternalLink[]);
+    const [linkResult, preferenceResult] = await Promise.all([
+      supabase.from('social_external_links')
+        .select('id,user_id,platform,label,handle,profile_url,visibility,created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase.from('social_app_preferences')
+        .select('id,user_id,app_key,is_added,is_visible,sort_order,category,notifications_enabled')
+        .eq('user_id', user.id)
+        .eq('is_added', true)
+        .order('sort_order', { ascending: true }),
+    ]);
+    if (linkResult.error) setError(linkResult.error.message);
+    else setLinks((linkResult.data ?? []) as ExternalLink[]);
+    if (preferenceResult.error) setError((current) => current || preferenceResult.error.message);
+    else setAppPreferences((preferenceResult.data ?? []) as AppPreference[]);
     setBusy(false);
   }, [supabase, user]);
 
   useEffect(() => { if (!loading) void load(); }, [loading, load]);
+
+  const addAppToSpace = async (app: Platform) => {
+    if (!user) return;
+    setAppBusy(true); setError(''); setAppNotice('');
+    const { data, error: saveError } = await supabase
+      .from('social_app_preferences')
+      .upsert({ user_id: user.id, app_key: app, is_added: true, is_visible: true, sort_order: appPreferences.length, category: 'Réseaux sociaux', notifications_enabled: true }, { onConflict: 'user_id,app_key' })
+      .select('id,user_id,app_key,is_added,is_visible,sort_order,category,notifications_enabled')
+      .single();
+    if (saveError) setError(saveError.message);
+    else {
+      setAppPreferences((current) => [...current.filter((item) => item.app_key !== app), data as AppPreference].sort((a, b) => a.sort_order - b.sort_order));
+      setAppNotice(`${platforms.find((item) => item.value === app)?.label ?? app} ajouté à votre espace JDV Social.`);
+    }
+    setAppBusy(false);
+  };
+
+  const updateAppPreference = async (item: AppPreference, patch: Partial<Pick<AppPreference, 'is_visible' | 'category' | 'notifications_enabled' | 'sort_order'>>) => {
+    if (!user) return;
+    setError(''); setAppNotice('');
+    const { data, error: updateError } = await supabase.from('social_app_preferences')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', item.id).eq('user_id', user.id)
+      .select('id,user_id,app_key,is_added,is_visible,sort_order,category,notifications_enabled').single();
+    if (updateError) setError(updateError.message);
+    else {
+      setAppPreferences((current) => current.map((pref) => pref.id === item.id ? data as AppPreference : pref).sort((a, b) => a.sort_order - b.sort_order));
+      setAppNotice('Préférences enregistrées.');
+    }
+  };
+
+  const removeAppFromSpace = async (item: AppPreference) => {
+    if (!user) return;
+    const { error: deleteError } = await supabase.from('social_app_preferences').delete().eq('id', item.id).eq('user_id', user.id);
+    if (deleteError) setError(deleteError.message);
+    else {
+      setAppPreferences((current) => current.filter((pref) => pref.id !== item.id));
+      setAppNotice('Application retirée de votre espace JDV Social. Elle reste disponible dans le catalogue.');
+    }
+  };
+
+  const moveApp = async (item: AppPreference, direction: -1 | 1) => {
+    const ordered = [...appPreferences].sort((a, b) => a.sort_order - b.sort_order);
+    const index = ordered.findIndex((pref) => pref.id === item.id);
+    const target = ordered[index + direction];
+    if (!target) return;
+    await updateAppPreference(item, { sort_order: target.sort_order });
+    await updateAppPreference(target, { sort_order: item.sort_order });
+    await load();
+  };
 
   const addLink = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -123,6 +195,34 @@ export default function SocialNetworksPage() {
             <div className="rounded-2xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><Share2 size={26}/></div>
             <div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black">Réseaux connectés</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">Rassemblez les liens de vos profils et chaînes externes dans votre espace JDV Social. Cette première version gère les liens; les connexions officielles et la publication via API seront ajoutées plateforme par plateforme, selon leurs autorisations.</p></div>
           </div>
+          {user && <section className="mt-7 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div><h2 className="flex items-center gap-2 text-xl font-bold"><Smartphone size={21} className="text-[#F28C28]"/> Catalogue des applications</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-white/55">Choisissez les applications à afficher dans votre espace JDV Social. Le bouton Télécharger ouvre le site officiel de l’application ; l’installation est confirmée sur votre appareil.</p></div>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{appPreferences.length} dans mon espace</span>
+            </div>
+            {appNotice && <p role="status" className="mt-4 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-3 text-sm text-[#F28C28]">{appNotice}</p>}
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {appCatalog.map((app) => {
+                const saved = appPreferences.some((pref) => pref.app_key === app.value);
+                const appLabel = platforms.find((item) => item.value === app.value)?.label ?? app.value;
+                return <article key={app.value} className="flex min-w-0 flex-col rounded-2xl border border-white/10 bg-white/[.025] p-4">
+                  <div className="flex items-start gap-3"><div className="grid size-12 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.04]"><BrandIcon platform={app.value} size={28}/></div><div className="min-w-0 flex-1"><h3 className="font-semibold">{appLabel}</h3><p className="mt-1 text-xs leading-5 text-white/50">{app.description}</p></div></div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <a href={app.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold hover:border-white/35"><Download size={14}/> Télécharger</a>
+                    {saved ? <button type="button" onClick={() => { const pref = appPreferences.find((entry) => entry.app_key === app.value); if (pref) void removeAppFromSpace(pref); }} className="rounded-lg bg-[#F28C28]/15 px-3 py-2 text-xs font-semibold text-[#F28C28]">Ajoutée ✓</button> : <button type="button" disabled={appBusy} onClick={() => void addAppToSpace(app.value)} className="rounded-lg bg-[#F28C28] px-3 py-2 text-xs font-bold text-[#0B1B3D] disabled:opacity-50">Ajouter à mon espace</button>}
+                  </div>
+                </article>;
+              })}
+            </div>
+          </section>}
+          {user && <section className="mt-5 rounded-2xl border border-white/10 bg-[#09152f]/50 p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Mon espace personnalisé</h2><p className="mt-1 text-sm text-white/55">Organisez vos applications, choisissez celles qui apparaissent et réglez vos préférences.</p></div><button type="button" onClick={() => void load()} disabled={busy} className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold disabled:opacity-50">Actualiser</button></div>
+            {appPreferences.length === 0 ? <p className="mt-4 rounded-xl border border-dashed border-white/15 p-6 text-center text-sm text-white/45">Ajoutez une ou plusieurs applications depuis le catalogue pour commencer votre espace personnel.</p> : <div className="mt-4 space-y-3">{[...appPreferences].sort((a,b) => a.sort_order-b.sort_order).map((item,index) => <article key={item.id} className="rounded-xl border border-white/10 p-4">
+              <div className="flex flex-wrap items-start gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.04]"><BrandIcon platform={item.app_key} size={25}/></div><div className="min-w-0 flex-1"><h3 className="font-semibold">{platforms.find((p) => p.value === item.app_key)?.label || item.app_key}</h3><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-xs text-white/50">Catégorie personnalisée<input value={item.category} maxLength={60} onChange={(event) => setAppPreferences((current) => current.map((pref) => pref.id === item.id ? {...pref, category:event.target.value} : pref))} onBlur={(event) => { const value = event.target.value.trim() || 'Réseaux sociaux'; void updateAppPreference(item,{category:value}); }} className={fieldClass + ' mt-1.5 py-2'}/></label><label className="flex items-center gap-2 self-end rounded-xl border border-white/10 px-3 py-3 text-xs text-white/70"><input type="checkbox" checked={item.notifications_enabled} onChange={(event) => void updateAppPreference(item,{notifications_enabled:event.target.checked})} className="accent-[#F28C28]"/> Préférences de notifications activées</label></div></div>
+              <div className="flex items-center gap-1"><button type="button" disabled={index===0} onClick={() => void moveApp(item,-1)} className="rounded-lg p-2 text-white/60 hover:bg-white/10 disabled:opacity-25" aria-label="Déplacer vers le haut"><ArrowUp size={16}/></button><button type="button" disabled={index===appPreferences.length-1} onClick={() => void moveApp(item,1)} className="rounded-lg p-2 text-white/60 hover:bg-white/10 disabled:opacity-25" aria-label="Déplacer vers le bas"><ArrowDown size={16}/></button><button type="button" onClick={() => void updateAppPreference(item,{is_visible:!item.is_visible})} className="rounded-lg p-2 text-white/60 hover:bg-white/10" aria-label={item.is_visible ? 'Masquer cette application' : 'Afficher cette application'}>{item.is_visible ? <Eye size={16}/> : <EyeOff size={16}/>}</button></div></div>
+              <p className="mt-3 text-xs text-white/45">{item.is_visible ? 'Visible dans votre espace' : 'Masquée de votre espace'} · {item.notifications_enabled ? 'Préférences de notifications activées' : 'Préférences de notifications désactivées'}</p>
+            </article>)}</div>}
+          </section>}
           {error && <p role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}
           {notice && <p role="status" className="mt-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-3 text-sm text-[#F28C28]">{notice}</p>}
           {!user ? <div className="mt-7 rounded-2xl border border-white/10 p-6"><p className="text-sm text-white/60">Connectez-vous pour gérer les liens de vos réseaux sociaux.</p><Link href="/auth/login" className="mt-4 inline-flex rounded-xl bg-[#F28C28] px-4 py-2 font-bold text-[#0B1B3D]">Se connecter</Link></div> : <div className="mt-7 grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
