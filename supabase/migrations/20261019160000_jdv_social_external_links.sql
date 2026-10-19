@@ -1,4 +1,4 @@
--- JDB Social external network links (link-only stage; no OAuth tokens stored here).
+-- JDV Social external network links (link-only stage; no OAuth tokens stored here).
 begin;
 
 create table if not exists public.social_external_links (
