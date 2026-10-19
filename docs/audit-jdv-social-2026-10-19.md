@@ -71,3 +71,18 @@ Aucune politique RLS n'a été modifiée lors de cet audit.
 - Audit initial statique et introspection en lecture seule de Supabase; aucun test avec des sessions utilisateur réelles n'a été exécuté.
 - La correspondance complète avec l'organigramme Rocket et le cahier des charges doit être confirmée à partir des fichiers de référence accessibles.
 - Aucun changement de code applicatif ni de schéma distant n'a été appliqué par ce rapport.
+
+
+## Première tranche de mise en œuvre (PR #128)
+- Branche dédiée créée : `feat/jdv-social-foundation-2026-10-19`.
+- Ajout d'une migration candidate pour séparer les règles RLS des profils, publications, commentaires, réactions et abonnements, avec visibilité des publications prise en compte.
+- Ajout de l'interface des réactions « J'aime » et commentaires dans `src/app/social/page.tsx`.
+- Ajout d'un espace `/social/networks` pour enregistrer/supprimer les liens externes des 11 plateformes retenues; aucun mot de passe ni jeton OAuth n'est stocké.
+- Ajout d'une migration candidate `20261019160000_jdv_social_external_links.sql` pour les liens externes et leurs règles RLS.
+- Ces modifications sont dans le PR brouillon [#128](https://github.com/globaletoile66-wq/JDV-GLOBAL-CENTER-/pull/128), non fusionné.
+
+## Validation de cette tranche
+- Les aperçus Netlify du PR ont été déclenchés, mais l'état observé reste « building »; aucun succès de build n'est revendiqué.
+- Le contrôle Supabase Preview est « skipped » car la création automatique de branches de prévisualisation par PR est désactivée dans les intégrations du projet.
+- Aucune migration n'a été appliquée à la base Supabase distante.
+- Étape bloquante avant fusion : obtenir un environnement de prévisualisation Supabase, valider les migrations et exécuter les tests RLS positifs/négatifs, puis confirmer le build Next.js et les parcours navigateur.
