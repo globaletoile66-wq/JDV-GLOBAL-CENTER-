@@ -8,6 +8,7 @@ type SocialApp = { key: string; name: string; url: string; color: string };
 type Preference = { app_key: string; is_added?: boolean; is_visible: boolean; sort_order: number; category: string; notifications_enabled: boolean };
 type SocialProfile = { user_id: string; username: string; display_name: string | null; bio?: string | null };
 type SocialPost = { id: string; author_user_id: string; body: string | null; media_url: string | null; visibility: string; status: string; created_at: string };
+type SocialReaction = { id: string; post_id: string; user_id: string; reaction_type: string };
 
 const webSpaceUrl = process.env.EXPO_PUBLIC_JDV_WEB_URL;
 const apps: SocialApp[] = [
@@ -39,6 +40,8 @@ export default function App() {
   const [postBody, setPostBody] = useState('');
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
   const [socialAuthors, setSocialAuthors] = useState<Record<string, SocialProfile>>({});
+  const [myReactions, setMyReactions] = useState<Record<string, string>>({});
+  const [reactionBusy, setReactionBusy] = useState('');
   const [feedBusy, setFeedBusy] = useState(false);
   const [postBusy, setPostBusy] = useState(false);
 
@@ -110,14 +113,23 @@ export default function App() {
         setSocialPosts(rows);
         const ids = Array.from(new Set([session.user.id, ...rows.map((item) => item.author_user_id)]));
         if (ids.length) {
-          const authorResult = await supabase.from('social_profiles').select('user_id,username,display_name,bio').in('user_id', ids);
+          const [authorResult, reactionResult] = await Promise.all([
+            supabase.from('social_profiles').select('user_id,username,display_name,bio').in('user_id', ids),
+            rows.length ? supabase.from('social_reactions').select('id,post_id,user_id,reaction_type').eq('user_id', session.user.id).eq('reaction_type', 'like').in('post_id', rows.map((item) => item.id)) : Promise.resolve({ data: [], error: null }),
+          ]);
           if (authorResult.error) setMessage((current) => current || 'Les noms des auteurs ne peuvent pas être chargés.');
           else {
             const lookup: Record<string, SocialProfile> = {};
             for (const item of (authorResult.data ?? []) as SocialProfile[]) lookup[item.user_id] = item;
             setSocialAuthors(lookup);
           }
-        } else setSocialAuthors({});
+          if (reactionResult.error) setMessage((current) => current || 'Vos réactions ne peuvent pas être chargées.');
+          else {
+            const lookup: Record<string, string> = {};
+            for (const item of (reactionResult.data ?? []) as SocialReaction[]) lookup[item.post_id] = item.id;
+            setMyReactions(lookup);
+          }
+        } else { setSocialAuthors({}); setMyReactions({}); }
       }
     } catch {
       setMessage('Erreur réseau lors du chargement du fil JDV Social.');
@@ -175,6 +187,29 @@ export default function App() {
       setMessage('Erreur réseau : la publication n’a pas pu être envoyée.');
     } finally {
       setPostBusy(false);
+    }
+  };
+
+  const togglePostLike = async (post: SocialPost) => {
+    if (!session || reactionBusy) return;
+    const existingId = myReactions[post.id];
+    setReactionBusy(post.id); setMessage('');
+    try {
+      if (existingId) {
+        const { error } = await supabase.from('social_reactions').delete().eq('id', existingId).eq('user_id', session.user.id);
+        if (error) setMessage(error.message);
+        else setMyReactions((current) => { const next = { ...current }; delete next[post.id]; return next; });
+      } else {
+        const { data, error } = await supabase.from('social_reactions')
+          .insert({ post_id: post.id, user_id: session.user.id, reaction_type: 'like' })
+          .select('id,post_id,user_id,reaction_type').single();
+        if (error) setMessage(error.message);
+        else setMyReactions((current) => ({ ...current, [post.id]: (data as SocialReaction).id }));
+      }
+    } catch {
+      setMessage('Erreur réseau : votre réaction n’a pas pu être enregistrée.');
+    } finally {
+      setReactionBusy('');
     }
   };
 
@@ -355,6 +390,9 @@ export default function App() {
             <Text style={styles.postDate}>{new Date(post.created_at).toLocaleString()}</Text>
             {!!post.body && <Text style={styles.postBody}>{post.body}</Text>}
             {!!post.media_url && <Pressable accessibilityRole="link" onPress={() => void openUrl(post.media_url!)}><Text style={styles.openLabel}>Ouvrir le média ↗</Text></Pressable>}
+            <Pressable accessibilityRole="button" disabled={reactionBusy === post.id} onPress={() => void togglePostLike(post)} style={styles.likeButton}>
+              <Text style={styles.visibilityText}>{reactionBusy === post.id ? 'Enregistrement…' : myReactions[post.id] ? '♥ J’aime' : '♡ J’aime'}</Text>
+            </Pressable>
           </View>)}
         </View>}
         <View style={styles.section}>
@@ -409,6 +447,7 @@ const styles = StyleSheet.create({
   postAuthor: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   postDate: { color: '#8799B6', fontSize: 11, marginTop: 4 },
   postBody: { color: '#C9D4E8', fontSize: 14, lineHeight: 22, marginTop: 10 },
+  likeButton: { alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: '#102343' },
   appHidden: { opacity: 0.65 },
   appMark: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
   appName: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', flex: 1 },
