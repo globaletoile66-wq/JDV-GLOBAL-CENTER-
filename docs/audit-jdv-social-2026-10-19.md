@@ -235,7 +235,7 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Contrôle statique uniquement : aucune installation de paquets, compilation ou export Expo n'a été exécuté dans cette vérification.
 
 ### Comparaison de branche
-- La branche de travail a été comparée à la branche par défaut `supabase-sync-2026-09-24` : GitHub indique une divergence (65 commits en avance et 1 commit en retard au moment du contrôle).
+- La branche de travail a été comparée à la branche par défaut `supabase-sync-2026-09-24` : Un contrôle ultérieur de GitHub indique une divergence (30 commits en avance et 2 commits en retard au moment du dernier contrôle; les références peuvent évoluer).
 - Les chemins de fichiers remontés dans cette comparaison concernent JDV Social, Mobile, les workflows, les migrations sociales, la documentation, le lockfile racine et la configuration TypeScript. Aucun chemin de l'ancien CRM n'apparaît dans cette liste.
 - Aucune fusion ou rebase automatique n'a été effectué : la divergence doit être revue avant intégration.
 
@@ -310,3 +310,9 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 - La migration n'a pas été appliquée à Supabase. Après validation sur environnement isolé, il faudra relire les privilèges effectifs et vérifier que les opérations normales de l'application continuent de fonctionner.
 
 - Le même correctif retire également tous les privilèges directs des rôles anonymes sur les tables sociales listées, car les fonctionnalités sociales de cette tranche nécessitent une session authentifiée et les politiques existantes sont conçues pour `authenticated`. Les clients authentifiés conservent leurs privilèges CRUD nécessaires, sous réserve des politiques RLS.
+
+### Nouvelle comparaison de branche
+- La comparaison la plus récente avec `supabase-sync-2026-09-24` indique 30 commits en avance et 2 en retard.
+- Les fichiers modifiés par rapport à cette base concernent les workflows, l'audit/checklist, la configuration Mobile, les pages de groupes et les migrations RLS/privilèges JDV Social. Aucun fichier de l'ancienne CRM n'apparaît dans la liste comparée.
+- Aucun rebase ni fusion n'a été réalisé.
+
