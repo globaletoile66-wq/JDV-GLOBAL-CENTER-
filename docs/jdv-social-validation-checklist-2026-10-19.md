@@ -95,3 +95,10 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - Les conversations directes ne sont pas considérées comme implémentées dans cette tranche.
 - L'ancien CRM doit rester inchangé.
 - Ne pas installer ni déployer la version finale tant que les tests requis ne sont pas passés.
+
+
+- [ ] Un administrateur de groupe qui n'est pas le créateur peut modifier les champs du groupe selon son rôle.
+- [ ] Un administrateur de groupe peut modifier un événement de son groupe selon son rôle.
+- [ ] Les champs `id`, `created_by` et `created_at` des groupes/événements ne peuvent pas être modifiés par un client authentifié.
+- [ ] Vérifier les privilèges UPDATE effectifs : les rôles authentifiés ne conservent que les droits de mise à jour sur les colonnes fonctionnelles autorisées.
+- [ ] Vérifier que la politique INSERT de `social_profiles` s'applique sans référence à une autre table et permet uniquement le propriétaire ou le super-administrateur.
