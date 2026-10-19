@@ -101,3 +101,20 @@ create trigger jdv_jobs_updated_at before update on public.jdv_jobs
 drop trigger if exists jdv_job_applications_updated_at on public.jdv_job_applications;
 create trigger jdv_job_applications_updated_at before update on public.jdv_job_applications
   for each row execute function public.jdv_jobs_set_updated_at();
+
+-- Prevent participant or parent-record reassignment through broad UPDATE grants.
+create or replace function public.jdv_jobs_guard_application_identity()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.job_id is distinct from old.job_id
+     or new.applicant_id is distinct from old.applicant_id then
+    raise exception 'Application identity fields are immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists jdv_job_applications_guard_identity on public.jdv_job_applications;
+create trigger jdv_job_applications_guard_identity
+before update on public.jdv_job_applications
+for each row execute function public.jdv_jobs_guard_application_identity();
