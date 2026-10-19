@@ -86,3 +86,23 @@ Aucune politique RLS n'a été modifiée lors de cet audit.
 - Le contrôle Supabase Preview est « skipped » car la création automatique de branches de prévisualisation par PR est désactivée dans les intégrations du projet.
 - Aucune migration n'a été appliquée à la base Supabase distante.
 - Étape bloquante avant fusion : obtenir un environnement de prévisualisation Supabase, valider les migrations et exécuter les tests RLS positifs/négatifs, puis confirmer le build Next.js et les parcours navigateur.
+
+
+## Comparaison avec le cahier des charges A–Z
+Le fichier `10_Education_Media_Social/02_SOCIAL_COMMUNITY_WEB.md` du ZIP `JDV_GLOBAL_CENTER_Specifications_A_Z_v2.zip` précise que Social doit réutiliser CORE (authentification, RBAC, organisations, notifications, recherche, Storage, audit, messagerie et PAY lorsque nécessaire), sans en créer de copies parallèles.
+
+Routes cibles documentées : `/social/feed`, `/social/groups`, `/social/groups/[id]`, `/social/events`, `/social/messages`, `/social/notifications`, `/social/settings`, ainsi que des routes de modération restreintes.
+
+Tables fonctionnelles cibles documentées : `community_profiles`, `community_groups`, `community_memberships`, `community_posts`, `community_comments`, `community_reactions`, `community_events`, `community_event_registrations`, `community_messages`, `community_reports`, `community_moderation_actions` et `community_verifications`.
+
+Écart d'architecture : la base actuelle contient déjà cinq tables `social_*` qui couvrent une partie du profil/fil/interactions/abonnements. Pour respecter la règle de non-duplication, la prochaine conception doit documenter une correspondance entre ces tables existantes et les besoins `community_*`, puis réutiliser ou faire évoluer les tables existantes si elles couvrent le besoin. Ne pas créer un second système communautaire concurrent sans nécessité démontrée.
+
+Autres écarts à traiter dans les prochaines tranches :
+- groupes, membres, événements et inscriptions absents du schéma social actuel;
+- messagerie sociale à relier au service CORE existant plutôt que dupliquer une messagerie;
+- notifications, recherche, Storage, audit, modération et vérification à raccorder aux services transversaux;
+- abonnements et contenus payants à raccorder à JDV PAY et aux droits Premium si activés;
+- les liens externes ajoutés à la demande sont distincts des connexions OAuth/API, qui restent à construire et tester plateforme par plateforme.
+
+## Accès aux sources de référence
+Le ZIP des spécifications A–Z et l'archive maître du 18 octobre sont présents dans la bibliothèque et ont été inspectés. Le dossier Rocket original et son organigramme séparé n'ont pas été retrouvés dans l'inventaire disponible pendant cette passe; la validation de synchronisation Rocket ↔ GitHub reste donc à confirmer, et n'est pas déclarée terminée.
