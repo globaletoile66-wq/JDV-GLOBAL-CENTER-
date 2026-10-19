@@ -290,3 +290,6 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 - La revue de l'interface groupes a révélé qu'un membre `blocked` pouvait tenter de réactiver sa propre ligne ou de la supprimer puis de se réinscrire, si les politiques le permettaient.
 - La migration candidate `20261019200000_jdv_social_private_group_membership_guard.sql` a été renforcée : les mises à jour et suppressions de sa propre ligne sont interdites lorsque le statut courant est `blocked`; un administrateur du groupe conserve la capacité de gérer cette ligne.
 - Un scénario négatif correspondant a été ajouté à la checklist. Correctif non appliqué à la base distante; validation isolée toujours nécessaire.
+
+- La migration de lecture sociale limite désormais les privilèges SQL UPDATE de `social_comments` à la colonne `body` pour le rôle `authenticated`. L'association `post_id` et l'auteur `user_id` ne peuvent ainsi pas être modifiés par les clients via une mise à jour ordinaire.
+- La checklist demande de vérifier explicitement le refus de changement de `post_id` et `user_id`. Ce correctif est candidat, non appliqué à la production.
