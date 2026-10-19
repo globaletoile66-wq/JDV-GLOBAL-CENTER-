@@ -242,7 +242,7 @@ export default function JDVBusinessDashboard() {
         <header className="border-b border-white/10 bg-[#0D1F3C]/95 backdrop-blur-sm sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/dashboard" className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm">
+              <Link href="/" aria-label="Retour à JDV Global Center" className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm">
                 <ArrowLeft size={16} />
                 <span className="hidden sm:inline">JDV GLOBAL CENTER</span>
               </Link>
@@ -297,7 +297,7 @@ export default function JDVBusinessDashboard() {
         {/* Sidebar Header */}
         <div className="p-4 border-b border-white/10">
           <div className="flex items-center justify-between mb-3">
-            <Link href="/dashboard" className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-xs">
+            <Link href="/" aria-label="Retour à JDV Global Center" className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-xs">
               <ArrowLeft size={14} />
               <span>Hub JDV</span>
             </Link>
