@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { supabase, supabaseConfigured } from './lib/supabase';
 
 type SocialApp = { key: string; name: string; url: string; color: string };
-type Preference = { app_key: string; is_visible: boolean; sort_order: number; category: string; notifications_enabled: boolean };
+type Preference = { app_key: string; is_added?: boolean; is_visible: boolean; sort_order: number; category: string; notifications_enabled: boolean };
 
 const webSpaceUrl = process.env.EXPO_PUBLIC_JDV_WEB_URL;
 const apps: SocialApp[] = [
@@ -80,15 +80,24 @@ export default function App() {
       setMessage('Saisissez votre adresse e-mail et votre mot de passe.');
       return;
     }
+    if (mode === 'signup' && password.length < 8) {
+      setMessage('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
     setBusy(true);
     setMessage('');
-    const result = mode === 'signin'
-      ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      : await supabase.auth.signUp({ email: email.trim(), password });
-    setBusy(false);
-    if (result.error) setMessage(result.error.message);
-    else if (mode === 'signup' && !result.data.session) setMessage('Compte créé. Vérifiez votre e-mail pour confirmer l’inscription avant de vous connecter.');
-    else setMessage(mode === 'signup' ? 'Compte créé et connecté.' : 'Connexion réussie.');
+    try {
+      const result = mode === 'signin'
+        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        : await supabase.auth.signUp({ email: email.trim(), password });
+      if (result.error) setMessage(result.error.message);
+      else if (mode === 'signup' && !result.data.session) setMessage('Compte créé. Vérifiez votre e-mail pour confirmer l’inscription avant de vous connecter.');
+      else setMessage(mode === 'signup' ? 'Compte créé et connecté.' : 'Connexion réussie.');
+    } catch {
+      setMessage('La connexion a échoué. Vérifiez votre réseau puis réessayez.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const signOut = async () => {
