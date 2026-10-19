@@ -262,3 +262,9 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - L'installation Mobile a signalé 22 vulnérabilités (dont 15 élevées).
 - Ces chiffres sont ceux affichés par `npm install` dans les journaux CI; ils ne constituent pas encore un audit de l'exploitabilité ni une liste des paquets concernés.
 - Aucune commande `npm audit fix` automatique n'a été lancée : les mises à jour correctives doivent être examinées package par package afin d'éviter une mise à niveau majeure non maîtrisée. Une analyse dédiée des advisories est requise avant publication.
+
+### Revue de sécurité RLS — inscriptions aux événements
+- La règle actuelle `social_event_registrations_update` vérifiée sur Supabase autorise le propriétaire de l'inscription à mettre à jour toute la ligne, sans revalider la visibilité et l'état de l'événement. En combinaison avec le droit UPDATE de table, cela permettrait de changer `event_id` et de contourner les contrôles appliqués à l'insertion.
+- Une migration corrective séparée a été ajoutée : `20261019210000_jdv_social_registration_update_guard.sql`. Elle limite le droit UPDATE des utilisateurs authentifiés à la seule colonne `status` et empêche de réactiver une inscription si l'événement n'est plus publié ou accessible.
+- Cette migration, comme la correction d'adhésion aux groupes privés, reste candidate et **n'a pas été appliquée à la production**.
+- Tests isolés requis : un utilisateur ne peut pas changer `event_id` ou `user_id`; peut annuler sa propre inscription; ne peut pas réactiver une inscription à un événement annulé/non publié ou inaccessible; peut s'inscrire à un événement public publié ou à un événement de membres s'il est membre actif du groupe.
