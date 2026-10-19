@@ -17,10 +17,10 @@
 | JDV SERVICES | Première marketplace créée | `/service-marketplace` utilise une migration préparée pour les offres et demandes de devis; migration non appliquée à Supabase distant. La compilation n'a pas encore été exécutée. `/services` reste le catalogue général. |
 | JDV EVENTS | Route de module créée | `/events` réutilise le workflow d'événements existant sous `/social/events`; la billetterie complète doit être auditée séparément. |
 | JDV JOBS | UI et migration préparées | `/jobs` propose consultation, publication et candidature. La migration `20261019190000_jdv_jobs_marketplace.sql` doit être relue, testée en préproduction puis appliquée avec autorisation explicite. La compilation n'a pas encore été exécutée. |
-| JDV LEGAL | À développer | Ne pas exposer de documents privés; vérifier les rôles et le stockage privé avant toute fonctionnalité de dossier. |
-| JDV ACCOUNTING | À développer | Ne pas créer de ledger parallèle à JDV PAY. |
-| JDV HR | À développer | Séparer strictement les données RH de la place de marché JDV JOBS. |
-| JDV PROCUREMENT | À développer | Les approbations et les données fournisseurs doivent être cloisonnées par organisation. |
+| JDV LEGAL | Écran d’entrée ajouté | `/legal` présente le périmètre et les accès existants sans déposer ni exposer de documents privés. Le stockage privé, les rôles et les dossiers restent à construire/tester. |
+| JDV ACCOUNTING | Écran d’entrée ajouté | `/accounting` relie factures, rapports et JDV PAY; aucun solde ou journal fictif n’est calculé. Les rapprochements et clôtures restent à développer. |
+| JDV HR | Écran d’entrée ajouté | `/hr` distingue le parcours public JDV JOBS des données RH privées. Les dossiers collaborateurs et les permissions RH restent à construire/tester. |
+| JDV PROCUREMENT | Écran d’entrée ajouté | `/procurement` relie Marketplace, catalogue de services et stock en lecture seule. Les demandes d’achat, fournisseurs et validations ne sont pas encore persistés. |
 | JDV INVENTORY | Vue de stock créée | `/inventory` lit les tables de stock existantes en lecture seule et calcule les alertes de seuil. Les mouvements et transferts restent à raccorder après audit des flux existants. |
 | JDV MEDIA | Existant à auditer | Réutiliser les tables media existantes et vérifier les flux de publication. |
 
@@ -53,5 +53,12 @@ La correspondance visuelle est connue. Un paquet prêt à copier a été prépar
 3. Appliquer les migrations uniquement dans un environnement de préproduction, puis tester les politiques RLS en utilisateur anonyme, candidat et recruteur.
 4. Vérifier les alertes Supabase et corriger chaque finding après inspection de ses dépendances.
 5. Vérifier les 18 logos dans le navigateur, les chemins d'assets, les dimensions et les textes alternatifs.
-6. Ouvrir une pull request; fusion et déploiement nécessitent une décision explicite.
+6. Contrôler les routes `/legal`, `/accounting`, `/hr` et `/procurement` ainsi que les destinations internes des liens.
+7. Ouvrir une pull request; fusion et déploiement nécessitent une décision explicite.
+
+## Mise à jour après le lot d’écrans opérationnels
+- Le composant partagé `src/components/jdv/OperationalModuleLanding.tsx` fournit une présentation commune sans fausses données métier.
+- Les quatre routes opérationnelles sont maintenant réelles et la page d’accueil y pointe directement.
+- Aucun test de compilation n’est déclaré réussi : aucun workflow CI n’a encore été observé sur la branche de travail après ces commits.
+- La copie des 18 PNG d’origine n’est toujours pas confirmée dans le dépôt; les chemins configurés ne doivent pas être considérés comme fonctionnels tant que les fichiers binaires ne sont pas présents.
 
