@@ -27,7 +27,7 @@ export default function TontineConcepteurPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [classes, setClasses] = useState<TontineClass[]>([]);
-  const [tontineClass, setTontineClass] = useState('rotating_classic');
+  const [tontineClass, setTontineClass] = useState(() => typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('classe') || 'rotating_classic') : 'rotating_classic');
   const [tontines, setTontines] = useState<TontineRow[]>([]);
   const [organizationId, setOrganizationId] = useState('');
   const [currencyId, setCurrencyId] = useState('');
