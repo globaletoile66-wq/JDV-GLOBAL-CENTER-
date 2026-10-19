@@ -92,6 +92,11 @@ create policy social_reactions_delete on public.social_reactions
 for delete to authenticated
 using (user_id = (select auth.uid()) or is_super_admin());
 
+-- Keep comment ownership and post association immutable through the client.
+-- The UI may edit only the comment body; RLS still checks the target post.
+revoke update on table public.social_comments from authenticated;
+grant update (body) on table public.social_comments to authenticated;
+
 -- Comments are readable when their post is public/published, by the commenter,
 -- by the post author, or by the super-administrator.
 drop policy if exists social_comments_access on public.social_comments;
