@@ -32,14 +32,17 @@ Renseignez dans `.env` :
 
 Ne mettez jamais une clé `service_role` ou une clé secrète dans l'application cliente. Les accès aux préférences sont limités par les politiques RLS de Supabase.
 
-## Fonctionnalités implémentées
-- Inscription par e-mail/mot de passe et connexion Supabase Auth.
-- Persistance de session via AsyncStorage.
+## Fonctionnalités présentes dans la branche de développement
+- Inscription par e-mail/mot de passe, connexion/déconnexion Supabase Auth et session persistante via AsyncStorage.
+- Création et modification du profil communautaire JDV Social.
+- Lecture du fil des publications publiées visibles par l'utilisateur et création de publications texte.
+- Réactions « J'aime » et commentaires sur les publications.
+- Consultation des groupes actifs, adhésion aux groupes publics et demande d'accès aux groupes privés.
+- Consultation des événements publiés, inscription et annulation d'inscription.
 - Catalogue de 11 applications sociales et ouverture de leurs sites officiels.
-- Lecture des préférences de visibilité depuis `public.social_app_preferences`.
-- Enregistrement des préférences par utilisateur avec `upsert` sur `user_id,app_key`.
+- Synchronisation des préférences d'affichage et d'alertes par application avec `public.social_app_preferences`.
 
-La synchronisation nécessite que le compte mobile soit le même utilisateur Supabase que celui utilisé sur le Web. Les changements ne seront visibles sur le Web que si sa page utilise la même table et les mêmes clés `app_key`.
+La synchronisation nécessite que le compte mobile soit le même utilisateur Supabase que celui utilisé sur le Web. Les opérations restent soumises aux politiques RLS actives dans Supabase; les lectures publiques des profils, réactions et commentaires nécessitent notamment la validation puis l'application de la migration candidate correspondante.
 
 ## Limites à vérifier
 - Définir l'URL Web réelle et les variables Supabase dans l'environnement de build.
