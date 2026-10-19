@@ -119,7 +119,7 @@ export default function SocialMessagesPage() {
       .insert({ conversation_id: selectedId, sender_user_id: user.id, body })
       .select('id,conversation_id,sender_user_id,body,created_at,read_at').single();
     if (sendError) setError(sendError.message);
-    else { setMessages((current) => [...current, data as DirectMessage]); setDraft(''); }
+    else {\n      setMessages((current) => [...current, data as DirectMessage]); setDraft('');\n      const { error: timestampError } = await supabase.from('social_conversations').update({ updated_at: new Date().toISOString() }).eq('id', selectedId);\n      if (!timestampError) void loadConversations();\n    }
     setSending(false);
   };
 
