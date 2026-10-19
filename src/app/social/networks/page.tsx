@@ -73,7 +73,7 @@ export default function SocialNetworksPage() {
   };
 
   const removeLink = async (item: ExternalLink) => {
-    if (!user || !window.confirm('Supprimer ce lien de réseau social de votre profil JDB Social ?')) return;
+    if (!user || !window.confirm('Supprimer ce lien de réseau social de votre profil JDV Social ?')) return;
     setError(''); setNotice('');
     const { error: deleteError } = await supabase.from('social_external_links').delete().eq('id', item.id).eq('user_id', user.id);
     if (deleteError) setError(deleteError.message);
@@ -86,13 +86,13 @@ export default function SocialNetworksPage() {
     <main className="min-h-screen bg-[#0B1B3D] p-5 text-white sm:p-8">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/social" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> Retour à JDB Social</Link>
+          <Link href="/social" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> Retour à JDV Social</Link>
           <button type="button" onClick={() => void load()} disabled={busy || !user} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''}/> Actualiser</button>
         </div>
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
           <div className="flex items-start gap-4">
             <div className="rounded-2xl bg-[#F28C28]/10 p-3 text-[#F28C28]"><Share2 size={26}/></div>
-            <div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDB GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black">Réseaux connectés</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">Rassemblez les liens de vos profils et chaînes externes dans votre espace JDB Social. Cette première version gère les liens; les connexions officielles et la publication via API seront ajoutées plateforme par plateforme, selon leurs autorisations.</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black">Réseaux connectés</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">Rassemblez les liens de vos profils et chaînes externes dans votre espace JDV Social. Cette première version gère les liens; les connexions officielles et la publication via API seront ajoutées plateforme par plateforme, selon leurs autorisations.</p></div>
           </div>
           {error && <p role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}
           {notice && <p role="status" className="mt-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-3 text-sm text-[#F28C28]">{notice}</p>}
