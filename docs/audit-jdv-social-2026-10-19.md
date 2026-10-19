@@ -146,3 +146,10 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Aucun build final réussi ni test navigateur n'est encore attesté.
 - Le déploiement de production actuel du site Netlify correspond toujours à la branche `supabase-sync-2026-09-24`; il ne contient pas automatiquement les commits de cette branche de fonctionnalité.
 - Le CRM historique n'a pas été modifié.
+
+
+## Routes ajoutées après la première revue
+- `/social/groups/[id]` : détail d'une communauté, statut d'adhésion et actions rejoindre/quitter.
+- `/social/messages` : point d'entrée de la messagerie sociale, avec indication explicite de la dépendance CORE non résolue. Cette route ne prétend pas envoyer de messages.
+- Le fil principal relie maintenant les paramètres du profil, notifications, messagerie, groupes, événements et réseaux externes.
+- La lecture des relations de suivi est indépendante du chargement du fil; les relations existantes non actives sont gérées sans tentative d'insertion en doublon.
