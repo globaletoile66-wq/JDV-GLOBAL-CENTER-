@@ -86,6 +86,7 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - [ ] Compte B ne peut pas modifier directement `post_id` ou `user_id` sur un commentaire; seul le corps du commentaire est modifiable par son propriétaire.
 - [ ] Compte B ne peut pas modifier ni supprimer les commentaires d'un autre utilisateur; les droits éventuels de modération sont testés séparément.
 - [ ] Un compte non connecté ne peut pas lire les données réservées au rôle `authenticated`.
+- [ ] Les rôles `anon` et `authenticated` n'ont aucun privilège `TRUNCATE` sur les tables sociales; le rôle `anon` n'a pas de privilèges directs sur ces tables.
 - [ ] Vérifier chaque scénario avec deux comptes de test distincts et conserver les erreurs RLS attendues comme preuves.
 
 ## 9. Sécurité et limites à vérifier
