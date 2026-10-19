@@ -80,7 +80,30 @@ export default function SocialPage() {
         if (reactionList.error) setError((current) => current || reactionList.error!.message);
         else setReactions((reactionList.data ?? []) as SocialReaction[]);
         if (commentList.error) setError((current) => current || commentList.error!.message);
-        else setComments((commentList.data ?? []) as SocialComment[]);
+        else {
+          const nextComments = (commentList.data ?? []) as SocialComment[];
+          setComments(nextComments);
+
+          // Include commenters in the public-name lookup so comments do not fall
+          // back to the generic "Membre JDV Social" label.
+          const missingCommenterIds = Array.from(new Set(
+            nextComments.map((comment) => comment.user_id).filter((id) => !authorIds.includes(id)),
+          ));
+          if (missingCommenterIds.length) {
+            const { data: commenterProfiles, error: commenterProfilesError } = await supabase
+              .from('social_profiles')
+              .select('user_id,username,display_name,avatar_url,profile_status')
+              .in('user_id', missingCommenterIds);
+            if (commenterProfilesError) setError((current) => current || commenterProfilesError.message);
+            else {
+              setProfilesByUser((current) => {
+                const merged = { ...current };
+                for (const item of commenterProfiles ?? []) merged[item.user_id] = item as SocialProfile;
+                return merged;
+              });
+            }
+          }
+        }
       } else {
         setReactions([]); setComments([]); setProfilesByUser({});
       }
