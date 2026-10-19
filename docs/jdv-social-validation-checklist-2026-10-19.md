@@ -76,6 +76,7 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - [ ] Compte B demande à rejoindre un groupe privé : le statut reste `pending`.
 - [ ] Compte B tente de modifier directement sa propre adhésion de `pending` à `active` : l'opération doit être refusée.
 - [ ] Un administrateur du groupe approuve la demande; le compte B devient actif uniquement après cette approbation.
+- [ ] Un membre marqué `blocked` ne peut ni réactiver son adhésion, ni supprimer sa ligne pour se réinscrire lui-même; seul un administrateur peut lever le blocage.
 - [ ] Compte A s'inscrit à un événement : modifier directement `event_id` ou `user_id` sur la ligne d'inscription doit être refusé.
 - [ ] Compte A peut annuler sa propre inscription en ne modifiant que `status`.
 - [ ] Compte A ne peut pas réactiver une inscription si l'événement n'est plus publié ou s'il n'a plus accès à l'événement réservé aux membres.
