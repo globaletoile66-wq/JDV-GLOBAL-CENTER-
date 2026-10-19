@@ -60,4 +60,23 @@ expect_count "public draft hidden from another member" "0" "SET ROLE authenticat
 psql -v ON_ERROR_STOP=1 -q -c "SET ROLE authenticated; SET request.jwt.claim.sub = '${USER_B}'; DELETE FROM public.social_posts WHERE id='${POST_PUBLIC}'"
 expect_count "another member's public post remains intact" "1" "SELECT count(*) FROM public.social_posts WHERE id='${POST_PUBLIC}'"
 
+
+CONVERSATION_ONE="50000000-0000-0000-0000-000000000001"
+MESSAGE_ONE="60000000-0000-0000-0000-000000000001"
+
+expect_count "conversation visible to participant B" "1" "SET ROLE authenticated; SET request.jwt.claim.sub='${USER_B}'; SELECT count(*) FROM public.social_conversations WHERE id='${CONVERSATION_ONE}'"
+expect_count "conversation hidden from nonparticipant C" "0" "SET ROLE authenticated; SET request.jwt.claim.sub='${USER_C}'; SELECT count(*) FROM public.social_conversations WHERE id='${CONVERSATION_ONE}'"
+expect_count "message visible to participant B" "1" "SET ROLE authenticated; SET request.jwt.claim.sub='${USER_B}'; SELECT count(*) FROM public.social_messages WHERE id='${MESSAGE_ONE}'"
+expect_count "message hidden from nonparticipant C" "0" "SET ROLE authenticated; SET request.jwt.claim.sub='${USER_C}'; SELECT count(*) FROM public.social_messages WHERE id='${MESSAGE_ONE}'"
+expect_denied "nonparticipant cannot send a direct message" "${USER_C}" "INSERT INTO public.social_messages(conversation_id, sender_user_id, body) VALUES ('${CONVERSATION_ONE}', '${USER_C}', 'Unauthorized message')"
+expect_denied "authenticated member cannot edit a sent message body" "${USER_B}" "UPDATE public.social_messages SET body='tampered' WHERE id='${MESSAGE_ONE}'"
+
+psql -v ON_ERROR_STOP=1 -q -c "SET ROLE authenticated; SET request.jwt.claim.sub = '${USER_A}'; UPDATE public.social_messages SET read_at=now() WHERE id='${MESSAGE_ONE}'"
+expect_count "sender cannot mark own message as read" "0" "SELECT count(*) FROM public.social_messages WHERE id='${MESSAGE_ONE}' AND read_at IS NOT NULL"
+psql -v ON_ERROR_STOP=1 -q -c "SET ROLE authenticated; SET request.jwt.claim.sub = '${USER_B}'; UPDATE public.social_messages SET read_at=now() WHERE id='${MESSAGE_ONE}'"
+expect_count "recipient can mark received message as read" "1" "SELECT count(*) FROM public.social_messages WHERE id='${MESSAGE_ONE}' AND read_at IS NOT NULL"
+
+psql -v ON_ERROR_STOP=1 -q -c "SET ROLE authenticated; SET request.jwt.claim.sub = '${USER_B}'; INSERT INTO public.social_messages(conversation_id, sender_user_id, body) VALUES ('${CONVERSATION_ONE}', '${USER_B}', 'Reply from B')"
+expect_count "conversation participants can exchange messages" "2" "SELECT count(*) FROM public.social_messages WHERE conversation_id='${CONVERSATION_ONE}'"
+
 echo "JDV Social RLS behavior tests passed"
