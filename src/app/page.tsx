@@ -7,7 +7,6 @@ import AppLogo from '@/components/ui/AppLogo';
 
 const modules = [
   ['JDV PAY','Paiements, transferts et services financiers','/pay',CreditCard],
-  ['JDV CORE','Espace central et services personnels','/dashboard',BriefcaseBusiness],
   ['JDV CRM','Gestion de la relation client','/crm',BarChart3],
   ['JDV BUSINESS','Gestion commerciale et opérations','/business',Building2],
   ['JDV MARKETPLACE','Commerce et vente en ligne','/marketplace',ShoppingBag],
@@ -37,7 +36,7 @@ const modules = [
 ] as const;
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
@@ -74,6 +73,7 @@ export default function HomePage() {
         </div>
 
         <div className="mt-16 flex items-end justify-between"><div><p className="text-sm font-semibold text-accent">SERVICES JDV</p><h2 className="mt-1 text-2xl font-extrabold">Accéder directement à un service</h2></div><span className="hidden text-sm text-muted-foreground sm:block">{modules.length} services disponibles dans l’interface</span></div>
+        {isSuperAdmin && <div className="mt-6 mb-5 rounded-2xl border border-accent/30 bg-accent/5 p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-accent">AUTRES · ESPACE PRIVÉ</p><h3 className="mt-1 font-bold">Centre de contrôle du concepteur</h3><p className="mt-1 text-sm text-muted-foreground">Administration de la plateforme, configuration et pilotage global. Cet espace n’est pas public.</p></div><Link href="/hidden-concepteur-gate/dashboard" className="btn-primary shrink-0">Ouvrir le centre de contrôle<ArrowRight size={16}/></Link></div></div>}
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {modules.map(([name,description,href,Icon])=><Link href={href} key={name} className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:-translate-y-1 hover:border-accent/40 hover:shadow-xl"><div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent"><Icon size={19}/></div><h3 className="font-bold">{name}</h3><p className="mt-1 text-sm text-muted-foreground">{description}</p><span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-accent">Ouvrir <ArrowRight size={13}/></span></Link>)}
         </div>
