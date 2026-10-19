@@ -81,7 +81,7 @@ export default function SocialNetworksPage() {
   const [notice, setNotice] = useState('');
 
   const load = useCallback(async () => {
-    if (!user) { setLinks([]); return; }
+    if (!user) { setLinks([]); setAppPreferences([]); return; }
     setBusy(true); setError('');
     const [linkResult, preferenceResult] = await Promise.all([
       supabase.from('social_external_links')
@@ -209,7 +209,7 @@ export default function SocialNetworksPage() {
                   <div className="flex items-start gap-3"><div className="grid size-12 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.04]"><BrandIcon platform={app.value} size={28}/></div><div className="min-w-0 flex-1"><h3 className="font-semibold">{appLabel}</h3><p className="mt-1 text-xs leading-5 text-white/50">{app.description}</p></div></div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <a href={`https://play.google.com/store/search?q=${encodeURIComponent(appLabel)}&c=apps`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold hover:border-white/35"><Download size={14}/> Google Play</a><a href={`https://apps.apple.com/search?term=${encodeURIComponent(appLabel)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold hover:border-white/35"><Download size={14}/> App Store</a>
-                    {saved ? <button type="button" onClick={() => { const pref = appPreferences.find((entry) => entry.app_key === app.value); if (pref) void removeAppFromSpace(pref); }} className="rounded-lg bg-[#F28C28]/15 px-3 py-2 text-xs font-semibold text-[#F28C28]">Ajoutée ✓</button> : <button type="button" disabled={appBusy} onClick={() => void addAppToSpace(app.value)} className="rounded-lg bg-[#F28C28] px-3 py-2 text-xs font-bold text-[#0B1B3D] disabled:opacity-50">Ajouter à mon espace</button>}
+                    {saved ? <button type="button" onClick={() => { const pref = appPreferences.find((entry) => entry.app_key === app.value); if (pref) void removeAppFromSpace(pref); }} className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 hover:border-red-300/40 hover:text-red-200">Retirer</button> : <button type="button" disabled={appBusy} onClick={() => void addAppToSpace(app.value)} className="rounded-lg bg-[#F28C28] px-3 py-2 text-xs font-bold text-[#0B1B3D] disabled:opacity-50">Ajouter à mon espace</button>}
                   </div>
                 </article>;
               })}
