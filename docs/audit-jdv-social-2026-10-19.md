@@ -114,3 +114,35 @@ Le ZIP des spécifications A–Z et l'archive maître du 18 octobre sont présen
 - Des index de parcours fil/commentaires/abonnements existaient déjà. La migration candidate a été ajustée pour éviter de recréer certains index équivalents et pour utiliser `(select auth.uid())` dans les prédicats RLS afin de limiter leur réévaluation par ligne.
 - Les advisors globaux Supabase ont aussi signalé 12 fonctions SECURITY DEFINER accessibles au rôle anon, 120 accessibles au rôle authenticated, la protection des mots de passe compromis désactivée, 529 clés étrangères sans index couvrant au niveau global et 288 policies présentant un coût de réévaluation RLS. Ces alertes ne sont pas toutes propres à Social; elles doivent faire l'objet d'un chantier de sécurité transversal distinct. Aucun changement global n'a été appliqué dans le cadre de ce PR.
 - Ces contrôles sont issus de l'état réel de la base distante en lecture seule; les nouvelles policies/index ne seront effectifs qu'après test et application approuvée de la migration.
+
+
+## Tranche communautaire ajoutée
+- `/social/groups` : création de groupes publics/privés, adhésion immédiate aux groupes publics et demande d'accès aux groupes privés.
+- `/social/events` : publication d'événements publics, inscription et annulation d'inscription.
+- `/social/settings` : modification du nom d'utilisateur, du nom affiché, de la biographie et de l'URL d'avatar.
+- `/social/notifications` : réutilisation de la table centrale `notifications`, avec marquage individuel ou global comme lu.
+- Le fil `/social` relie maintenant les espaces Profil, Notifications, Groupes, Événements et Réseaux connectés.
+- Migration candidate `20261019170000_jdv_social_groups_events.sql` : tables groupes, adhésions, événements et inscriptions, fonctions auxiliaires à droits limités, règles RLS et index.
+- Le suivi des abonnements a été corrigé pour se charger indépendamment du nombre de publications dans le fil.
+
+## Matrice de tests avant mise en production
+1. Build/type-check Next.js sur la tête de branche et contrôle des erreurs de lint.
+2. Profils : création, mise à jour, nom d'utilisateur dupliqué, URL avatar invalide.
+3. Fil : réaction, retrait de réaction, commentaire, suivi/désuivi; vérifier les erreurs réseau et l'absence de double envoi.
+4. Confidentialité : un membre non abonné ne doit pas lire une publication `followers`; une publication `private` doit rester visible uniquement par son auteur et les administrateurs autorisés.
+5. Groupes : création, adhésion publique, demande privée, annulation de demande, sortie du groupe; un membre ne doit pas obtenir les droits d'administration.
+6. Événements : création, dates incohérentes rejetées, inscription et annulation; un utilisateur ne doit pas lire/modifier les inscriptions d'un autre utilisateur.
+7. Notifications : seules les notifications du compte connecté sont lues ou mises à jour.
+8. Réseaux externes : seules les URL HTTP(S), visibilité privée respectée, aucune donnée OAuth/secrète enregistrée.
+9. Naviguer entre les routes depuis le fil, vérifier mobile/desktop, erreurs et état vide.
+10. Appliquer les migrations uniquement dans une base Supabase isolée; comparer advisors et politiques avant toute promotion vers la base de production.
+
+## Messagerie CORE — dépendance non résolue
+L'introspection de la base a trouvé des tables de messagerie liées à la marketplace (`marketplace_conversations`, `marketplace_messages`) et des tables de conversation IA, mais aucune table de messagerie directe générique utilisable sans détourner un module. Pour respecter la spécification, la messagerie JDV Social ne doit pas réutiliser les conversations de marketplace comme si elles étaient des conversations sociales, ni créer un second système concurrent avant d'avoir identifié le service CORE prévu. La route `/social/messages` reste donc à raccorder au service de messagerie central lorsqu'il sera identifié.
+
+## État exact de validation
+- Les modifications applicatives et migrations candidates sont enregistrées dans la branche du PR #128.
+- Aucune migration n'a été exécutée sur Supabase distant.
+- Aucun build final réussi ni test navigateur n'est encore attesté.
+- Le déploiement de production actuel du site Netlify correspond toujours à la branche `supabase-sync-2026-09-24`; il ne contient pas automatiquement les commits de cette branche de fonctionnalité.
+- Le CRM historique n'a pas été modifié.
