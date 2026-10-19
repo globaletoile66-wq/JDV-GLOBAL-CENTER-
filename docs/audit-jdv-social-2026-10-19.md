@@ -319,3 +319,12 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 ### Vérification du registre des migrations Supabase
 - Lecture seule de `supabase_migrations.schema_migrations` : les versions enregistrées pour le 19 octobre vont jusqu'à `20261019080401`; les versions candidates `20261019190000`, `20261019200000`, `20261019210000`, `20261019220000` et `20261019230000` n'y figurent pas.
 - Cela confirme que les cinq migrations de correction RLS/privilèges de cette série ne sont pas enregistrées comme appliquées dans le projet distant. Aucun SQL de modification n'a été exécuté sur la base.
+
+
+### Revue statique finale complémentaire — 19 octobre 2026
+- La revue ligne par ligne de `20261019190000_jdv_social_public_reads.sql` a détecté une référence de colonne incorrecte dans la politique INSERT de `social_profiles` (référence accidentelle à `social_comments.post_id`). Elle a été corrigée dans la branche par une règle propriétaire/super-administrateur simple. La migration n'a pas été exécutée sur Supabase.
+- La revue de `20261019170000_jdv_social_groups_events.sql` a identifié deux défauts dans les politiques de mise à jour : les administrateurs de groupe non créateurs pouvaient être refusés par `WITH CHECK`, et les champs d'identité du créateur étaient modifiables par un UPDATE de table trop large.
+- Migration corrective candidate ajoutée : `20261019240000_jdv_social_owner_fields_guard.sql`. Elle révoque UPDATE de table sur les groupes/événements, accorde UPDATE seulement sur les champs fonctionnels modifiables, et autorise les administrateurs légitimes à éditer les groupes/événements de leur périmètre sans transférer le champ `created_by`.
+- Les cinq workflows CI du dernier commit applicatif précédent avaient réussi : validation Web + Mobile, contrôle TypeScript Web, build Web, contrôle TypeScript Mobile et export Web Expo. Après les nouveaux commits de correction SQL/doc, leur exécution spécifique doit être vérifiée avant de considérer la tranche validée.
+- Les migrations `20261019190000` à `20261019240000` restent des candidates non appliquées. Aucune écriture SQL ni migration n'a été exécutée sur le projet Supabase distant.
+- Cette revue est statique : sans environnement Supabase isolé, elle ne prouve pas les résultats des scénarios RLS à l'exécution. La fusion et le déploiement ne sont pas déclarés effectués.
