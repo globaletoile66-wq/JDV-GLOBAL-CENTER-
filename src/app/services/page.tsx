@@ -104,9 +104,23 @@ export default function ServicesPage() {
     }
   };
 
+  const moduleRoutes: Record<string, string> = {
+    jdv_pay: '/pay', jdv_crm: '/crm', jdv_business: '/business',
+    jdv_marketplace: '/marketplace', jdv_immo: '/immo', jdv_travel: '/travel',
+    jdv_transport: '/transport', jdv_transit: '/transit', jdv_health: '/health',
+    jdv_insurance: '/insurance', jdv_agriculture: '/agriculture', jdv_energy: '/energy',
+    jdv_academy: '/academy', jdv_tontine: '/tontine', jdv_pub: '/pub',
+    jdv_media: '/media', jdv_social: '/social', jdv_ai: '/ai',
+    jdv_community: '/community', jdv_inventory: '/inventory',
+    jdv_services: '/service-marketplace', jdv_events: '/events', jdv_jobs: '/jobs',
+    jdv_legal: '/legal', jdv_accounting: '/accounting', jdv_hr: '/hr',
+    jdv_procurement: '/procurement',
+  };
+
   const handleModuleClick = (mod: Module) => {
-    if (mod.module_status === 'active') {
-      router.push(`/${mod.code.replace('jdv_', '')}`);
+    const route = moduleRoutes[mod.code];
+    if (route) {
+      router.push(route);
     } else if (mod.module_status === 'maintenance') {
       router.push(`/maintenance?service=${mod.code}&name=${encodeURIComponent(mod.name)}`);
     } else {
