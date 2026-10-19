@@ -26,20 +26,20 @@ drop policy if exists social_external_links_delete on public.social_external_lin
 
 create policy social_external_links_select on public.social_external_links
 for select to authenticated
-using (user_id = auth.uid() or visibility = 'public' or is_super_admin());
+using (user_id = (select auth.uid()) or visibility = 'public' or is_super_admin());
 
 create policy social_external_links_insert on public.social_external_links
 for insert to authenticated
-with check (user_id = auth.uid());
+with check (user_id = (select auth.uid()));
 
 create policy social_external_links_update on public.social_external_links
 for update to authenticated
-using (user_id = auth.uid() or is_super_admin())
-with check (user_id = auth.uid() or is_super_admin());
+using (user_id = (select auth.uid()) or is_super_admin())
+with check (user_id = (select auth.uid()) or is_super_admin());
 
 create policy social_external_links_delete on public.social_external_links
 for delete to authenticated
-using (user_id = auth.uid() or is_super_admin());
+using (user_id = (select auth.uid()) or is_super_admin());
 
 create index if not exists social_external_links_user_idx
   on public.social_external_links (user_id, created_at desc);
