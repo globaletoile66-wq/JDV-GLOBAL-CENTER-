@@ -43,7 +43,7 @@ export default function HomePage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-3"><AppLogo size={40}/><div><div className="font-extrabold">JDV</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Global Center</div></div></Link>
           <div className="flex items-center gap-2">
-            <Link href="/business/create" className="hidden sm:inline-flex btn-secondary"><BriefcaseBusiness size={16}/>Enregistrer mon entreprise</Link>
+            <Link href="/marketplace" className="hidden sm:inline-flex btn-secondary"><ShoppingBag size={16}/>Explorer Marketplace</Link><Link href="/business/create" className="hidden lg:inline-flex btn-secondary"><BriefcaseBusiness size={16}/>Enregistrer mon entreprise</Link>
             {!loading && <Link href={user?'/dashboard':'/auth/login'} className="btn-primary">{user?'Mon espace':'Connexion'}<ArrowRight size={16}/></Link>}
           </div>
         </div>
@@ -56,7 +56,8 @@ export default function HomePage() {
             <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl">Votre activité, vos clients et vos services <span className="text-accent">au même endroit.</span></h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">JDV GLOBAL CENTER accueille les particuliers, les entreprises, les partenaires et les professionnels dans un même écosystème sécurisé.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/business/create" className="btn-primary px-6 py-3"><Building2 size={18}/>Enregistrer mon entreprise<ArrowRight size={17}/></Link>
+              <Link href="/marketplace" className="btn-primary px-6 py-3"><ShoppingBag size={18}/>Explorer JDV Marketplace<ArrowRight size={17}/></Link>
+              <Link href="/business/create" className="btn-secondary px-6 py-3"><Building2 size={18}/>Enregistrer mon entreprise</Link>
               <Link href={user?'/dashboard':'/auth/register'} className="btn-secondary px-6 py-3">{user?'Ouvrir mon espace':'Créer mon compte'}</Link>
             </div>
             <div className="mt-7 grid max-w-xl grid-cols-3 gap-3">
