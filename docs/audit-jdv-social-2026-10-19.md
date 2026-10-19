@@ -268,3 +268,9 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Une migration corrective séparée a été ajoutée : `20261019210000_jdv_social_registration_update_guard.sql`. Elle limite le droit UPDATE des utilisateurs authentifiés à la seule colonne `status` et empêche de réactiver une inscription si l'événement n'est plus publié ou accessible.
 - Cette migration, comme la correction d'adhésion aux groupes privés, reste candidate et **n'a pas été appliquée à la production**.
 - Tests isolés requis : un utilisateur ne peut pas changer `event_id` ou `user_id`; peut annuler sa propre inscription; ne peut pas réactiver une inscription à un événement annulé/non publié ou inaccessible; peut s'inscrire à un événement public publié ou à un événement de membres s'il est membre actif du groupe.
+
+### Revue de la migration RLS candidate — correctif supplémentaire
+- Le contrôle du schéma distant confirme que `social_profiles.profile_status`, les colonnes des publications, réactions et commentaires correspondent aux noms utilisés dans la migration candidate.
+- La revue du contrôle d'accès des commentaires a identifié un risque : la politique UPDATE initiale autorisait un commentaire à être déplacé vers une publication que son auteur ne pouvait pas consulter.
+- La migration candidate `20261019190000_jdv_social_public_reads.sql` a été corrigée pour exiger, après UPDATE, que le commentaire reste lié à une publication publique publiée, à une publication de l'auteur connecté, ou à une action de super-administrateur.
+- Ce correctif reste du SQL candidat dans GitHub : il n'a pas été appliqué à Supabase. Les tests RLS par deux comptes dans un environnement isolé restent requis.
