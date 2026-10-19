@@ -50,7 +50,7 @@ export default function TransportPartnersPage() {
     }
     setSaving(true); setError(''); setNotice('');
     const description = [
-      'CANDIDATURE PARTENAIRE GILLES DV TRANSPORT',
+      'CANDIDATURE PARTENAIRE JDV TRANSPORT',
       'Type de partenaire : ' + partnerType,
       'Nom commercial : ' + displayName.trim(),
       'Pays : ' + country.trim(),
@@ -81,7 +81,7 @@ export default function TransportPartnersPage() {
     <main className="min-h-screen bg-[#f5f7f8] text-slate-900">
       <header className="bg-[#0b2537] text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/transport" className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft size={16} /> Gilles DV Transport</Link>
+          <Link href="/transport" className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft size={16} /> JDV Transport</Link>
           <Link href="/transport" className="rounded-xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/10">Espace transport</Link>
         </div>
       </header>
@@ -90,7 +90,7 @@ export default function TransportPartnersPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/20 bg-teal-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[.16em] text-teal-200"><BadgeCheck size={14} /> Réseau de partenaires</div>
             <h1 className="mt-5 text-4xl font-black leading-tight sm:text-5xl">Votre activité avance avec <span className="text-teal-300">JDV.</span></h1>
-            <p className="mt-4 max-w-xl text-base leading-7 text-white/65">Transporteurs, chauffeurs, livreurs, loueurs et entreprises : présentez vos services et demandez à rejoindre le réseau Gilles DV Transport.</p>
+            <p className="mt-4 max-w-xl text-base leading-7 text-white/65">Transporteurs, chauffeurs, livreurs, loueurs et entreprises : présentez vos services et demandez à rejoindre le réseau JDV Transport.</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {[['Visibilité', 'Présentez vos services et votre zone'], ['Missions', 'Préparez-vous à recevoir des demandes'], ['Gestion', 'Vers un espace pro pour votre activité'], ['Confiance', 'Validation des documents et informations']].map(([title, detail]) => <div key={title} className="flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"><CheckCircle2 size={18} className="mt-0.5 shrink-0 text-teal-300" /><div><p className="font-bold">{title}</p><p className="mt-1 text-xs leading-5 text-white/55">{detail}</p></div></div>)}
             </div>
@@ -124,7 +124,7 @@ export default function TransportPartnersPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-800"><FileCheck2 size={20} /></div><div><h2 className="text-2xl font-black">Mes candidatures</h2><p className="mt-1 text-sm text-slate-500">Suivez l’état des demandes envoyées depuis votre compte.</p></div></div>
-        {!user ? <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Connectez-vous pour consulter vos candidatures.</div> : <div className="mt-5 grid gap-3 md:grid-cols-2">{requests.map((request) => <article key={request.id} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-slate-400">JDV-PART-{request.id.slice(0, 8).toUpperCase()}</span><span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">{statusLabels[request.request_status] || request.request_status}</span></div><p className="mt-3 font-bold">Candidature partenaire</p><p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-500">{request.description?.split('\n').slice(1, 5).join(' · ') || 'Demande transmise à l’équipe.'}</p><p className="mt-3 flex items-center gap-2 text-xs text-slate-400"><Clock3 size={14} /> Envoyée le {new Date(request.created_at).toLocaleDateString('fr-FR')}</p></article>)}{!busy && requests.length === 0 && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-7 text-center md:col-span-2"><Users size={24} className="mx-auto text-slate-300" /><p className="mt-3 font-bold">Aucune candidature pour le moment</p><p className="mt-1 text-sm text-slate-500">Remplissez le formulaire pour rejoindre le réseau Gilles DV Transport.</p></div>}</div>}
+        {!user ? <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Connectez-vous pour consulter vos candidatures.</div> : <div className="mt-5 grid gap-3 md:grid-cols-2">{requests.map((request) => <article key={request.id} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-slate-400">JDV-PART-{request.id.slice(0, 8).toUpperCase()}</span><span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">{statusLabels[request.request_status] || request.request_status}</span></div><p className="mt-3 font-bold">Candidature partenaire</p><p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-500">{request.description?.split('\n').slice(1, 5).join(' · ') || 'Demande transmise à l’équipe.'}</p><p className="mt-3 flex items-center gap-2 text-xs text-slate-400"><Clock3 size={14} /> Envoyée le {new Date(request.created_at).toLocaleDateString('fr-FR')}</p></article>)}{!busy && requests.length === 0 && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-7 text-center md:col-span-2"><Users size={24} className="mx-auto text-slate-300" /><p className="mt-3 font-bold">Aucune candidature pour le moment</p><p className="mt-1 text-sm text-slate-500">Remplissez le formulaire pour rejoindre le réseau JDV Transport.</p></div>}</div>}
         <div className="mt-8 rounded-2xl bg-slate-100 p-5"><div className="flex gap-3"><ShieldCheck size={22} className="mt-0.5 shrink-0 text-teal-800" /><div><h3 className="font-extrabold">Validation avant activation</h3><p className="mt-1 text-sm leading-6 text-slate-600">L’équipe devra vérifier les informations, les autorisations applicables et les documents professionnels avant de confier des missions ou de publier une offre.</p></div></div></div>
       </section>
     </main>
