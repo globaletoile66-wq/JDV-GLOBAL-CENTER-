@@ -55,7 +55,8 @@ jobs:
             supabase/migrations/20261019210000_jdv_social_registration_update_guard.sql \
             supabase/migrations/20261019220000_jdv_social_posts_policy_guard.sql \
             supabase/migrations/20261019230000_jdv_social_privilege_hardening.sql \
-            supabase/migrations/20261019240000_jdv_social_owner_fields_guard.sql; do
+            supabase/migrations/20261019240000_jdv_social_owner_fields_guard.sql \
+            supabase/migrations/20261019250000_jdv_social_direct_messaging.sql; do
             echo "Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "$migration"
           done
