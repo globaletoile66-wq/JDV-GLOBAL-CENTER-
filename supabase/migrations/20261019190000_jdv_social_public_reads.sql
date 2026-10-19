@@ -15,7 +15,18 @@ using (user_id = (select auth.uid()) or profile_status = 'active' or is_super_ad
 
 create policy social_profiles_insert on public.social_profiles
 for insert to authenticated
-with check (user_id = (select auth.uid()) or is_super_admin());
+with check (
+  (user_id = (select auth.uid()) or is_super_admin())
+  and exists (
+    select 1 from public.social_posts p
+    where p.id = social_comments.post_id
+      and (
+        p.author_user_id = (select auth.uid())
+        or (p.status = 'published' and p.visibility = 'public')
+        or is_super_admin()
+      )
+  )
+);
 
 create policy social_profiles_update on public.social_profiles
 for update to authenticated
