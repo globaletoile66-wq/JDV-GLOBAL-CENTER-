@@ -337,3 +337,9 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 - Ce test ne touche pas Supabase distant et ne remplace pas les tests RLS comportementaux avec deux sessions utilisateur réelles. Il réduit toutefois le risque de syntaxe et vérifie les privilèges SQL déterminants avant toute promotion.
 - La politique de mise à jour des événements a aussi été durcie : un créateur ne peut pas réaffecter un événement à un groupe dont il n'est pas administrateur; le contrôle porte sur le groupe cible.
 - Le workflow Web/Mobile et les aperçus Netlify du commit le plus récent sont encore en cours de validation au moment de cette note. Aucun déploiement de production n'a été déclenché.
+
+
+### Tests RLS comportementaux sur PostgreSQL jetable — résultat
+- Le workflow SQL a été étendu avec trois identités distinctes et des cas de test couvrant l'auto-approbation d'un groupe privé, l'auto-suppression d'une adhésion bloquée, la modification de `event_id`, la modification de `post_id`, le transfert des champs `created_by`, la réaffectation d'un événement à un groupe non autorisé, la visibilité des publications et les droits d'édition d'un administrateur de groupe.
+- **Résultat réel : tous ces tests ont réussi au commit `bae05c3fd57507c15dafecd4d7d5d3f4669ec6b0`** dans PostgreSQL jetable.
+- Ces résultats vérifient le comportement des politiques et privilèges dans le fixture de test. Ils ne prouvent pas encore l'intégration exacte avec les helpers, données et sessions du projet Supabase distant; aucun test n'a été exécuté sur les données de production.
