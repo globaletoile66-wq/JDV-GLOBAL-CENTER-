@@ -59,6 +59,7 @@ La correspondance visuelle est connue. Un paquet prêt à copier a été prépar
 ## Mise à jour après le lot d’écrans opérationnels
 - Le composant partagé `src/components/jdv/OperationalModuleLanding.tsx` fournit une présentation commune sans fausses données métier.
 - Les quatre routes opérationnelles sont maintenant réelles et la page d’accueil y pointe directement.
-- Aucun test de compilation n’est déclaré réussi : aucun workflow CI n’a encore été observé sur la branche de travail après ces commits.
+- Les migrations JOBS et SERVICES ont été durcies par des triggers qui rendent immuables les identifiants de candidature/demande et le message initial; elles restent à tester avec des rôles réels.
+- Aucun test de compilation n’est déclaré réussi : aucun workflow de build n’a été observé sur la branche de travail après ces commits. Le contrôle Supabase Preview de la PR est ignoré car la branche Supabase correspondante n’existe pas.
 - La copie des 18 PNG d’origine n’est toujours pas confirmée dans le dépôt; les chemins configurés ne doivent pas être considérés comme fonctionnels tant que les fichiers binaires ne sont pas présents.
 
