@@ -137,7 +137,7 @@ create policy social_groups_insert on public.social_groups for insert to authent
 with check (created_by = (select auth.uid()));
 create policy social_groups_update on public.social_groups for update to authenticated
 using (created_by = (select auth.uid()) or public.social_is_group_admin(id))
-with check (created_by = (select auth.uid()) or public.social_is_group_admin(id));
+with check (created_by = (select auth.uid()));
 create policy social_groups_delete on public.social_groups for delete to authenticated
 using (created_by = (select auth.uid()) or public.social_is_group_admin(id));
 
@@ -179,7 +179,7 @@ create policy social_events_insert on public.social_events for insert to authent
 with check (created_by = (select auth.uid()) and (group_id is null or public.social_is_group_admin(group_id)));
 create policy social_events_update on public.social_events for update to authenticated
 using (created_by = (select auth.uid()) or (group_id is not null and public.social_is_group_admin(group_id)))
-with check (created_by = (select auth.uid()) or (group_id is not null and public.social_is_group_admin(group_id)));
+with check (created_by = (select auth.uid()));
 create policy social_events_delete on public.social_events for delete to authenticated
 using (created_by = (select auth.uid()) or (group_id is not null and public.social_is_group_admin(group_id)));
 
