@@ -173,3 +173,10 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Un workflow GitHub Actions `.github/workflows/jdv-social-validation.yml` a été ajouté pour lancer les contrôles TypeScript Web et Mobile.
 - À la clôture de cette tranche, aucun résultat de compilation complet ni test navigateur/appareil n'est déclaré. Les dépendances Mobile n'ont pas été installées localement et l'installation/déploiement restent différés.
 - Aucun changement n'a été apporté au CRM historique.
+
+
+### Suite du travail — Web + Mobile
+- Le mobile charge désormais aussi les profils des auteurs de commentaires afin d'afficher leur identité lorsque les droits RLS le permettent.
+- Le mobile permet de quitter un groupe ou d'annuler une demande en attente en conservant l'enregistrement d'adhésion avec le statut `left`.
+- Une checklist manuelle Web/Mobile est disponible dans `docs/jdv-social-validation-checklist-2026-10-19.md`.
+- Ces changements sont committés sur la branche de travail; compilation, tests d'appareil, application de migration et déploiement restent non confirmés.
