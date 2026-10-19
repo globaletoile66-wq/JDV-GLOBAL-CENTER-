@@ -2,14 +2,14 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, Heart, MessageCircle, RefreshCw, Search, Send, Share2, UserRound } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Heart, MessageCircle, RefreshCw, Search, Send, Share2, UserCheck, UserPlus, UserRound } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
 type SocialProfile = { id?: string; user_id: string; username: string; display_name: string | null; bio?: string | null; avatar_url?: string | null; profile_status?: string };
 type SocialPost = { id: string; author_user_id: string; body: string | null; media_url: string | null; visibility: string; status: string; created_at: string };
 type SocialReaction = { id: string; post_id: string; user_id: string; reaction_type: string };
-type SocialComment = { id: string; post_id: string; user_id: string; body: string; status: string; created_at: string };
+type SocialComment = { id: string; post_id: string; user_id: string; body: string; status: string; created_at: string };\ntype SocialFollow = { follower_user_id: string; following_user_id: string; status: string };
 const inputClass = 'w-full rounded-xl border border-white/10 bg-[#09152f] px-3 py-3 text-sm text-white outline-none focus:border-[#F28C28]';
 const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50';
 
@@ -24,7 +24,7 @@ export default function SocialPage() {
   const [profilesByUser, setProfilesByUser] = useState<Record<string, SocialProfile>>({});
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [reactions, setReactions] = useState<SocialReaction[]>([]);
-  const [comments, setComments] = useState<SocialComment[]>([]);
+  const [comments, setComments] = useState<SocialComment[]>([]);\n  const [follows, setFollows] = useState<SocialFollow[]>([]);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [username, setUsername] = useState('');
@@ -41,7 +41,7 @@ export default function SocialPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    if (!user) { setProfile(null); setPosts([]); setReactions([]); setComments([]); setProfilesByUser({}); setBusy(false); return; }
+    if (!user) { setProfile(null); setPosts([]); setReactions([]); setComments([]); setFollows([]); setProfilesByUser({}); setBusy(false); return; }
     const [profileResult, postsResult] = await Promise.all([
       supabase.from('social_profiles').select('id,user_id,username,display_name,bio,avatar_url,profile_status').eq('user_id', user.id).maybeSingle(),
       supabase.from('social_posts').select('id,author_user_id,body,media_url,visibility,status,created_at').order('created_at', { ascending: false }).limit(100),
@@ -54,17 +54,17 @@ export default function SocialPage() {
     }
     if (postsResult.error) {
       setError((current) => current || postsResult.error!.message);
-      setPosts([]); setReactions([]); setComments([]); setProfilesByUser({});
+      setPosts([]); setReactions([]); setComments([]); setFollows([]); setProfilesByUser({});
     } else {
       const nextPosts = (postsResult.data ?? []) as SocialPost[];
       setPosts(nextPosts);
       const ids = nextPosts.map((post) => post.id);
       const authorIds = Array.from(new Set([user.id, ...nextPosts.map((post) => post.author_user_id)]));
       if (ids.length) {
-        const [profileList, reactionList, commentList] = await Promise.all([
+        const [profileList, reactionList, commentList, followList] = await Promise.all([
           supabase.from('social_profiles').select('user_id,username,display_name,avatar_url,profile_status').in('user_id', authorIds),
           supabase.from('social_reactions').select('id,post_id,user_id,reaction_type').in('post_id', ids),
-          supabase.from('social_comments').select('id,post_id,user_id,body,status,created_at').in('post_id', ids).eq('status', 'published').order('created_at', { ascending: true }).limit(300),
+          supabase.from('social_comments').select('id,post_id,user_id,body,status,created_at').in('post_id', ids).eq('status', 'published').order('created_at', { ascending: true }).limit(300),\n          supabase.from('social_follows').select('follower_user_id,following_user_id,status').eq('follower_user_id', user.id).eq('status', 'active'),
         ]);
         if (profileList.error) setError((current) => current || profileList.error!.message);
         else {
@@ -126,6 +126,22 @@ export default function SocialPage() {
     setActingOn('');
   };
 
+  const toggleFollow = async (authorUserId: string) => {
+    if (!user || authorUserId === user.id) return;
+    setActingOn(authorUserId); setError(''); setMessage('');
+    const existing = follows.find((item) => item.following_user_id === authorUserId && item.follower_user_id === user.id && item.status === 'active');
+    if (existing) {
+      const { error: deleteError } = await supabase.from('social_follows').delete().eq('follower_user_id', user.id).eq('following_user_id', authorUserId);
+      if (deleteError) setError(deleteError.message);
+      else setFollows((current) => current.filter((item) => item.following_user_id !== authorUserId));
+    } else {
+      const { data, error: insertError } = await supabase.from('social_follows').insert({ follower_user_id: user.id, following_user_id: authorUserId, status: 'active' }).select('follower_user_id,following_user_id,status').single();
+      if (insertError) setError(insertError.message);
+      else setFollows((current) => [...current, data as SocialFollow]);
+    }
+    setActingOn('');
+  };
+
   const addComment = async (event: FormEvent<HTMLFormElement>, post: SocialPost) => {
     event.preventDefault();
     if (!user) return;
@@ -172,7 +188,7 @@ export default function SocialPage() {
                 const liked = Boolean(user && postReactions.some((item) => item.user_id === user.id));
                 const postComments = comments.filter((item) => item.post_id === post.id);
                 return <article key={post.id} className="rounded-xl border border-white/10 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold">{author?.display_name || (author?.username ? '@' + author.username : 'Membre JDV Social')}{post.author_user_id === user.id ? ' (vous)' : ''}</p><p className="mt-1 text-xs text-white/35">{new Date(post.created_at).toLocaleString('fr-FR')}</p></div><span className="rounded-full bg-white/10 px-2.5 py-1 text-xs">{post.visibility}</span></div>{post.body && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/75">{post.body}</p>}{post.media_url && <a href={post.media_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm text-[#F28C28] hover:underline">Ouvrir le média <ExternalLink size={14} /></a>}
-                  <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-white/10 pt-3 text-xs text-white/55"><button type="button" onClick={() => void toggleLike(post)} disabled={actingOn === post.id} aria-pressed={liked} className={'inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-white/10 disabled:opacity-50 ' + (liked ? 'text-[#F28C28]' : '')}><Heart size={15} fill={liked ? 'currentColor' : 'none'} /> {postReactions.length} J’aime</button><span className="inline-flex items-center gap-1.5"><MessageCircle size={15} /> {postComments.length} commentaire(s)</span><span>{post.status}</span></div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-white/10 pt-3 text-xs text-white/55">{post.author_user_id !== user.id && <button type="button" onClick={() => void toggleFollow(post.author_user_id)} disabled={actingOn === post.author_user_id} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-white/10 disabled:opacity-50">{follows.some((item) => item.following_user_id === post.author_user_id) ? <UserCheck size={15}/> : <UserPlus size={15}/>} {follows.some((item) => item.following_user_id === post.author_user_id) ? "Suivi" : "Suivre"}</button>}<button type="button" onClick={() => void toggleLike(post)} disabled={actingOn === post.id} aria-pressed={liked} className={'inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-white/10 disabled:opacity-50 ' + (liked ? 'text-[#F28C28]' : '')}><Heart size={15} fill={liked ? 'currentColor' : 'none'} /> {postReactions.length} J’aime</button><span className="inline-flex items-center gap-1.5"><MessageCircle size={15} /> {postComments.length} commentaire(s)</span><span>{post.status}</span></div>
                   {postComments.length > 0 && <div className="mt-3 space-y-2">{postComments.map((comment) => <div key={comment.id} className="rounded-lg bg-white/[.04] px-3 py-2"><p className="text-xs font-semibold">{profilesByUser[comment.user_id]?.display_name || (profilesByUser[comment.user_id]?.username ? '@' + profilesByUser[comment.user_id].username : 'Membre JDV Social')}</p><p className="mt-1 whitespace-pre-wrap text-sm text-white/70">{comment.body}</p></div>)}</div>}
                   <form onSubmit={(event) => void addComment(event, post)} className="mt-3 flex gap-2"><input aria-label="Votre commentaire" className={inputClass} value={commentDrafts[post.id] || ''} onChange={(e) => setCommentDrafts((current) => ({ ...current, [post.id]: e.target.value }))} maxLength={2000} placeholder="Écrire un commentaire…" /><button type="submit" disabled={actingOn === post.id || !(commentDrafts[post.id] || '').trim()} className="shrink-0 rounded-xl bg-[#F28C28] px-3 py-2 font-bold text-[#0B1B3D] disabled:opacity-50" aria-label="Envoyer le commentaire"><Send size={16}/></button></form>
                 </article>;
