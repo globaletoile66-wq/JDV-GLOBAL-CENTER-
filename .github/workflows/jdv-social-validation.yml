@@ -39,7 +39,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install Web dependencies (repository has no tracked lockfile)
+          cache: npm
+      - name: Install Web dependencies
         run: npm install --no-audit --no-fund
       - name: Check Web types
         run: npm run type-check
