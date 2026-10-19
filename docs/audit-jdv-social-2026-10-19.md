@@ -219,3 +219,7 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 4. Concevoir la messagerie sociale dans une migration séparée et une interface dédiée, avec accès strictement limité aux membres des conversations.
 5. Maintenir l'ancienne CRM hors périmètre.
 
+### Ajustement du workflow CI (après inspection)
+- Le dépôt ignore `package-lock.json` et aucun lockfile suivi n'a été confirmé. Le cache npm de `actions/setup-node` peut échouer lorsqu'aucun lockfile n'est trouvé.
+- Le workflow a donc été corrigé pour retirer `cache: npm` du job Web et préciser que l'installation utilise les dépendances déclarées sans lockfile suivi.
+- Cette correction élimine un risque de panne précoce du workflow ; elle ne constitue pas une preuve que les vérifications TypeScript ou le build passent. Les résultats CI restent à vérifier dans GitHub Actions.
