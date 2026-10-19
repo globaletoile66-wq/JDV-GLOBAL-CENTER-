@@ -163,6 +163,23 @@ export default function App() {
     }
   };
 
+  const toggleNotifications = async (app: SocialApp) => {
+    if (!session || preferenceSaving) return;
+    const current = preferences[app.key];
+    const next: Preference = { app_key: app.key, is_added: true, is_visible: current?.is_visible ?? true, sort_order: current?.sort_order ?? apps.findIndex((item) => item.key === app.key), category: current?.category ?? 'Réseaux sociaux', notifications_enabled: current ? !current.notifications_enabled : false };
+    setPreferenceSaving(app.key); setMessage(''); setPreferences((previous) => ({ ...previous, [app.key]: next }));
+    try {
+      const { error } = await supabase.from('social_app_preferences').upsert({ user_id: session.user.id, ...next }, { onConflict: 'user_id,app_key' });
+      if (error) {
+        setPreferences((previous) => { const restored = { ...previous }; if (current) restored[app.key] = current; else delete restored[app.key]; return restored; });
+        setMessage('Impossible d’enregistrer les alertes de cette application. Vérifiez la connexion et les politiques RLS.');
+      } else setMessage('Préférences d’alertes synchronisées avec Supabase.');
+    } catch {
+      setPreferences((previous) => { const restored = { ...previous }; if (current) restored[app.key] = current; else delete restored[app.key]; return restored; });
+      setMessage('Erreur réseau : les alertes n’ont pas pu être enregistrées.');
+    } finally { setPreferenceSaving(''); }
+  };
+
   const openUrl = async (url: string) => {
     try { await Linking.openURL(url); }
     catch { if (Platform.OS !== 'web') Alert.alert('Lien indisponible', 'Impossible d’ouvrir ce lien sur cet appareil.'); }
@@ -237,6 +254,7 @@ export default function App() {
                 {session && <Pressable accessibilityRole="button" disabled={Boolean(preferenceSaving)} onPress={() => void toggleVisibility(app)} style={styles.visibilityButton}>
                   <Text style={styles.visibilityText}>{preferenceSaving === app.key ? 'Enregistrement…' : visible ? 'Masquer' : 'Afficher'}</Text>
                 </Pressable>}
+                {session && <Pressable accessibilityRole="button" disabled={Boolean(preferenceSaving)} onPress={() => void toggleNotifications(app)} style={styles.visibilityButton}><Text style={styles.visibilityText}>{preferenceSaving === app.key ? 'Enregistrement…' : preferences[app.key]?.notifications_enabled ? 'Alertes : oui' : 'Alertes : non'}</Text></Pressable>}
                 <Pressable accessibilityRole="link" onPress={() => void openUrl(app.url)}><Text style={styles.openLabel}>Ouvrir ↗</Text></Pressable>
               </View>
             );
