@@ -28,3 +28,9 @@ insert into public.social_posts(id, author_user_id, status, visibility) values
 
 insert into public.social_comments(id, post_id, user_id, body) values
  ('40000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'Test comment');
+
+insert into public.social_conversations(id, user_a_id, user_b_id) values
+ ('50000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002');
+
+insert into public.social_messages(id, conversation_id, sender_user_id, body) values
+ ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Private message A to B');

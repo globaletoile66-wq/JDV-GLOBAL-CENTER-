@@ -1,10 +1,12 @@
 -- JDV Social: prevent members from self-approving private-group requests.
--- Corrective migration: the original groups/events migration may already be applied.
--- Validate on an isolated Supabase preview before applying to production.
+-- Restrict client updates to status/role; group_id and user_id remain immutable.
+-- Candidate corrective migration: validate on an isolated Supabase preview before production.
 begin;
 
-drop policy if exists social_group_memberships_update on public.social_group_memberships;
+revoke update on table public.social_group_memberships from authenticated;
+grant update (status, role) on table public.social_group_memberships to authenticated;
 
+drop policy if exists social_group_memberships_update on public.social_group_memberships;
 create policy social_group_memberships_update
 on public.social_group_memberships
 for update to authenticated

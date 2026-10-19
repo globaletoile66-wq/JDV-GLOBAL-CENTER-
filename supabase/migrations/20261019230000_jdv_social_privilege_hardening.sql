@@ -5,6 +5,7 @@
 begin;
 
 -- Anonymous clients have no JDV Social feature that requires direct table access.
+-- Keep the shared public.notifications table out of this Social-only migration.
 revoke all privileges on table
   public.social_profiles,
   public.social_posts,
@@ -15,8 +16,7 @@ revoke all privileges on table
   public.social_events,
   public.social_event_registrations,
   public.social_external_links,
-  public.social_app_preferences,
-  public.notifications
+  public.social_app_preferences
 from anon;
 
 -- Authenticated users need CRUD only through RLS; remove privileges that RLS
@@ -31,8 +31,7 @@ revoke truncate, references, trigger on table
   public.social_events,
   public.social_event_registrations,
   public.social_external_links,
-  public.social_app_preferences,
-  public.notifications
+  public.social_app_preferences
 from authenticated;
 
 commit;
