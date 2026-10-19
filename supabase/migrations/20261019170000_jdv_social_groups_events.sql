@@ -90,19 +90,35 @@ stable
 security definer
 set search_path = public, auth, pg_temp
 set row_security = off
-as $$
+as $
   select exists (
     select 1 from public.social_groups g
     where g.id = p_group_id and g.visibility = 'public' and g.status = 'active'
   );
-$$;
+$;
+
+create or replace function public.social_has_group_request(p_group_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth, pg_temp
+set row_security = off
+as $
+  select exists (
+    select 1 from public.social_group_memberships m
+    where m.group_id = p_group_id
+      and m.user_id = auth.uid()
+      and m.status in ('active', 'pending')
+  );
+$;
 
 revoke all on function public.social_is_group_member(uuid) from public, anon;
 revoke all on function public.social_is_group_admin(uuid) from public, anon;
-revoke all on function public.social_is_group_public(uuid) from public, anon;
+revoke all on function public.social_is_group_public(uuid) from public, anon;\nrevoke all on function public.social_has_group_request(uuid) from public, anon;
 grant execute on function public.social_is_group_member(uuid) to authenticated;
 grant execute on function public.social_is_group_admin(uuid) to authenticated;
-grant execute on function public.social_is_group_public(uuid) to authenticated;
+grant execute on function public.social_is_group_public(uuid) to authenticated;\ngrant execute on function public.social_has_group_request(uuid) to authenticated;
 
 alter table public.social_groups enable row level security;
 alter table public.social_group_memberships enable row level security;
@@ -114,7 +130,7 @@ drop policy if exists social_groups_insert on public.social_groups;
 drop policy if exists social_groups_update on public.social_groups;
 drop policy if exists social_groups_delete on public.social_groups;
 create policy social_groups_select on public.social_groups for select to authenticated
-using ((visibility = 'public' and status = 'active') or created_by = (select auth.uid()) or public.social_is_group_member(id) or public.social_is_group_admin(id));
+using ((visibility = 'public' and status = 'active') or created_by = (select auth.uid()) or public.social_is_group_member(id) or public.social_is_group_admin(id) or public.social_has_group_request(id));
 create policy social_groups_insert on public.social_groups for insert to authenticated
 with check (created_by = (select auth.uid()));
 create policy social_groups_update on public.social_groups for update to authenticated
