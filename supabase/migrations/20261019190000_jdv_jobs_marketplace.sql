@@ -118,3 +118,26 @@ drop trigger if exists jdv_job_applications_guard_identity on public.jdv_job_app
 create trigger jdv_job_applications_guard_identity
 before update on public.jdv_job_applications
 for each row execute function public.jdv_jobs_guard_application_identity();
+
+
+-- Prevent ownership and creation metadata from being reassigned through broad UPDATE grants.
+create or replace function public.jdv_jobs_guard_job_identity()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.owner_id is distinct from old.owner_id
+     or new.created_at is distinct from old.created_at then
+    raise exception 'Job ownership and creation metadata are immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists jdv_jobs_guard_identity on public.jdv_jobs;
+create trigger jdv_jobs_guard_identity
+before update on public.jdv_jobs
+for each row execute function public.jdv_jobs_guard_job_identity();
+
+-- Trigger-only helpers are not application RPCs.
+revoke all on function public.jdv_jobs_set_updated_at() from public, anon, authenticated;
+revoke all on function public.jdv_jobs_guard_application_identity() from public, anon, authenticated;
+revoke all on function public.jdv_jobs_guard_job_identity() from public, anon, authenticated;
