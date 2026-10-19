@@ -303,3 +303,8 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 - Une migration candidate séparée, `20261019220000_jdv_social_posts_policy_guard.sql`, remplace cette politique globale par des règles distinctes : lecture de publications publiques uniquement si publiées (ou propres/admin), et INSERT/UPDATE/DELETE limités à l'auteur ou au super-administrateur.
 - La checklist demande maintenant de tester la suppression/modification interdite d'une publication d'autrui et la lecture directe d'un brouillon public.
 - **Important :** cette faille potentielle est observée dans les politiques actuellement présentes sur Supabase. La migration corrective n'est pas appliquée à la production; elle doit être testée sur un environnement isolé avant activation. Aucune écriture destructive n'a été tentée.
+
+### Privilèges SQL excessifs des rôles API — migration candidate ajoutée
+- La lecture de `information_schema.role_table_grants` a montré que `anon` et/ou `authenticated` disposent de privilèges `TRUNCATE`, `REFERENCES` et `TRIGGER` sur plusieurs tables sociales. Le privilège `TRUNCATE` est particulièrement important, car il n'est pas filtré par les politiques RLS.
+- Une migration candidate `20261019230000_jdv_social_privilege_hardening.sql` révoque ces privilèges non nécessaires sur les tables JDV Social, les préférences, les liens externes et les notifications. Les privilèges CRUD nécessaires aux écrans restent séparés.
+- La migration n'a pas été appliquée à Supabase. Après validation sur environnement isolé, il faudra relire les privilèges effectifs et vérifier que les opérations normales de l'application continuent de fonctionner.
