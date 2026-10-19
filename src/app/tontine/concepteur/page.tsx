@@ -45,17 +45,17 @@ export default function TontineConcepteurPage() {
   const [joinPath, setJoinPath] = useState('');
 
   const load = useCallback(async () => {
-    if (!user || !isSuperAdmin) return;
+    if (!user) return;
     setBusy(true);
     setError('');
     const [orgResult, currencyResult, tontineResult] = await Promise.all([
-      supabase.from('organizations').select('id,name,org_status').order('name').limit(500),
+      isSuperAdmin ? supabase.from('organizations').select('id,name,org_status').order('name').limit(500) : supabase.from('organization_members').select('organization_id, organizations!inner(id,name,org_status)').eq('user_id', user.id).eq('member_status', 'active').limit(500),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).order('code').limit(100),
       supabase.from('tontines').select('id,name,organization_id,contribution_amount,frequency,cycle_periods,member_limit,status,tontine_type').order('created_at', { ascending: false }).limit(100),
     ]);
     if (orgResult.error) setError('Chargement des organisations impossible : ' + orgResult.error.message);
     else {
-      const rows = (orgResult.data ?? []) as Organization[];
+      const rows = (orgResult.data ?? []).map((row: any) => isSuperAdmin ? row as Organization : row.organizations as Organization).filter(Boolean) as Organization[];
       setOrganizations(rows);
       setOrganizationId((current) => current || rows[0]?.id || '');
     }
@@ -71,12 +71,12 @@ export default function TontineConcepteurPage() {
   }, [isSuperAdmin, supabase, user]);
 
   useEffect(() => {
-    if (!authLoading && user && isSuperAdmin) void load();
+    if (!authLoading && user) void load();
   }, [authLoading, isSuperAdmin, load, user]);
 
   async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user || !isSuperAdmin) return;
+    if (!user) return;
     setError('');
     setSuccess('');
     setJoinPath('');
@@ -159,11 +159,11 @@ export default function TontineConcepteurPage() {
     await load();
   }
 
-  if (authLoading || busy && user && isSuperAdmin) {
+  if (authLoading || busy && user) {
     return <main className="grid min-h-screen place-items-center bg-[#0B1B3D] text-white"><LoaderCircle className="animate-spin" /></main>;
   }
   if (!user) return <main className="grid min-h-screen place-items-center bg-[#0B1B3D] p-6 text-white"><div className="max-w-lg rounded-2xl border border-white/10 p-6"><h1 className="text-xl font-bold">Connexion requise</h1><p className="mt-2 text-white/60">Connecte-toi avec le compte concepteur pour accéder à l’atelier de vérification.</p><Link className="mt-4 inline-block underline" href="/auth/login">Se connecter</Link></div></main>;
-  if (!isSuperAdmin) return <main className="grid min-h-screen place-items-center bg-[#0B1B3D] p-6 text-white"><div className="max-w-lg rounded-2xl border border-white/10 p-6"><h1 className="text-xl font-bold">Accès réservé au concepteur</h1><p className="mt-2 text-white/60">Cet atelier n’est pas disponible dans l’espace client.</p><Link className="mt-4 inline-block underline" href="/tontine">Retour à JDV TONTINE</Link></div></main>;
+
 
   return <main className="min-h-screen bg-[#0B1B3D] p-5 text-white sm:p-8">
     <div className="mx-auto max-w-7xl">
