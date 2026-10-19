@@ -38,6 +38,8 @@ export default function JobsPage() {
   const [location, setLocation] = useState('');
   const [employmentType, setEmploymentType] = useState('full_time');
   const [description, setDescription] = useState('');
+  const [salaryMin, setSalaryMin] = useState('');
+  const [salaryMax, setSalaryMax] = useState('');
   const [coverLetters, setCoverLetters] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -65,15 +67,22 @@ export default function JobsPage() {
   const createJob = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) return;
+    if (salaryMin && salaryMax && Number(salaryMax) < Number(salaryMin)) {
+      setError('Le salaire maximum doit être supérieur ou égal au salaire minimum.');
+      return;
+    }
     setCreating(true); setError(''); setNotice('');
     const { error: createError } = await supabase.from('jdv_jobs').insert({
       owner_id: user.id, title: title.trim(), company_name: company.trim(),
       location: location.trim() || null, employment_type: employmentType,
-      description: description.trim(), status: 'published',
+      description: description.trim(),
+      salary_min: salaryMin ? Number(salaryMin) : null,
+      salary_max: salaryMax ? Number(salaryMax) : null,
+      salary_currency: 'XOF', status: 'published',
     });
     if (createError) setError('La publication a échoué. Vérifiez que la migration JDV JOBS est appliquée et que votre session est valide.');
     else {
-      setTitle(''); setCompany(''); setLocation(''); setDescription('');
+      setTitle(''); setCompany(''); setLocation(''); setDescription(''); setSalaryMin(''); setSalaryMax('');
       setNotice('Votre offre a été publiée.');
       await loadJobs();
     }
@@ -123,6 +132,7 @@ export default function JobsPage() {
               <input required minLength={2} maxLength={180} value={company} onChange={(e) => setCompany(e.target.value)} className="jdv-input" placeholder="Entreprise / recruteur"/>
               <input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={180} className="jdv-input" placeholder="Lieu (ville, pays ou télétravail)"/>
               <select value={employmentType} onChange={(e) => setEmploymentType(e.target.value)} className="jdv-input">{Object.entries(TYPES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>
+              <div className="grid grid-cols-2 gap-3"><input type="number" min="0" step="1" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} className="jdv-input" placeholder="Salaire min. (XOF)" aria-label="Salaire minimum en XOF"/><input type="number" min="0" step="1" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} className="jdv-input" placeholder="Salaire max. (XOF)" aria-label="Salaire maximum en XOF"/></div>
               <textarea required minLength={20} maxLength={12000} rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className="jdv-input" placeholder="Missions, compétences et profil recherché (20 caractères minimum)"/>
               <button type="submit" disabled={creating} className="btn-primary w-full">{creating ? 'Publication…' : 'Publier l’offre'}</button>
             </form>}
@@ -142,6 +152,7 @@ export default function JobsPage() {
           filteredJobs.length ? <div className="mt-6 grid gap-4 md:grid-cols-2">{filteredJobs.map((job) => <article key={job.id} className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-start justify-between gap-3"><div><h3 className="text-lg font-bold">{job.title}</h3><p className="mt-1 text-sm text-muted-foreground">{job.company_name}</p></div><span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">{TYPES[job.employment_type] ?? job.employment_type}</span></div>
             {job.location && <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground"><MapPin size={14}/>{job.location}</p>}
+            {(job.salary_min !== null || job.salary_max !== null) && <p className="mt-3 text-sm font-semibold text-accent">{job.salary_min !== null ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(job.salary_min) : '—'}{job.salary_max !== null ? ` – ${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(job.salary_max)}` : ''} {job.salary_currency}</p>}
             <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{job.description}</p>
             <p className="mt-3 text-xs text-muted-foreground">Publié le {new Date(job.created_at).toLocaleDateString('fr-FR')}</p>
             {user && user.id !== job.owner_id && <div className="mt-4 border-t border-border pt-4"><textarea maxLength={6000} rows={2} value={coverLetters[job.id] ?? ''} onChange={(e) => setCoverLetters((current) => ({ ...current, [job.id]: e.target.value }))} className="jdv-input" placeholder="Message au recruteur (facultatif)"/><button onClick={() => void apply(job)} disabled={applying === job.id} className="btn-primary mt-3 inline-flex items-center gap-2">{applying === job.id ? 'Envoi…' : 'Candidater'} <Send size={15}/></button></div>}
