@@ -153,3 +153,23 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - `/social/messages` : point d'entrée de la messagerie sociale, avec indication explicite de la dépendance CORE non résolue. Cette route ne prétend pas envoyer de messages.
 - Le fil principal relie maintenant les paramètres du profil, notifications, messagerie, groupes, événements et réseaux externes.
 - La lecture des relations de suivi est indépendante du chargement du fil; les relations existantes non actives sont gérées sans tentative d'insertion en doublon.
+
+## Tranche de développement Web + Mobile — 19 octobre 2026
+
+### Web
+- Le fil applique désormais un filtre explicite sur les publications publiées et sur les publications publiques ou appartenant au membre connecté.
+- La création de groupes inclut un nettoyage compensatoire si l'enregistrement du rôle propriétaire échoue.
+- Le formulaire de création d'événement vérifie le titre avant l'envoi, en cohérence avec la contrainte de longueur du schéma.
+
+### Mobile
+- L'application Expo utilise le même projet Supabase et les mêmes tables sociales que le Web.
+- Le parcours couvre maintenant l'authentification, la création et la modification du profil, le fil communautaire, les publications texte, les réactions, les commentaires, les groupes, les adhésions, les événements, les inscriptions, les notifications et les préférences du catalogue d'applications.
+- Le catalogue mobile synchronise les préférences d'affichage et d'alertes dans `social_app_preferences`.
+- La documentation mobile a été actualisée pour refléter ces fonctionnalités.
+
+### Accès et validation
+- Une migration candidate `20261019190000_jdv_social_public_reads.sql` sépare les règles de lecture et d'écriture des profils, réactions et commentaires, pour permettre la lecture des profils actifs et des interactions sur les publications visibles.
+- Cette migration est versionnée dans la branche de développement, mais **n'a pas été appliquée à Supabase distant**. Elle doit être revue et testée sur un environnement isolé avant application.
+- Un workflow GitHub Actions `.github/workflows/jdv-social-validation.yml` a été ajouté pour lancer les contrôles TypeScript Web et Mobile.
+- À la clôture de cette tranche, aucun résultat de compilation complet ni test navigateur/appareil n'est déclaré. Les dépendances Mobile n'ont pas été installées localement et l'installation/déploiement restent différés.
+- Aucun changement n'a été apporté au CRM historique.
