@@ -48,6 +48,10 @@ export default function ServiceMarketplacePage() {
   const createOffer = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) return;
+    if (pricingMode !== 'quote' && (!price.trim() || !Number.isFinite(Number(price)) || Number(price) <= 0)) {
+      setError('Indiquez un prix strictement positif en XOF, ou choisissez « Sur devis ».');
+      return;
+    }
     setSaving(true); setError(''); setNotice('');
     const { error: insertError } = await supabase.from('jdv_service_offerings').insert({
       provider_id: user.id, title: title.trim(), category: category.trim(), description: description.trim(),
@@ -56,7 +60,7 @@ export default function ServiceMarketplacePage() {
     });
     if (insertError) setError('La publication a échoué. Vérifiez la migration JDV SERVICES et vos autorisations.');
     else {
-      setTitle(''); setCategory(''); setDescription(''); setLocation(''); setPrice('');
+      setTitle(''); setCategory(''); setDescription(''); setLocation(''); setPrice(''); setPricingMode('quote');
       setNotice('Votre prestation est publiée dans le catalogue.');
       await loadOffers();
     }
