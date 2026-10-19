@@ -29,7 +29,10 @@ using (
   or (group_id is not null and public.social_is_group_admin(group_id))
 )
 with check (
-  created_by = (select auth.uid())
+  (
+    created_by = (select auth.uid())
+    and (group_id is null or public.social_is_group_admin(group_id))
+  )
   or (group_id is not null and public.social_is_group_admin(group_id))
 );
 
