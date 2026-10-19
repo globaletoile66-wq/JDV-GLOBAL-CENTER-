@@ -274,3 +274,10 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - La revue du contrôle d'accès des commentaires a identifié un risque : la politique UPDATE initiale autorisait un commentaire à être déplacé vers une publication que son auteur ne pouvait pas consulter.
 - La migration candidate `20261019190000_jdv_social_public_reads.sql` a été corrigée pour exiger, après UPDATE, que le commentaire reste lié à une publication publique publiée, à une publication de l'auteur connecté, ou à une action de super-administrateur.
 - Ce correctif reste du SQL candidat dans GitHub : il n'a pas été appliqué à Supabase. Les tests RLS par deux comptes dans un environnement isolé restent requis.
+
+### Risques RLS constatés sur la base distante (lecture seule)
+Les politiques actuellement présentes sur Supabase confirment trois points qui doivent être corrigés avant d'activer les fonctionnalités concernées :
+1. `social_group_memberships_update` autorise actuellement un membre à remettre son propre statut à `active` sans vérifier que le groupe est public ou que la demande a été approuvée par un administrateur. La migration candidate `20261019200000_jdv_social_private_group_membership_guard.sql` vise à fermer ce contournement.
+2. `social_event_registrations_update` limite actuellement l'identité du propriétaire et les valeurs de statut, mais ne restreint pas la colonne `event_id` par privilèges SQL. La migration candidate `20261019210000_jdv_social_registration_update_guard.sql` révoque UPDATE global et n'accorde que UPDATE sur `status`.
+3. `social_comments_access` autorise actuellement les commentaires liés aux publications de l'auteur, mais sa règle UPDATE ne vérifie pas la visibilité de la nouvelle publication associée. Le correctif de la migration candidate `20261019190000_jdv_social_public_reads.sql` ajoute cette vérification.
+Ces constats proviennent de la lecture de `pg_policies` et des privilèges de schéma; aucun test d'écriture ni changement de données n'a été réalisé. Les trois migrations restent non appliquées à la production et doivent être testées sur une base isolée avec deux comptes distincts avant toute mise en service.
