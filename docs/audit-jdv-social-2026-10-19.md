@@ -328,3 +328,12 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 - Les cinq workflows CI du dernier commit applicatif précédent avaient réussi : validation Web + Mobile, contrôle TypeScript Web, build Web, contrôle TypeScript Mobile et export Web Expo. Après les nouveaux commits de correction SQL/doc, leur exécution spécifique doit être vérifiée avant de considérer la tranche validée.
 - Les migrations `20261019190000` à `20261019240000` restent des candidates non appliquées. Aucune écriture SQL ni migration n'a été exécutée sur le projet Supabase distant.
 - Cette revue est statique : sans environnement Supabase isolé, elle ne prouve pas les résultats des scénarios RLS à l'exécution. La fusion et le déploiement ne sont pas déclarés effectués.
+
+
+### Vérification SQL automatisée en PostgreSQL jetable — 19 octobre 2026
+- Ajout du workflow `.github/workflows/jdv-social-sql-smoke.yml`, qui crée un PostgreSQL 16 éphémère dans GitHub Actions, installe un schéma minimal de test puis applique dans l'ordre les migrations candidates JDV Social.
+- Ajout des fixtures `supabase/tests/jdv_social_migration_fixture.sql` et des assertions `supabase/tests/jdv_social_migration_assertions.sql`.
+- **Résultat réel : réussi au commit `4000de047635b2590c8f84b1dd3c2eaae1a70de2`** : les migrations candidates se sont appliquées sans erreur sur PostgreSQL jetable et les assertions ont confirmé les politiques attendues, l'absence de privilèges `anon` sur les publications, le retrait de `TRUNCATE`, la restriction UPDATE de `social_event_registrations.status` et l'immutabilité de `created_by` sur groupes/événements.
+- Ce test ne touche pas Supabase distant et ne remplace pas les tests RLS comportementaux avec deux sessions utilisateur réelles. Il réduit toutefois le risque de syntaxe et vérifie les privilèges SQL déterminants avant toute promotion.
+- La politique de mise à jour des événements a aussi été durcie : un créateur ne peut pas réaffecter un événement à un groupe dont il n'est pas administrateur; le contrôle porte sur le groupe cible.
+- Le workflow Web/Mobile et les aperçus Netlify du commit le plus récent sont encore en cours de validation au moment de cette note. Aucun déploiement de production n'a été déclenché.
