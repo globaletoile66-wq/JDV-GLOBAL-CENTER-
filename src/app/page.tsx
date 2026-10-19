@@ -24,7 +24,7 @@ const modules = [
   ['JDV MEDIA','Média et contenus','/media',Store],
   ['JDV SOCIAL','Réseau social JDV','/social',UserRound],
   ['JDV AI','Assistant IA JDV','/ai',Sparkles],
-  ['JDV COMMUNITY','Communautés et espaces collectifs','/coming-soon?name=JDV%20COMMUNITY',Users],
+  ['JDV COMMUNITY','Communautés et espaces collectifs','/community',Users],
   ['JDV SERVICES','Catalogue de services et prestations','/coming-soon?name=JDV%20SERVICES',Wrench],
   ['JDV EVENTS','Organisation et gestion d’événements','/coming-soon?name=JDV%20EVENTS',CalendarDays],
   ['JDV JOBS','Offres d’emploi et recrutement','/coming-soon?name=JDV%20JOBS',BriefcaseBusiness],
