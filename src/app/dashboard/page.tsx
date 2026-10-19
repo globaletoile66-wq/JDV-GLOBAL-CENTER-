@@ -28,7 +28,7 @@ export default function DashboardRouter() {
         .eq('status', 'active')
         .limit(1)
         .maybeSingle();
-      router.replace(data ? '/prospecteur' : '/business');
+      router.replace(data ? '/prospecteur' : '/');
     })();
   }, [loading, user, isSuperAdmin, router]);
 
