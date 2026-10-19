@@ -187,3 +187,10 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Les colonnes utilisées par la migration candidate (`profile_status`, `author_user_id`, `visibility`, `status`, `post_id`, `user_id`) ont été retrouvées dans le schéma distant.
 - Durcissement du workflow GitHub Actions : permission réduite à `contents: read` et suppression de l'étape qui tentait de pousser automatiquement un `package-lock.json` modifié. Le workflow ne doit pas écrire dans la branche pour exécuter les validations.
 - Toujours en attente : résultat effectif du build Web, du contrôle TypeScript Mobile et validation fonctionnelle avec plusieurs comptes. Aucun déploiement, aucune installation et aucune migration distante ne sont déclarés comme effectués.
+
+
+## Suite sans branche payante — 19 octobre 2026
+- La création de branche Supabase payante a été volontairement écartée. Les vérifications complémentaires ont été limitées à des lectures du schéma et des politiques.
+- Les politiques distantes actuelles confirment un point fonctionnel à traiter : les profils sont principalement lisibles par leur propriétaire ou le super-administrateur, et les réactions/commentaires sont également restreints. La migration candidate vise à autoriser les lectures nécessaires au fil public, tout en gardant les écritures contrôlées. Elle n'est toujours pas appliquée.
+- Le workflow de validation est maintenant déclenchable manuellement depuis GitHub Actions (`workflow_dispatch`), en plus des déclencheurs push/PR. La consultation effectuée n'a pas retourné de statut de contrôle ni de run exploitable ; aucune réussite de build n'est donc revendiquée.
+- La suite sans frais : déclencher les validations depuis GitHub Actions, corriger les erreurs de compilation éventuelles, puis continuer les tests fonctionnels. Ne pas appliquer la migration distante ni déployer sans validation distincte.
