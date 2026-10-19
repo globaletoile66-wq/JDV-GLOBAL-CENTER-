@@ -14,14 +14,14 @@
 | JDV SOCIAL | Existant à auditer | Les routes et tables sociales existantes sont réutilisées; tests de non-régression requis. |
 | JDV IA | À auditer | Vérifier les intégrations et secrets avant activation. |
 | JDV COMMUNITY | Première route créée | `/community` lit les groupes publics de `social_groups`; création et adhésion restent dans le workflow partagé `/social/groups`. |
-| JDV SERVICES | Route existante conservée | `/services` est actuellement un catalogue de modules, pas encore la marketplace complète de prestataires décrite dans le cahier des charges. |
+| JDV SERVICES | Première marketplace créée | `/service-marketplace` utilise une migration préparée pour les offres et demandes de devis; migration non appliquée à Supabase distant. `/services` reste le catalogue général. |
 | JDV EVENTS | Route de module créée | `/events` réutilise le workflow d'événements existant sous `/social/events`; la billetterie complète doit être auditée séparément. |
 | JDV JOBS | UI et migration préparées | `/jobs` propose consultation, publication et candidature. La migration `20261019190000_jdv_jobs_marketplace.sql` doit être relue, testée en préproduction puis appliquée avec autorisation explicite. |
 | JDV LEGAL | À développer | Ne pas exposer de documents privés; vérifier les rôles et le stockage privé avant toute fonctionnalité de dossier. |
 | JDV ACCOUNTING | À développer | Ne pas créer de ledger parallèle à JDV PAY. |
 | JDV HR | À développer | Séparer strictement les données RH de la place de marché JDV JOBS. |
 | JDV PROCUREMENT | À développer | Les approbations et les données fournisseurs doivent être cloisonnées par organisation. |
-| JDV INVENTORY | À auditer/développer | Vérifier les tables d'inventaire existantes avant d'ajouter un schéma concurrent. |
+| JDV INVENTORY | Vue de stock créée | `/inventory` lit les tables de stock existantes en lecture seule et calcule les alertes de seuil. Les mouvements et transferts restent à raccorder après audit des flux existants. |
 | JDV MEDIA | Existant à auditer | Réutiliser les tables media existantes et vérifier les flux de publication. |
 
 ## Logos fournis le 19 octobre 2026
