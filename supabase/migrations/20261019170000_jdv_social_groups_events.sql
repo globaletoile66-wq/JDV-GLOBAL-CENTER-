@@ -158,7 +158,14 @@ with check (
 create policy social_group_memberships_update on public.social_group_memberships for update to authenticated
 using (user_id = (select auth.uid()) or public.social_is_group_admin(group_id))
 with check (
-  (user_id = (select auth.uid()) and role = 'member' and status in ('active', 'pending', 'left'))
+  (
+    user_id = (select auth.uid())
+    and role = 'member'
+    and (
+      status in ('pending', 'left')
+      or (status = 'active' and public.social_is_group_public(group_id))
+    )
+  )
   or (public.social_is_group_admin(group_id) and role in ('owner', 'admin', 'member'))
 );
 create policy social_group_memberships_delete on public.social_group_memberships for delete to authenticated
