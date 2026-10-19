@@ -32,7 +32,7 @@ const modules = [
   ['JDV ACCOUNTING','Comptabilité et clôtures financières','/coming-soon?name=JDV%20ACCOUNTING',Calculator],
   ['JDV HR','Gestion des ressources humaines','/coming-soon?name=JDV%20HR',UserRoundCog],
   ['JDV PROCUREMENT','Achats et validations fournisseurs','/coming-soon?name=JDV%20PROCUREMENT',ClipboardList],
-  ['JDV INVENTORY','Stocks et traçabilité des articles','/coming-soon?name=JDV%20INVENTORY',Package],
+  ['JDV INVENTORY','Stocks et traçabilité des articles','/inventory',Package],
 ] as const;
 
 export default function HomePage() {
