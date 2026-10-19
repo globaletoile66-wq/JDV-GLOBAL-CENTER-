@@ -235,7 +235,7 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Contrôle statique uniquement : aucune installation de paquets, compilation ou export Expo n'a été exécuté dans cette vérification.
 
 ### Comparaison de branche
-- La branche de travail a été comparée à la branche par défaut `supabase-sync-2026-09-24` : GitHub indique une divergence (65 commits en avance et 1 commit en retard au moment du contrôle).
+- La branche de travail a été comparée à la branche par défaut `supabase-sync-2026-09-24` : Un contrôle ultérieur de GitHub indique une divergence (30 commits en avance et 2 commits en retard au moment du dernier contrôle; les références peuvent évoluer).
 - Les chemins de fichiers remontés dans cette comparaison concernent JDV Social, Mobile, les workflows, les migrations sociales, la documentation, le lockfile racine et la configuration TypeScript. Aucun chemin de l'ancien CRM n'apparaît dans cette liste.
 - Aucune fusion ou rebase automatique n'a été effectué : la divergence doit être revue avant intégration.
 
@@ -244,3 +244,78 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Une migration corrective distincte a été ajoutée : `20261019200000_jdv_social_private_group_membership_guard.sql`. Elle conserve la migration initiale immuable et limite l'auto-activation aux groupes publics ou aux adhésions privées déjà actives ; l'approbation d'une demande privée doit venir d'un administrateur du groupe.
 - **Risque toujours présent en production tant que la migration corrective n'est pas appliquée.** Elle n'a pas été appliquée au Supabase distant, conformément à la consigne de ne pas modifier la production sans validation isolée.
 - Test à effectuer dans un environnement isolé : un utilisateur non membre ne peut pas s'auto-ajouter à un groupe privé en statut `active`; une demande `pending` ne peut pas s'auto-activer; un administrateur du groupe peut approuver; les adhésions publiques continuent de fonctionner.
+
+### Résultats réels de CI observés le 19 octobre 2026
+- Exécution `JDV Social Web and Mobile validation` au commit `5e3b1230...` : vérification TypeScript Web réussie; build Web échoué au pré-rendu parce que `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` étaient absents.
+- Exécution Mobile au commit `2438f9ed...` : vérification TypeScript Mobile réussie, mais contrôle de compatibilité Expo échoué car `expo-status-bar`, `@types/react` et TypeScript ne correspondaient pas aux versions attendues par Expo SDK 58.
+- Après alignement des versions, le contrôle `expo install --check` a réussi. Le TypeScript Mobile a ensuite révélé l'absence des types Node pour `process.env`; `@types/node` a été ajouté. Les résultats du commit qui contient cette correction restent à confirmer.
+- Le workflow Web/Mobile a été ajusté pour utiliser des variables Supabase de repli non secrètes pendant le build lorsque les secrets ne sont pas configurés. Le résultat de compilation de cette version reste à confirmer.
+- Le workflow existant `Verifier le build` sur la branche par défaut a terminé avec succès au commit `5e640964...`; ce résultat est distinct des contrôles JDV Social et ne prouve pas que tous les tests sociaux sont réussis.
+
+### État de fusion GitHub — suivi
+- GitHub indique que la PR `#130` a été fusionnée le 19 octobre 2026 à 13:03:31 UTC. Aucune commande de fusion n'a été lancée dans cette session; la fusion a été constatée après coup lors de la vérification.
+- La branche par défaut pointe maintenant sur `5e640964...`. Les deux correctifs postérieurs à la tête fusionnée sont suivis dans la PR brouillon `#131` : alignement des versions Expo/TypeScript et configuration d'environnement de build.
+- La PR `#131` reste ouverte en brouillon et ne doit pas être fusionnée avant résultats CI concluants et revue. Aucune action de déploiement n'a été lancée.
+
+### Dépendances — signal de sécurité CI
+- L'installation Web au commit `5e3b1230...` a signalé 30 vulnérabilités dans l'arbre de dépendances (dont 1 critique et 22 élevées).
+- L'installation Mobile a signalé 22 vulnérabilités (dont 15 élevées).
+- Ces chiffres sont ceux affichés par `npm install` dans les journaux CI; ils ne constituent pas encore un audit de l'exploitabilité ni une liste des paquets concernés.
+- Aucune commande `npm audit fix` automatique n'a été lancée : les mises à jour correctives doivent être examinées package par package afin d'éviter une mise à niveau majeure non maîtrisée. Une analyse dédiée des advisories est requise avant publication.
+
+### Revue de sécurité RLS — inscriptions aux événements
+- La règle actuelle `social_event_registrations_update` vérifiée sur Supabase autorise le propriétaire de l'inscription à mettre à jour toute la ligne, sans revalider la visibilité et l'état de l'événement. En combinaison avec le droit UPDATE de table, cela permettrait de changer `event_id` et de contourner les contrôles appliqués à l'insertion.
+- Une migration corrective séparée a été ajoutée : `20261019210000_jdv_social_registration_update_guard.sql`. Elle limite le droit UPDATE des utilisateurs authentifiés à la seule colonne `status` et empêche de réactiver une inscription si l'événement n'est plus publié ou accessible.
+- Cette migration, comme la correction d'adhésion aux groupes privés, reste candidate et **n'a pas été appliquée à la production**.
+- Tests isolés requis : un utilisateur ne peut pas changer `event_id` ou `user_id`; peut annuler sa propre inscription; ne peut pas réactiver une inscription à un événement annulé/non publié ou inaccessible; peut s'inscrire à un événement public publié ou à un événement de membres s'il est membre actif du groupe.
+
+### Revue de la migration RLS candidate — correctif supplémentaire
+- Le contrôle du schéma distant confirme que `social_profiles.profile_status`, les colonnes des publications, réactions et commentaires correspondent aux noms utilisés dans la migration candidate.
+- La revue du contrôle d'accès des commentaires a identifié un risque : la politique UPDATE initiale autorisait un commentaire à être déplacé vers une publication que son auteur ne pouvait pas consulter.
+- La migration candidate `20261019190000_jdv_social_public_reads.sql` a été corrigée pour exiger, après UPDATE, que le commentaire reste lié à une publication publique publiée, à une publication de l'auteur connecté, ou à une action de super-administrateur.
+- Ce correctif reste du SQL candidat dans GitHub : il n'a pas été appliqué à Supabase. Les tests RLS par deux comptes dans un environnement isolé restent requis.
+
+### Risques RLS constatés sur la base distante (lecture seule)
+Les politiques actuellement présentes sur Supabase confirment trois points qui doivent être corrigés avant d'activer les fonctionnalités concernées :
+1. `social_group_memberships_update` autorise actuellement un membre à remettre son propre statut à `active` sans vérifier que le groupe est public ou que la demande a été approuvée par un administrateur. La migration candidate `20261019200000_jdv_social_private_group_membership_guard.sql` vise à fermer ce contournement.
+2. `social_event_registrations_update` limite actuellement l'identité du propriétaire et les valeurs de statut, mais ne restreint pas la colonne `event_id` par privilèges SQL. La migration candidate `20261019210000_jdv_social_registration_update_guard.sql` révoque UPDATE global et n'accorde que UPDATE sur `status`.
+3. `social_comments_access` autorise actuellement les commentaires liés aux publications de l'auteur, mais sa règle UPDATE ne vérifie pas la visibilité de la nouvelle publication associée. Le correctif de la migration candidate `20261019190000_jdv_social_public_reads.sql` ajoute cette vérification.
+Ces constats proviennent de la lecture de `pg_policies` et des privilèges de schéma; aucun test d'écriture ni changement de données n'a été réalisé. Les trois migrations restent non appliquées à la production et doivent être testées sur une base isolée avec deux comptes distincts avant toute mise en service.
+
+### Renforcement de la checklist de tests
+- La checklist Web + Mobile inclut désormais des scénarios négatifs explicites pour l'auto-approbation d'une adhésion privée, la modification de `event_id`/`user_id`, la réactivation d'inscription sans accès valide, le déplacement de commentaires vers des publications privées et les accès anonymes.
+- Ces tests sont définis mais non exécutés sur la base distante. Ils doivent être joués sur un environnement isolé avec deux comptes de test avant d'approuver les migrations RLS.
+
+### Protection complémentaire des membres bloqués
+- La revue de l'interface groupes a révélé qu'un membre `blocked` pouvait tenter de réactiver sa propre ligne ou de la supprimer puis de se réinscrire, si les politiques le permettaient.
+- La migration candidate `20261019200000_jdv_social_private_group_membership_guard.sql` a été renforcée : les mises à jour et suppressions de sa propre ligne sont interdites lorsque le statut courant est `blocked`; un administrateur du groupe conserve la capacité de gérer cette ligne.
+- Un scénario négatif correspondant a été ajouté à la checklist. Correctif non appliqué à la base distante; validation isolée toujours nécessaire.
+
+- La migration de lecture sociale limite désormais les privilèges SQL UPDATE de `social_comments` à la colonne `body` pour le rôle `authenticated`. L'association `post_id` et l'auteur `user_id` ne peuvent ainsi pas être modifiés par les clients via une mise à jour ordinaire.
+- La checklist demande de vérifier explicitement le refus de changement de `post_id` et `user_id`. Ce correctif est candidat, non appliqué à la production.
+
+### Cohérence UI pour les adhésions bloquées
+- Les pages Web de liste et de détail des groupes indiquent désormais clairement le statut `blocked` et n'affichent plus de bouton permettant à l'utilisateur bloqué de tenter une nouvelle adhésion depuis la page de détail.
+- Le contrôle côté interface complète la protection RLS candidate; la base reste l'autorité de sécurité et les migrations ne sont toujours pas appliquées à distance.
+
+### Risque critique confirmé sur les publications — migration candidate ajoutée
+- La lecture de `pg_policies` a montré que la politique distante `social_posts_access` est de type `ALL` et autorise dans `USING` les lignes dont `visibility = 'public'`. Comme les politiques `DELETE` évaluent `USING` sans `WITH CHECK`, un utilisateur authentifié pourrait potentiellement supprimer une publication publique appartenant à quelqu'un d'autre. La condition de lecture ne filtre pas non plus le statut `published`.
+- Une migration candidate séparée, `20261019220000_jdv_social_posts_policy_guard.sql`, remplace cette politique globale par des règles distinctes : lecture de publications publiques uniquement si publiées (ou propres/admin), et INSERT/UPDATE/DELETE limités à l'auteur ou au super-administrateur.
+- La checklist demande maintenant de tester la suppression/modification interdite d'une publication d'autrui et la lecture directe d'un brouillon public.
+- **Important :** cette faille potentielle est observée dans les politiques actuellement présentes sur Supabase. La migration corrective n'est pas appliquée à la production; elle doit être testée sur un environnement isolé avant activation. Aucune écriture destructive n'a été tentée.
+
+### Privilèges SQL excessifs des rôles API — migration candidate ajoutée
+- La lecture de `information_schema.role_table_grants` a montré que `anon` et/ou `authenticated` disposent de privilèges `TRUNCATE`, `REFERENCES` et `TRIGGER` sur plusieurs tables sociales. Le privilège `TRUNCATE` est particulièrement important, car il n'est pas filtré par les politiques RLS.
+- Une migration candidate `20261019230000_jdv_social_privilege_hardening.sql` révoque ces privilèges non nécessaires sur les tables JDV Social, les préférences, les liens externes et les notifications. Les privilèges CRUD nécessaires aux écrans restent séparés.
+- La migration n'a pas été appliquée à Supabase. Après validation sur environnement isolé, il faudra relire les privilèges effectifs et vérifier que les opérations normales de l'application continuent de fonctionner.
+
+- Le même correctif retire également tous les privilèges directs des rôles anonymes sur les tables sociales listées, car les fonctionnalités sociales de cette tranche nécessitent une session authentifiée et les politiques existantes sont conçues pour `authenticated`. Les clients authentifiés conservent leurs privilèges CRUD nécessaires, sous réserve des politiques RLS.
+
+### Nouvelle comparaison de branche
+- La comparaison la plus récente avec `supabase-sync-2026-09-24` indique 30 commits en avance et 2 en retard.
+- Les fichiers modifiés par rapport à cette base concernent les workflows, l'audit/checklist, la configuration Mobile, les pages de groupes et les migrations RLS/privilèges JDV Social. Aucun fichier de l'ancienne CRM n'apparaît dans la liste comparée.
+- Aucun rebase ni fusion n'a été réalisé.
+
+### Vérification du registre des migrations Supabase
+- Lecture seule de `supabase_migrations.schema_migrations` : les versions enregistrées pour le 19 octobre vont jusqu'à `20261019080401`; les versions candidates `20261019190000`, `20261019200000`, `20261019210000`, `20261019220000` et `20261019230000` n'y figurent pas.
+- Cela confirme que les cinq migrations de correction RLS/privilèges de cette série ne sont pas enregistrées comme appliquées dans le projet distant. Aucun SQL de modification n'a été exécuté sur la base.

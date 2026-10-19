@@ -39,6 +39,8 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - [ ] Le compte B ajoute un commentaire; le commentaire apparaît sans rechargement.
 - [ ] Le nom du commentateur s'affiche lorsqu'un profil social lisible existe.
 - [ ] Une publication privée/non publiée ne fuit pas dans le fil public.
+- [ ] Un compte B ne peut ni modifier ni supprimer la publication publique du compte A; les écritures restent limitées à l'auteur ou au super-administrateur.
+- [ ] Une publication `public` en brouillon n'est pas lisible par le compte B via l'API directe.
 - [ ] Les erreurs RLS sont visibles sans casser le fil.
 
 ## 5. Groupes et événements
@@ -71,7 +73,23 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - [ ] Tester au moins un appareil/simulateur Android ou iOS et la version Web.
 - [ ] Consigner les erreurs et les corriger avant fusion ou déploiement.
 
-## 8. Sécurité et limites à vérifier
+## 8. Tests négatifs RLS obligatoires avant activation
+
+- [ ] Compte B demande à rejoindre un groupe privé : le statut reste `pending`.
+- [ ] Compte B tente de modifier directement sa propre adhésion de `pending` à `active` : l'opération doit être refusée.
+- [ ] Un administrateur du groupe approuve la demande; le compte B devient actif uniquement après cette approbation.
+- [ ] Un membre marqué `blocked` ne peut ni réactiver son adhésion, ni supprimer sa ligne pour se réinscrire lui-même; seul un administrateur peut lever le blocage.
+- [ ] Compte A s'inscrit à un événement : modifier directement `event_id` ou `user_id` sur la ligne d'inscription doit être refusé.
+- [ ] Compte A peut annuler sa propre inscription en ne modifiant que `status`.
+- [ ] Compte A ne peut pas réactiver une inscription si l'événement n'est plus publié ou s'il n'a plus accès à l'événement réservé aux membres.
+- [ ] Compte B ne peut pas déplacer son commentaire vers une publication privée/non publiée qu'il ne peut pas consulter.
+- [ ] Compte B ne peut pas modifier directement `post_id` ou `user_id` sur un commentaire; seul le corps du commentaire est modifiable par son propriétaire.
+- [ ] Compte B ne peut pas modifier ni supprimer les commentaires d'un autre utilisateur; les droits éventuels de modération sont testés séparément.
+- [ ] Un compte non connecté ne peut pas lire les données réservées au rôle `authenticated`.
+- [ ] Les rôles `anon` et `authenticated` n'ont aucun privilège `TRUNCATE` sur les tables sociales; le rôle `anon` n'a pas de privilèges directs sur ces tables.
+- [ ] Vérifier chaque scénario avec deux comptes de test distincts et conserver les erreurs RLS attendues comme preuves.
+
+## 9. Sécurité et limites à vérifier
 
 - La migration de lecture publique des profils/réactions/commentaires est une migration candidate; elle n'a pas été appliquée au Supabase distant.
 - Les conversations directes ne sont pas considérées comme implémentées dans cette tranche.

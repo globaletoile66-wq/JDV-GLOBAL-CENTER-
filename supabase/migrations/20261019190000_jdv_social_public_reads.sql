@@ -15,7 +15,18 @@ using (user_id = (select auth.uid()) or profile_status = 'active' or is_super_ad
 
 create policy social_profiles_insert on public.social_profiles
 for insert to authenticated
-with check (user_id = (select auth.uid()) or is_super_admin());
+with check (
+  (user_id = (select auth.uid()) or is_super_admin())
+  and exists (
+    select 1 from public.social_posts p
+    where p.id = social_comments.post_id
+      and (
+        p.author_user_id = (select auth.uid())
+        or (p.status = 'published' and p.visibility = 'public')
+        or is_super_admin()
+      )
+  )
+);
 
 create policy social_profiles_update on public.social_profiles
 for update to authenticated
@@ -80,6 +91,11 @@ with check (
 create policy social_reactions_delete on public.social_reactions
 for delete to authenticated
 using (user_id = (select auth.uid()) or is_super_admin());
+
+-- Keep comment ownership and post association immutable through the client.
+-- The UI may edit only the comment body; RLS still checks the target post.
+revoke update on table public.social_comments from authenticated;
+grant update (body) on table public.social_comments to authenticated;
 
 -- Comments are readable when their post is public/published, by the commenter,
 -- by the post author, or by the super-administrator.
