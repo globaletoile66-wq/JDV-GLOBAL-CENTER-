@@ -328,6 +328,13 @@ const moduleRoutes: Record<string, string> = {
   jdv_ai: '/ai',
   jdv_community: '/community',
   jdv_inventory: '/inventory',
+  jdv_services: '/service-marketplace',
+  jdv_events: '/events',
+  jdv_jobs: '/jobs',
+  jdv_legal: '/legal',
+  jdv_accounting: '/accounting',
+  jdv_hr: '/hr',
+  jdv_procurement: '/procurement',
 };
 
 const statusLabels: Record<string, string> = {
