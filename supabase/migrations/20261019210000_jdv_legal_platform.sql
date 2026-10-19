@@ -114,3 +114,17 @@ create policy "legal consultations requester create own"
 
 -- No public write policies for legal resources and no client-side publication/verification privileges.
 -- Consultation access for the selected professional and privileged moderation require dedicated audited policies/RPCs.
+
+drop policy if exists "legal consultations assigned professional read" on public.legal_consultation_requests;
+create policy "legal consultations assigned professional read"
+  on public.legal_consultation_requests for select to authenticated
+  using (
+    exists (
+      select 1 from public.legal_professionals p
+      where p.id = professional_id and p.user_id = auth.uid()
+        and p.verification_status = 'verified' and p.is_active = true
+    )
+  );
+
+-- A professional can only see requests explicitly assigned to their verified profile.
+-- Status transitions are intentionally not exposed to the client until an audited workflow is added.
