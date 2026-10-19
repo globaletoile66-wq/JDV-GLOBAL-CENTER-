@@ -71,7 +71,20 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - [ ] Tester au moins un appareil/simulateur Android ou iOS et la version Web.
 - [ ] Consigner les erreurs et les corriger avant fusion ou déploiement.
 
-## 8. Sécurité et limites à vérifier
+## 8. Tests négatifs RLS obligatoires avant activation
+
+- [ ] Compte B demande à rejoindre un groupe privé : le statut reste `pending`.
+- [ ] Compte B tente de modifier directement sa propre adhésion de `pending` à `active` : l'opération doit être refusée.
+- [ ] Un administrateur du groupe approuve la demande; le compte B devient actif uniquement après cette approbation.
+- [ ] Compte A s'inscrit à un événement : modifier directement `event_id` ou `user_id` sur la ligne d'inscription doit être refusé.
+- [ ] Compte A peut annuler sa propre inscription en ne modifiant que `status`.
+- [ ] Compte A ne peut pas réactiver une inscription si l'événement n'est plus publié ou s'il n'a plus accès à l'événement réservé aux membres.
+- [ ] Compte B ne peut pas déplacer son commentaire vers une publication privée/non publiée qu'il ne peut pas consulter.
+- [ ] Compte B ne peut pas modifier ni supprimer les commentaires d'un autre utilisateur; les droits éventuels de modération sont testés séparément.
+- [ ] Un compte non connecté ne peut pas lire les données réservées au rôle `authenticated`.
+- [ ] Vérifier chaque scénario avec deux comptes de test distincts et conserver les erreurs RLS attendues comme preuves.
+
+## 9. Sécurité et limites à vérifier
 
 - La migration de lecture publique des profils/réactions/commentaires est une migration candidate; elle n'a pas été appliquée au Supabase distant.
 - Les conversations directes ne sont pas considérées comme implémentées dans cette tranche.
