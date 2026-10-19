@@ -244,3 +244,15 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Une migration corrective distincte a été ajoutée : `20261019200000_jdv_social_private_group_membership_guard.sql`. Elle conserve la migration initiale immuable et limite l'auto-activation aux groupes publics ou aux adhésions privées déjà actives ; l'approbation d'une demande privée doit venir d'un administrateur du groupe.
 - **Risque toujours présent en production tant que la migration corrective n'est pas appliquée.** Elle n'a pas été appliquée au Supabase distant, conformément à la consigne de ne pas modifier la production sans validation isolée.
 - Test à effectuer dans un environnement isolé : un utilisateur non membre ne peut pas s'auto-ajouter à un groupe privé en statut `active`; une demande `pending` ne peut pas s'auto-activer; un administrateur du groupe peut approuver; les adhésions publiques continuent de fonctionner.
+
+### Résultats réels de CI observés le 19 octobre 2026
+- Exécution `JDV Social Web and Mobile validation` au commit `5e3b1230...` : vérification TypeScript Web réussie; build Web échoué au pré-rendu parce que `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` étaient absents.
+- Exécution Mobile au commit `2438f9ed...` : vérification TypeScript Mobile réussie, mais contrôle de compatibilité Expo échoué car `expo-status-bar`, `@types/react` et TypeScript ne correspondaient pas aux versions attendues par Expo SDK 58.
+- Après alignement des versions, le contrôle `expo install --check` a réussi. Le TypeScript Mobile a ensuite révélé l'absence des types Node pour `process.env`; `@types/node` a été ajouté. Les résultats du commit qui contient cette correction restent à confirmer.
+- Le workflow Web/Mobile a été ajusté pour utiliser des variables Supabase de repli non secrètes pendant le build lorsque les secrets ne sont pas configurés. Le résultat de compilation de cette version reste à confirmer.
+- Le workflow existant `Verifier le build` sur la branche par défaut a terminé avec succès au commit `5e640964...`; ce résultat est distinct des contrôles JDV Social et ne prouve pas que tous les tests sociaux sont réussis.
+
+### État de fusion GitHub — suivi
+- GitHub indique que la PR `#130` a été fusionnée le 19 octobre 2026 à 13:03:31 UTC. Aucune commande de fusion n'a été lancée dans cette session; la fusion a été constatée après coup lors de la vérification.
+- La branche par défaut pointe maintenant sur `5e640964...`. Les deux correctifs postérieurs à la tête fusionnée sont suivis dans la PR brouillon `#131` : alignement des versions Expo/TypeScript et configuration d'environnement de build.
+- La PR `#131` reste ouverte en brouillon et ne doit pas être fusionnée avant résultats CI concluants et revue. Aucune action de déploiement n'a été lancée.
