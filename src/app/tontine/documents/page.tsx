@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 type Tontine = { id: string; name: string; tontine_class: string; tontine_type: string };
 type TontineClass = { code: string; name: string; description: string };
 type BoardRow = { function_title: string; full_name: string; phone: string };
+type DocumentRow = { id: string; document_kind: string; original_filename: string; storage_path: string; status: string; created_at: string };
 const BUCKET = 'jdv-tontine-private';
 const DOC_KINDS = [
   ['creation_form', 'Fiche de création signée'],
@@ -38,6 +39,7 @@ export default function TontineDocumentsPage() {
   ]);
   const [docKind, setDocKind] = useState<(typeof DOC_KINDS)[number][0]>('creation_form');
   const [file, setFile] = useState<File | null>(null);
+  const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [role, setRole] = useState<'member' | 'beneficiary' | 'witness_1' | 'witness_2'>('member');
   const [party, setParty] = useState({ full_name: '', phone: '', country_code: 'BJ', identity_document_type: 'Carte nationale d’identité', identity_document_number_masked: '' });
   const [identityFile, setIdentityFile] = useState<File | null>(null);
@@ -64,6 +66,22 @@ export default function TontineDocumentsPage() {
 
   useEffect(() => { if (!loading && user) void load(); }, [loading, user, load]);
 
+  const loadDocuments = useCallback(async () => {
+    if (!user || !selected) { setDocuments([]); return; }
+    const result = await (supabase as any).from('tontine_documents').select('id,document_kind,original_filename,storage_path,status,created_at').eq('tontine_id', selected).order('created_at', { ascending: false }).limit(50);
+    if (result.error) setError((current) => current || 'Lecture du registre documentaire impossible : ' + result.error.message);
+    else setDocuments((result.data ?? []) as DocumentRow[]);
+  }, [selected, supabase, user]);
+
+  useEffect(() => { void loadDocuments(); }, [loadDocuments]);
+
+  async function downloadDocument(path: string) {
+    setError('');
+    const result = await supabase.storage.from(BUCKET).createSignedUrl(path, 60);
+    if (result.error || !result.data?.signedUrl) { setError('Accès au document refusé : ' + (result.error?.message || 'lien temporaire indisponible')); return; }
+    window.open(result.data.signedUrl, '_blank', 'noopener,noreferrer');
+  }
+
   async function uploadPrivateDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || !selected || !file) return;
@@ -87,6 +105,7 @@ export default function TontineDocumentsPage() {
       setError('Le fichier a été envoyé dans le stockage privé mais son registre n’a pas été créé : ' + saved.error.message + '. Contacte le support avant de renvoyer le même fichier.');
     } else {
       setNotice('Document envoyé dans l’espace privé. Il reste à vérifier par un responsable autorisé.');
+      await loadDocuments();
       setFile(null);
       const input = document.getElementById('tontine-document-file') as HTMLInputElement | null;
       if (input) input.value = '';
@@ -167,6 +186,7 @@ export default function TontineDocumentsPage() {
           <button disabled={busy || !selected || !file} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F28C28] p-3 font-bold text-[#0B1B3D] disabled:opacity-50"><Upload size={17}/> Envoyer le document</button>
         </form>
       </div>
+      <section className="mt-6 rounded-2xl border border-white/10 bg-white/[.04] p-5"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">Documents déposés</h2><span className="text-xs text-white/40">{documents.length} élément(s)</span></div><div className="mt-4 space-y-2">{documents.map((item) => <article key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 p-3"><div><p className="text-sm font-semibold">{item.original_filename}</p><p className="mt-1 text-xs text-white/45">{DOC_KINDS.find(([key]) => key === item.document_kind)?.[1] || item.document_kind} · {item.status} · {new Date(item.created_at).toLocaleDateString('fr-FR')}</p></div><button type="button" onClick={() => void downloadDocument(item.storage_path)} className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs"><Download size={14}/> Télécharger</button></article>)}{!documents.length && <p className="rounded-xl border border-dashed border-white/15 p-5 text-center text-sm text-white/40">Aucun document visible pour cette tontine.</p>}</div><p className="mt-3 text-xs text-white/35">Les liens de téléchargement expirent après 60 secondes et sont générés seulement après contrôle d’accès.</p></section>
       <form onSubmit={submitParty} className="mt-6 space-y-4 rounded-2xl border border-white/10 bg-white/[.04] p-5">
         <div className="flex items-center gap-2"><ShieldCheck className="text-[#F28C28]"/><h2 className="text-lg font-bold">Identité du bénéficiaire ou d’un témoin</h2></div>
         <p className="text-sm text-white/50">Soumets chaque personne séparément. Chaque membre fournit sa pièce; le bénéficiaire et les deux témoins fournissent aussi leurs pièces et téléphones. Les témoins doivent donner leur accord; n’enregistre pas leurs données sans leur consentement.</p>
