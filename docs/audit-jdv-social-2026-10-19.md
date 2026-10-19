@@ -293,3 +293,7 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 
 - La migration de lecture sociale limite désormais les privilèges SQL UPDATE de `social_comments` à la colonne `body` pour le rôle `authenticated`. L'association `post_id` et l'auteur `user_id` ne peuvent ainsi pas être modifiés par les clients via une mise à jour ordinaire.
 - La checklist demande de vérifier explicitement le refus de changement de `post_id` et `user_id`. Ce correctif est candidat, non appliqué à la production.
+
+### Cohérence UI pour les adhésions bloquées
+- Les pages Web de liste et de détail des groupes indiquent désormais clairement le statut `blocked` et n'affichent plus de bouton permettant à l'utilisateur bloqué de tenter une nouvelle adhésion depuis la page de détail.
+- Le contrôle côté interface complète la protection RLS candidate; la base reste l'autorité de sécurité et les migrations ne sont toujours pas appliquées à distance.
