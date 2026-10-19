@@ -24,7 +24,7 @@ export default function CreateSellerStorePage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { router.replace('/auth/login'); return; }
+    if (!user) { router.replace('/auth/login?redirect=%2Fmarketplace%2Fseller%2Fcreate'); return; }
     let active = true;
     (async () => {
       const [sellerResult, countryResult] = await Promise.all([
