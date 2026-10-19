@@ -297,3 +297,9 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 ### Cohérence UI pour les adhésions bloquées
 - Les pages Web de liste et de détail des groupes indiquent désormais clairement le statut `blocked` et n'affichent plus de bouton permettant à l'utilisateur bloqué de tenter une nouvelle adhésion depuis la page de détail.
 - Le contrôle côté interface complète la protection RLS candidate; la base reste l'autorité de sécurité et les migrations ne sont toujours pas appliquées à distance.
+
+### Risque critique confirmé sur les publications — migration candidate ajoutée
+- La lecture de `pg_policies` a montré que la politique distante `social_posts_access` est de type `ALL` et autorise dans `USING` les lignes dont `visibility = 'public'`. Comme les politiques `DELETE` évaluent `USING` sans `WITH CHECK`, un utilisateur authentifié pourrait potentiellement supprimer une publication publique appartenant à quelqu'un d'autre. La condition de lecture ne filtre pas non plus le statut `published`.
+- Une migration candidate séparée, `20261019220000_jdv_social_posts_policy_guard.sql`, remplace cette politique globale par des règles distinctes : lecture de publications publiques uniquement si publiées (ou propres/admin), et INSERT/UPDATE/DELETE limités à l'auteur ou au super-administrateur.
+- La checklist demande maintenant de tester la suppression/modification interdite d'une publication d'autrui et la lecture directe d'un brouillon public.
+- **Important :** cette faille potentielle est observée dans les politiques actuellement présentes sur Supabase. La migration corrective n'est pas appliquée à la production; elle doit être testée sur un environnement isolé avant activation. Aucune écriture destructive n'a été tentée.
