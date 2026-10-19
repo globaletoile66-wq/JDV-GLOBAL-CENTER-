@@ -556,7 +556,7 @@ export default function App() {
       setMessage('Définissez EXPO_PUBLIC_JDV_WEB_URL pour ouvrir la messagerie sécurisée.');
       return;
     }
-    const baseUrl = webSpaceUrl.replace(/\\/+$/, '');
+    const baseUrl = webSpaceUrl.replace(/\/+$/, '');
     void openUrl(`${baseUrl}/social/messages`);
   };
 
