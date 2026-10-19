@@ -115,10 +115,12 @@ $;
 
 revoke all on function public.social_is_group_member(uuid) from public, anon;
 revoke all on function public.social_is_group_admin(uuid) from public, anon;
-revoke all on function public.social_is_group_public(uuid) from public, anon;\nrevoke all on function public.social_has_group_request(uuid) from public, anon;
+revoke all on function public.social_is_group_public(uuid) from public, anon;
+revoke all on function public.social_has_group_request(uuid) from public, anon;
 grant execute on function public.social_is_group_member(uuid) to authenticated;
 grant execute on function public.social_is_group_admin(uuid) to authenticated;
-grant execute on function public.social_is_group_public(uuid) to authenticated;\ngrant execute on function public.social_has_group_request(uuid) to authenticated;
+grant execute on function public.social_is_group_public(uuid) to authenticated;
+grant execute on function public.social_has_group_request(uuid) to authenticated;
 
 alter table public.social_groups enable row level security;
 alter table public.social_group_memberships enable row level security;
