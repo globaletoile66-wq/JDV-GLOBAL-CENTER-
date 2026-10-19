@@ -45,6 +45,12 @@ jobs:
       - name: Check Web types
         run: npm run type-check
       - name: Build Web application
+        env:
+          # Public client config is optional for CI compilation. Prefer repository
+          # secrets when configured; otherwise use non-secret placeholders so
+          # prerendering can construct the Supabase client without credentials.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-for-ci-build' }}
         run: npm run build
 
   mobile-typecheck:
