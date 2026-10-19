@@ -88,3 +88,21 @@ create trigger jdv_service_offerings_updated_at before update on public.jdv_serv
 drop trigger if exists jdv_service_requests_updated_at on public.jdv_service_requests;
 create trigger jdv_service_requests_updated_at before update on public.jdv_service_requests
   for each row execute function public.jdv_services_set_updated_at();
+
+-- Prevent participant or parent-record reassignment through broad UPDATE grants.
+create or replace function public.jdv_services_guard_request_identity()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.offering_id is distinct from old.offering_id
+     or new.requester_id is distinct from old.requester_id
+     or new.message is distinct from old.message then
+    raise exception 'Service request identity fields are immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists jdv_service_requests_guard_identity on public.jdv_service_requests;
+create trigger jdv_service_requests_guard_identity
+before update on public.jdv_service_requests
+for each row execute function public.jdv_services_guard_request_identity();
