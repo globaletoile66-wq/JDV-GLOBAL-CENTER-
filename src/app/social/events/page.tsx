@@ -117,7 +117,7 @@ export default function SocialEventsPage() {
         </header>
         {!user ? <section className="mt-6 rounded-2xl border border-white/10 p-6"><p className="text-sm text-white/60">Connectez-vous pour créer un événement ou vous inscrire.</p><Link href="/auth/login" className="mt-4 inline-flex rounded-xl bg-[#F28C28] px-4 py-2 font-bold text-[#0B1B3D]">Se connecter</Link></section> : <div className="mt-6 grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
           <section className="h-fit rounded-2xl border border-white/10 bg-white/[.04] p-5">
-            <h2 className="flex items-center gap-2 text-lg font-bold"><CalendarDays size={19} className="text-[#F28C28}"/> Créer un événement</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold"><CalendarDays size={19} className="text-[#F28C28]"/> Créer un événement</h2>
             <form onSubmit={createEvent} className="mt-4 space-y-4">
               <div><label htmlFor="event-title" className={labelClass}>Titre *</label><input id="event-title" required minLength={3} maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} className={fieldClass} placeholder="Ex. Forum des entrepreneurs africains"/></div>
               <div><label htmlFor="event-description" className={labelClass}>Description</label><textarea id="event-description" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={3000} rows={3} className={fieldClass} placeholder="Programme, intervenants, informations utiles…"/></div>
@@ -128,7 +128,7 @@ export default function SocialEventsPage() {
             </form>
           </section>
           <section className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
-            <h2 className="flex items-center gap-2 text-lg font-bold"><Users size={19} className="text-[#F28C28}"/> Agenda communautaire <span className="rounded-full bg-white/10 px-2 py-1 text-xs">{events.length}</span></h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold"><Users size={19} className="text-[#F28C28]"/> Agenda communautaire <span className="rounded-full bg-white/10 px-2 py-1 text-xs">{events.length}</span></h2>
             {events.length === 0 && !busy ? <p className="mt-4 rounded-xl border border-dashed border-white/15 p-7 text-center text-sm text-white/45">Aucun événement publié pour le moment.</p> : <div className="mt-4 space-y-3">{events.map((item) => {
               const registration = registrations.find((row) => row.event_id === item.id);
               const registered = registration?.status === 'registered';
