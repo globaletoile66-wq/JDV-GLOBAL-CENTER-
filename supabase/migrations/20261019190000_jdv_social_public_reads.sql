@@ -48,12 +48,34 @@ using (
 
 create policy social_reactions_insert on public.social_reactions
 for insert to authenticated
-with check (user_id = (select auth.uid()) or is_super_admin());
+with check (
+  (user_id = (select auth.uid()) or is_super_admin())
+  and exists (
+    select 1 from public.social_posts p
+    where p.id = social_reactions.post_id
+      and (
+        p.author_user_id = (select auth.uid())
+        or (p.status = 'published' and p.visibility = 'public')
+        or is_super_admin()
+      )
+  )
+);
 
 create policy social_reactions_update on public.social_reactions
 for update to authenticated
 using (user_id = (select auth.uid()) or is_super_admin())
-with check (user_id = (select auth.uid()) or is_super_admin());
+with check (
+  (user_id = (select auth.uid()) or is_super_admin())
+  and exists (
+    select 1 from public.social_posts p
+    where p.id = social_reactions.post_id
+      and (
+        p.author_user_id = (select auth.uid())
+        or (p.status = 'published' and p.visibility = 'public')
+        or is_super_admin()
+      )
+  )
+);
 
 create policy social_reactions_delete on public.social_reactions
 for delete to authenticated
