@@ -106,3 +106,28 @@ drop trigger if exists jdv_service_requests_guard_identity on public.jdv_service
 create trigger jdv_service_requests_guard_identity
 before update on public.jdv_service_requests
 for each row execute function public.jdv_services_guard_request_identity();
+
+
+-- A provider may edit an offer, but cannot transfer ownership or rewrite its creation history.
+create or replace function public.jdv_services_guard_offering_identity()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.provider_id is distinct from old.provider_id
+     or new.business_id is distinct from old.business_id
+     or new.created_at is distinct from old.created_at then
+    raise exception 'Service offering ownership and creation metadata are immutable';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists jdv_service_offerings_guard_identity on public.jdv_service_offerings;
+create trigger jdv_service_offerings_guard_identity
+before update on public.jdv_service_offerings
+for each row execute function public.jdv_services_guard_offering_identity();
+
+-- Request participants and the original request content are immutable.
+-- Provider responses, quote amounts and workflow status remain editable by the provider under RLS.
+revoke all on function public.jdv_services_set_updated_at() from public, anon, authenticated;
+revoke all on function public.jdv_services_guard_request_identity() from public, anon, authenticated;
+revoke all on function public.jdv_services_guard_offering_identity() from public, anon, authenticated;

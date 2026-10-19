@@ -14,9 +14,9 @@
 | JDV SOCIAL | Existant à auditer | Les routes et tables sociales existantes sont réutilisées; tests de non-régression requis. |
 | JDV IA | À auditer | Vérifier les intégrations et secrets avant activation. |
 | JDV COMMUNITY | Première route créée | `/community` lit les groupes publics de `social_groups`; création et adhésion restent dans le workflow partagé `/social/groups`. |
-| JDV SERVICES | Première marketplace créée | `/service-marketplace` utilise une migration préparée pour les offres et demandes de devis; migration non appliquée à Supabase distant. La compilation n'a pas encore été exécutée. `/services` reste le catalogue général. |
+| JDV SERVICES | Marketplace initiale + garde-fous SQL | `/service-marketplace` permet la publication et les demandes de devis. La migration préparée verrouille désormais l’identité du prestataire et l’historique de création; migration non appliquée à Supabase distant. L’inbox prestataire et les réponses de devis restent à compléter. `/services` reste le catalogue général. |
 | JDV EVENTS | Route de module créée | `/events` réutilise le workflow d'événements existant sous `/social/events`; la billetterie complète doit être auditée séparément. |
-| JDV JOBS | UI et migration préparées | `/jobs` propose consultation, publication et candidature. La migration `20261019190000_jdv_jobs_marketplace.sql` doit être relue, testée en préproduction puis appliquée avec autorisation explicite. La compilation n'a pas encore été exécutée. |
+| JDV JOBS | Marketplace initiale + fourchette salariale | `/jobs` propose consultation, publication, recherche et candidature; le formulaire prend maintenant en charge le salaire minimum/maximum en XOF. La migration préparée empêche la réaffectation du propriétaire d’une offre et verrouille l’identité d’une candidature. Migration non appliquée à Supabase distant. La compilation reste à exécuter. |
 | JDV LEGAL | Écran d’entrée ajouté | `/legal` présente le périmètre et les accès existants sans déposer ni exposer de documents privés. Le stockage privé, les rôles et les dossiers restent à construire/tester. |
 | JDV ACCOUNTING | Écran d’entrée ajouté | `/accounting` relie factures, rapports et JDV PAY; aucun solde ou journal fictif n’est calculé. Les rapprochements et clôtures restent à développer. |
 | JDV HR | Écran d’entrée ajouté | `/hr` distingue le parcours public JDV JOBS des données RH privées. Les dossiers collaborateurs et les permissions RH restent à construire/tester. |
@@ -63,3 +63,14 @@ La correspondance visuelle est connue. Un paquet prêt à copier a été prépar
 - Aucun test de compilation n’est déclaré réussi : aucun workflow de build n’a été observé sur la branche de travail après ces commits. Le contrôle Supabase Preview de la PR est ignoré car la branche Supabase correspondante n’existe pas.
 - La copie des 18 PNG d’origine n’est toujours pas confirmée dans le dépôt; les chemins configurés ne doivent pas être considérés comme fonctionnels tant que les fichiers binaires ne sont pas présents.
 
+
+
+## Suivi de construction — mise à jour du 19 octobre 2026
+
+- PR de consolidation initiale : https://github.com/globaletoile66-wq/JDV-GLOBAL-CENTER-/pull/135 (fusionnée dans la branche de référence).
+- PR de durcissement JOBS/SERVICES : https://github.com/globaletoile66-wq/JDV-GLOBAL-CENTER-/pull/136 (brouillon, non fusionnée).
+- Changements du lot suivant : champs de salaire sur JDV JOBS; déclencheurs SQL pour empêcher la réaffectation du propriétaire d’une offre et d’une prestation; privilèges directs révoqués sur les fonctions auxiliaires de déclencheurs.
+- Le projet Supabase distant est actif. Les migrations JOBS/SERVICES ne figurent pas dans l’historique distant et n’ont pas été appliquées.
+- Le statut CI du dernier commit n’a pas renvoyé de contrôles ni d’exécution de workflow vérifiable; la réussite de `npm run type-check` et `npm run build` n’est donc pas confirmée.
+- L’audit Supabase du 19 octobre a signalé 7 tables avec RLS activée sans politique et de nombreux avertissements sur des fonctions SECURITY DEFINER accessibles aux rôles API. Ces alertes doivent être examinées individuellement et sans changements aveugles, notamment pour préserver les modules existants et l’ancien CRM.
+- Étape obligatoire avant activation des migrations : environnement de préproduction jetable, tests d’accès anonymes/candidat/recruteur/client/prestataire, tests de non-régression, puis décision explicite avant toute application distante.
