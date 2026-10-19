@@ -238,3 +238,9 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - La branche de travail a été comparée à la branche par défaut `supabase-sync-2026-09-24` : GitHub indique une divergence (65 commits en avance et 1 commit en retard au moment du contrôle).
 - Les chemins de fichiers remontés dans cette comparaison concernent JDV Social, Mobile, les workflows, les migrations sociales, la documentation, le lockfile racine et la configuration TypeScript. Aucun chemin de l'ancien CRM n'apparaît dans cette liste.
 - Aucune fusion ou rebase automatique n'a été effectué : la divergence doit être revue avant intégration.
+
+### Revue de sécurité RLS — adhésions aux groupes privés
+- Le contrôle en lecture seule des politiques réellement actives dans Supabase a confirmé que la règle actuelle `social_group_memberships_update` autorise un utilisateur à passer lui-même son statut à `active`, même pour un groupe privé. Une demande `pending` pourrait donc être approuvée sans intervention d'un administrateur du groupe.
+- Une migration corrective distincte a été ajoutée : `20261019200000_jdv_social_private_group_membership_guard.sql`. Elle conserve la migration initiale immuable et limite l'auto-activation aux groupes publics ou aux adhésions privées déjà actives ; l'approbation d'une demande privée doit venir d'un administrateur du groupe.
+- **Risque toujours présent en production tant que la migration corrective n'est pas appliquée.** Elle n'a pas été appliquée au Supabase distant, conformément à la consigne de ne pas modifier la production sans validation isolée.
+- Test à effectuer dans un environnement isolé : un utilisateur non membre ne peut pas s'auto-ajouter à un groupe privé en statut `active`; une demande `pending` ne peut pas s'auto-activer; un administrateur du groupe peut approuver; les adhésions publiques continuent de fonctionner.
