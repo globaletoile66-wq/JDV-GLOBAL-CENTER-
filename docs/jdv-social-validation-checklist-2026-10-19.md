@@ -47,6 +47,8 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - [ ] Le compte A rejoint un groupe public.
 - [ ] Pour un groupe privé, la demande reste en attente et n'est pas présentée comme une adhésion confirmée.
 - [ ] L'adhésion n'est pas dupliquée après plusieurs clics.
+- [ ] Le membre peut quitter un groupe actif.
+- [ ] Le membre peut annuler une demande en attente; l'historique passe à `left` sans suppression de ligne.
 - [ ] Les événements publiés apparaissent dans l'ordre chronologique.
 - [ ] Le compte A s'inscrit puis annule son inscription à un événement.
 - [ ] Les statuts et droits d'accès sont vérifiés avec les règles RLS réelles.
