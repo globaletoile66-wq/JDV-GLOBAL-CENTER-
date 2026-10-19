@@ -156,7 +156,9 @@ export default function TontineConcepteurPage() {
     }
     setSaving(false);
     if (createError || !created) {
-      setError('La création a été refusée par la base de données : ' + (createError?.message || 'réponse vide') + '. Aucune cotisation ni aucun paiement n’a été lancé.');
+      setError(created
+        ? 'Le brouillon a bien été créé, mais sa classe n’a pas pu être enregistrée : ' + (createError?.message || 'erreur inconnue') + '. Aucun paiement n’a été lancé; ouvre Documents & identités et contacte le support avant de continuer.'
+        : 'La création a été refusée par la base de données : ' + (createError?.message || 'réponse vide') + '. Aucune cotisation ni aucun paiement n’a été lancé.');
       return;
     }
     setSuccess(tontineType === 'individual'
@@ -177,7 +179,7 @@ export default function TontineConcepteurPage() {
 
   return <main className="min-h-screen bg-[#0B1B3D] p-5 text-white sm:p-8">
     <div className="mx-auto max-w-7xl">
-      <Link href="/tontine" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> Retour à JDV TONTINE</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3"><Link href="/tontine" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> Retour à JDV TONTINE</Link><Link href="/tontine/documents" className="rounded-xl border border-white/15 px-4 py-2 text-sm">Documents, bureau et identités</Link></div>
       <header className="mt-6 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
         <div className="flex items-start gap-4"><div className="rounded-2xl bg-emerald-400/10 p-3 text-emerald-300"><ShieldCheck size={25}/></div><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#F28C28]">Espace concepteur · accès indépendant</p><h1 className="mt-2 text-3xl font-black">Atelier de vérification — Tontine</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">Créer des tontines de test en brouillon, vérifier les paramètres et examiner les tontines existantes. La création ne lance ni cycle, ni cotisation, ni paiement.</p></div></div>
       </header>
