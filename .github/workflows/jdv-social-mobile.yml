@@ -3,7 +3,7 @@ name: JDV Social Mobile CI
 on:
   push:
     branches:
-      - feat/jdv-social-cross-platform-2026-10-19
+      - feat/jdv-social-foundation-2026-10-19
     paths:
       - "mobile/**"
       - ".github/workflows/jdv-social-mobile.yml"
