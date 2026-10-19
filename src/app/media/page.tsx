@@ -10,7 +10,7 @@ type Channel = { id: string; name: string; channel_type: string; status: string 
 type MediaContent = { id: string; channel_id: string; title: string; slug: string; content_type: string; body: string | null; media_url: string | null; published_at: string | null; status: string; created_at: string };
 const inputClass = 'w-full rounded-xl border border-white/10 bg-[#09152f] px-3 py-3 text-sm text-white outline-none focus:border-[#F28C28]';
 const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50';
-const statusLabels: Record<string, string> = { draft: 'Brouillon', review: 'À vérifier', published: 'Publié', archived: 'Archivé' };
+const statusLabels: Record<string, string> = { draft: 'Brouillon', scheduled: 'Programmé', published: 'Publié', archived: 'Archivé' };
 
 function safeHttpUrl(value: string) {
   try { const url = new URL(value); return url.protocol === 'https:' || url.protocol === 'http:'; } catch { return false; }
@@ -55,7 +55,11 @@ export default function MediaPage() {
 
   useEffect(() => { if (!loading) void load(); }, [loading, load]);
 
-  const filtered = contents.filter((item) => [item.title, item.content_type, item.body, item.status, channels.find((channel) => channel.id === item.channel_id)?.name].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const publishedCount = contents.filter((item) => item.status === 'published').length;
+  const draftCount = contents.filter((item) => item.status === 'draft').length;
+  const scheduledCount = contents.filter((item) => item.status === 'scheduled').length;
+  const activeChannelsCount = channels.filter((channel) => channel.status === 'active').length;
+  const filtered = contents.filter((item) => [item.title, item.content_type, item.body, item.status, channels.find((channel) => channel.id === item.channel_id)?.name].join(' ').toLowerCase().includes(query.trim().toLowerCase()));
 
   const createDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,7 +85,7 @@ export default function MediaPage() {
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center justify-between gap-3"><Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Accueil</Link><button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV MEDIA</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Gérez les contenus de vos chaînes accessibles et préparez des brouillons sans publication automatique.</p></div><div className="rounded-2xl border border-white/10 px-5 py-4"><div className="text-xs text-white/40">Contenus accessibles</div><div className="mt-1 text-2xl font-bold">{contents.length}</div></div></div>
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV MEDIA</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Gérez les chaînes, préparez vos contenus éditoriaux et suivez leur état. La création reste en brouillon : aucune publication n’est déclenchée automatiquement.</p></div><div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-2xl border border-white/10 px-4 py-3"><div className="text-xs text-white/40">Chaînes actives</div><div className="mt-1 text-2xl font-bold">{activeChannelsCount}</div></div><div className="rounded-2xl border border-white/10 px-4 py-3"><div className="text-xs text-white/40">Brouillons</div><div className="mt-1 text-2xl font-bold">{draftCount}</div></div><div className="rounded-2xl border border-white/10 px-4 py-3"><div className="text-xs text-white/40">Programmés</div><div className="mt-1 text-2xl font-bold">{scheduledCount}</div></div><div className="rounded-2xl border border-white/10 px-4 py-3"><div className="text-xs text-white/40">Publiés</div><div className="mt-1 text-2xl font-bold">{publishedCount}</div></div></div></div>
           {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
           {message && <div role="status" className="mt-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-4 text-sm text-[#F28C28]">{message}</div>}
           {!user ? <p className="mt-7 rounded-2xl border border-white/10 p-6 text-sm text-white/60">Connectez-vous pour consulter les contenus de votre organisation et créer des brouillons.</p> : <div className="mt-7 grid gap-6 lg:grid-cols-[.8fr_1.2fr]">

@@ -65,6 +65,18 @@ La correspondance visuelle est connue. Un paquet prêt à copier a été prépar
 
 
 
+## JDV MEDIA — cadrage opérationnel du 19 octobre 2026
+
+Le module média réutilise le schéma existant `media_channels`, `media_contents`, `media_categories`, `media_content_categories` et `media_content_metrics`. Aucun nouveau schéma distant n'a été appliqué.
+
+- La route `/media` est un espace de travail authentifié : création de brouillons, recherche et consultation des contenus accessibles par les politiques Supabase existantes.
+- Le tableau de bord affiche désormais des compteurs calculés à partir des données réellement accessibles : chaînes actives, brouillons, contenus programmés et contenus publiés.
+- Les libellés d'état correspondent aux états SQL documentés (`draft`, `scheduled`, `published`, `archived`) ; aucun état `review` n'est présenté comme s'il existait dans le schéma actuel.
+- La création d'un contenu ne déclenche pas de publication. Les compteurs sont des décomptes de l'échantillon chargé (limite actuelle de 100 contenus), pas des statistiques globales garanties.
+- À construire ensuite : workflow de soumission/validation avec autorisations serveur, véritable calendrier de diffusion (le schéma actuel ne définit pas de champ de programmation), page publique des contenus publiés avec politique RLS explicitement conçue, gestion des catégories, métriques fiables et stockage média contrôlé.
+- Avant d'exposer des contenus au public : définir et tester les règles de lecture anonyme des seuls contenus publiés, sans donner accès aux brouillons, aux données d'organisation ni aux métriques internes.
+- Aucune migration distante, publication automatique, fusion ou mise en production n'est réalisée par cette étape.
+
 ## Suivi de construction — mise à jour du 19 octobre 2026
 
 - PR de consolidation initiale : https://github.com/globaletoile66-wq/JDV-GLOBAL-CENTER-/pull/135 (fusionnée dans la branche de référence).

@@ -21,6 +21,7 @@ export default function InventoryPage() {
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
+    if (!user) { setRows([]); setLoading(false); return; }
     const { data, error: loadError } = await supabase.from('stocks')
       .select('id,quantity,reserved_quantity,minimum_quantity,updated_at,article:articles(id,code,name,unit,category)')
       .order('updated_at', { ascending: false }).limit(500);
@@ -29,9 +30,13 @@ export default function InventoryPage() {
       setError('Les stocks ne peuvent pas être chargés. Vérifiez votre accès organisationnel et les autorisations Supabase.');
     } else setRows((data ?? []) as unknown as StockRow[]);
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, user]);
 
-  useEffect(() => { if (!authLoading && user) void load(); else if (!authLoading) setLoading(false); }, [authLoading, user, load]);
+  useEffect(() => {
+    if (authLoading) return;
+    if (user) void load();
+    else { setRows([]); setError(''); setQuery(''); setLoading(false); }
+  }, [authLoading, user, load]);
 
   const filtered = rows.filter((row) => [row.article?.name ?? '', row.article?.code ?? '', row.article?.category ?? ''].some((v) => v.toLowerCase().includes(query.toLowerCase())));
   const lowStock = rows.filter((row) => Number(row.quantity) - Number(row.reserved_quantity) <= Number(row.minimum_quantity));
