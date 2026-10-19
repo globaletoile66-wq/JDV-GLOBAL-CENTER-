@@ -153,9 +153,24 @@ export default function App() {
           }
           if (commentsResult.error) setMessage((current) => current || 'Les commentaires ne peuvent pas être chargés.');
           else {
+            const comments = (commentsResult.data ?? []) as SocialComment[];
             const lookup: Record<string, SocialComment[]> = {};
-            for (const item of (commentsResult.data ?? []) as SocialComment[]) lookup[item.post_id] = [...(lookup[item.post_id] ?? []), item];
+            for (const item of comments) lookup[item.post_id] = [...(lookup[item.post_id] ?? []), item];
             setCommentsByPost(lookup);
+
+            // Include commenters in the author map so their names render beside comments.
+            const commenterIds = Array.from(new Set(comments.map((item) => item.user_id).filter((id) => !ids.includes(id))));
+            if (commenterIds.length) {
+              const commenterProfiles = await supabase
+                .from('social_profiles')
+                .select('user_id,username,display_name,bio')
+                .in('user_id', commenterIds);
+              if (!commenterProfiles.error) {
+                const additions: Record<string, SocialProfile> = {};
+                for (const item of (commenterProfiles.data ?? []) as SocialProfile[]) additions[item.user_id] = item;
+                setSocialAuthors((current) => ({ ...current, ...additions }));
+              }
+            }
           }
         } else { setSocialAuthors({}); setMyReactions({}); }
       }
