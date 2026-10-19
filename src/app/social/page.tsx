@@ -134,8 +134,8 @@ export default function SocialPage() {
   const toggleFollow = async (authorUserId: string) => {
     if (!user || authorUserId === user.id) return;
     setActingOn(authorUserId); setError(''); setMessage('');
-    const existing = follows.find((item) => item.following_user_id === authorUserId && item.follower_user_id === user.id && item.status === 'active');
-    if (existing) {
+    const existing = follows.find((item) => item.following_user_id === authorUserId && item.follower_user_id === user.id);
+    if (existing?.status === 'active') {
       const { error: deleteError } = await supabase.from('social_follows').delete().eq('follower_user_id', user.id).eq('following_user_id', authorUserId);
       if (deleteError) setError(deleteError.message);
       else setFollows((current) => current.filter((item) => item.following_user_id !== authorUserId));
