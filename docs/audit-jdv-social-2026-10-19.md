@@ -285,3 +285,8 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 ### Renforcement de la checklist de tests
 - La checklist Web + Mobile inclut désormais des scénarios négatifs explicites pour l'auto-approbation d'une adhésion privée, la modification de `event_id`/`user_id`, la réactivation d'inscription sans accès valide, le déplacement de commentaires vers des publications privées et les accès anonymes.
 - Ces tests sont définis mais non exécutés sur la base distante. Ils doivent être joués sur un environnement isolé avec deux comptes de test avant d'approuver les migrations RLS.
+
+### Protection complémentaire des membres bloqués
+- La revue de l'interface groupes a révélé qu'un membre `blocked` pouvait tenter de réactiver sa propre ligne ou de la supprimer puis de se réinscrire, si les politiques le permettaient.
+- La migration candidate `20261019200000_jdv_social_private_group_membership_guard.sql` a été renforcée : les mises à jour et suppressions de sa propre ligne sont interdites lorsque le statut courant est `blocked`; un administrateur du groupe conserve la capacité de gérer cette ligne.
+- Un scénario négatif correspondant a été ajouté à la checklist. Correctif non appliqué à la base distante; validation isolée toujours nécessaire.
