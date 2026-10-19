@@ -228,3 +228,8 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Un second workflow `jdv-social-mobile.yml` contenait encore le nom d'une ancienne branche (`feat/jdv-social-cross-platform-2026-10-19`) pour les déclenchements `push`.
 - Son déclencheur a été aligné sur la branche active `feat/jdv-social-foundation-2026-10-19`. Il ajoute aux vérifications Mobile le contrôle de compatibilité Expo et l'export Web Expo.
 - Les workflows sont configurés, mais leurs étapes ne sont pas déclarées réussies tant qu'un résultat GitHub Actions vérifiable n'est pas disponible.
+
+### Cohérence des dépendances (contrôle statique)
+- Le `package-lock.json` racine utilise le format lockfile v3 et les entrées `dependencies` / `devDependencies` correspondent exactement aux versions déclarées dans `package.json` au moment de l'inspection.
+- Le dossier Mobile déclare 9 dépendances et ne contient pas de `mobile/package-lock.json`; son installation CI n'est donc pas verrouillée au même niveau que l'application Web.
+- Contrôle statique uniquement : aucune installation de paquets, compilation ou export Expo n'a été exécuté dans cette vérification.
