@@ -31,6 +31,7 @@ export default function App() {
   const [message, setMessage] = useState('');
   const [preferences, setPreferences] = useState<Record<string, Preference>>({});
   const [preferencesBusy, setPreferencesBusy] = useState(false);
+  const [preferenceSaving, setPreferenceSaving] = useState('');
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -53,20 +54,25 @@ export default function App() {
       return;
     }
     setPreferencesBusy(true);
-    const { data, error } = await supabase
-      .from('social_app_preferences')
-      .select('app_key,is_added,is_visible,sort_order,category,notifications_enabled')
-      .eq('user_id', session.user.id)
-      .eq('is_added', true);
-    if (error) {
-      setMessage('Connexion active, mais les préférences ne peuvent pas être chargées. Vérifiez les droits RLS et la connexion réseau.');
-    } else {
-      const next: Record<string, Preference> = {};
-      for (const item of (data ?? []) as Preference[]) next[item.app_key] = item;
-      setPreferences(next);
-      setMessage('');
+    try {
+      const { data, error } = await supabase
+        .from('social_app_preferences')
+        .select('app_key,is_added,is_visible,sort_order,category,notifications_enabled')
+        .eq('user_id', session.user.id)
+        .eq('is_added', true);
+      if (error) {
+        setMessage('Connexion active, mais les préférences ne peuvent pas être chargées. Vérifiez les droits RLS et la connexion réseau.');
+      } else {
+        const next: Record<string, Preference> = {};
+        for (const item of (data ?? []) as Preference[]) next[item.app_key] = item;
+        setPreferences(next);
+        setMessage('');
+      }
+    } catch {
+      setMessage('Impossible de joindre Supabase pour charger les préférences. Réessayez.');
+    } finally {
+      setPreferencesBusy(false);
     }
-    setPreferencesBusy(false);
   }, [session?.user.id]);
 
   useEffect(() => { void loadPreferences(); }, [loadPreferences]);
@@ -101,31 +107,59 @@ export default function App() {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) setMessage(error.message);
+    setBusy(true);
+    setMessage('');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) setMessage(error.message);
+      else setMessage('Vous êtes déconnecté.');
+    } catch {
+      setMessage('La déconnexion a échoué. Vérifiez votre connexion puis réessayez.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const toggleVisibility = async (app: SocialApp) => {
-    if (!session) return;
+    if (!session || preferenceSaving) return;
     const current = preferences[app.key];
     const next: Preference = {
       app_key: app.key,
+      is_added: true,
       is_visible: current ? !current.is_visible : false,
       sort_order: current?.sort_order ?? apps.findIndex((item) => item.key === app.key),
       category: current?.category ?? 'Réseaux sociaux',
       notifications_enabled: current?.notifications_enabled ?? true,
     };
+    setPreferenceSaving(app.key);
+    setMessage('');
     setPreferences((previous) => ({ ...previous, [app.key]: next }));
-    const { error } = await supabase.from('social_app_preferences').upsert({
-      user_id: session.user.id,
-      is_added: true,
-      ...next,
-    }, { onConflict: 'user_id,app_key' });
-    if (error) {
-      setPreferences((previous) => ({ ...previous, [app.key]: current ?? { ...next, is_visible: true } }));
-      setMessage('Impossible d’enregistrer cette préférence. Vérifiez la connexion et les politiques RLS.');
-    } else {
-      setMessage('Préférence enregistrée et synchronisée avec Supabase.');
+    try {
+      const { error } = await supabase.from('social_app_preferences').upsert({
+        user_id: session.user.id,
+        ...next,
+      }, { onConflict: 'user_id,app_key' });
+      if (error) {
+        setPreferences((previous) => {
+          const restored = { ...previous };
+          if (current) restored[app.key] = current;
+          else delete restored[app.key];
+          return restored;
+        });
+        setMessage('Impossible d’enregistrer cette préférence. Vérifiez la connexion et les politiques RLS.');
+      } else {
+        setMessage('Préférence enregistrée et synchronisée avec Supabase.');
+      }
+    } catch {
+      setPreferences((previous) => {
+        const restored = { ...previous };
+        if (current) restored[app.key] = current;
+        else delete restored[app.key];
+        return restored;
+      });
+      setMessage('Erreur réseau : la préférence n’a pas pu être enregistrée.');
+    } finally {
+      setPreferenceSaving('');
     }
   };
 
@@ -200,8 +234,8 @@ export default function App() {
               <View key={app.key} style={[styles.appRow, !visible && styles.appHidden]}>
                 <View style={[styles.appMark, { backgroundColor: app.color }]} />
                 <Text style={styles.appName}>{app.name}</Text>
-                {session && <Pressable accessibilityRole="button" onPress={() => void toggleVisibility(app)} style={styles.visibilityButton}>
-                  <Text style={styles.visibilityText}>{visible ? 'Masquer' : 'Afficher'}</Text>
+                {session && <Pressable accessibilityRole="button" disabled={Boolean(preferenceSaving)} onPress={() => void toggleVisibility(app)} style={styles.visibilityButton}>
+                  <Text style={styles.visibilityText}>{preferenceSaving === app.key ? 'Enregistrement…' : visible ? 'Masquer' : 'Afficher'}</Text>
                 </Pressable>}
                 <Pressable accessibilityRole="link" onPress={() => void openUrl(app.url)}><Text style={styles.openLabel}>Ouvrir ↗</Text></Pressable>
               </View>
