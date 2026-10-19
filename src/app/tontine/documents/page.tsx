@@ -50,7 +50,7 @@ export default function TontineDocumentsPage() {
   const load = useCallback(async () => {
     if (!user) return;
     const [memberResult, classResult] = await Promise.all([
-      (supabase as any).from('tontine_members').select('tontine_id,tontines!inner(id,name,tontine_class,tontine_type)').eq('user_id', user.id).in('membership_status', ['active', 'pending']).limit(200),
+      (supabase as any).from('tontine_members').select('tontine_id,tontines!tontine_members_tontine_id_fkey!inner(id,name,tontine_class,tontine_type)').eq('user_id', user.id).in('membership_status', ['active', 'pending']).limit(200),
       (supabase as any).from('tontine_classes').select('code,name,description').eq('is_active', true).order('name'),
     ]);
     if (memberResult.error) setError(memberResult.error.message);
