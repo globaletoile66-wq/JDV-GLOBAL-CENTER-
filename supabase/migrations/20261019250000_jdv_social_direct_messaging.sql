@@ -35,6 +35,7 @@ alter table public.social_messages enable row level security;
 revoke all on table public.social_conversations, public.social_messages from anon;
 revoke all on table public.social_conversations, public.social_messages from authenticated;
 grant select, insert on table public.social_conversations to authenticated;
+grant update (updated_at) on table public.social_conversations to authenticated;
 grant select, insert on table public.social_messages to authenticated;
 grant update (read_at) on table public.social_messages to authenticated;
 
@@ -51,6 +52,12 @@ create policy social_conversations_insert_participant
     and user_a_id <> user_b_id
     and user_a_id < user_b_id
   );
+
+drop policy if exists social_conversations_update_participant_timestamp on public.social_conversations;
+create policy social_conversations_update_participant_timestamp
+  on public.social_conversations for update to authenticated
+  using (user_a_id = (select auth.uid()) or user_b_id = (select auth.uid()))
+  with check (user_a_id = (select auth.uid()) or user_b_id = (select auth.uid()));
 
 drop policy if exists social_messages_select_participant on public.social_messages;
 create policy social_messages_select_participant
