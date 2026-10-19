@@ -6,6 +6,8 @@ import { supabase, supabaseConfigured } from './lib/supabase';
 
 type SocialApp = { key: string; name: string; url: string; color: string };
 type Preference = { app_key: string; is_added?: boolean; is_visible: boolean; sort_order: number; category: string; notifications_enabled: boolean };
+type SocialProfile = { user_id: string; username: string; display_name: string | null; bio?: string | null };
+type SocialPost = { id: string; author_user_id: string; body: string | null; media_url: string | null; visibility: string; status: string; created_at: string };
 
 const webSpaceUrl = process.env.EXPO_PUBLIC_JDV_WEB_URL;
 const apps: SocialApp[] = [
@@ -32,6 +34,13 @@ export default function App() {
   const [preferences, setPreferences] = useState<Record<string, Preference>>({});
   const [preferencesBusy, setPreferencesBusy] = useState(false);
   const [preferenceSaving, setPreferenceSaving] = useState('');
+  const [socialProfile, setSocialProfile] = useState<SocialProfile | null>(null);
+  const [profileUsername, setProfileUsername] = useState('');
+  const [postBody, setPostBody] = useState('');
+  const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
+  const [socialAuthors, setSocialAuthors] = useState<Record<string, SocialProfile>>({});
+  const [feedBusy, setFeedBusy] = useState(false);
+  const [postBusy, setPostBusy] = useState(false);
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -76,6 +85,98 @@ export default function App() {
   }, [session?.user.id]);
 
   useEffect(() => { void loadPreferences(); }, [loadPreferences]);
+
+  const loadSocialFeed = useCallback(async () => {
+    if (!session?.user.id) {
+      setSocialProfile(null); setSocialPosts([]); setSocialAuthors({});
+      return;
+    }
+    setFeedBusy(true);
+    try {
+      const [profileResult, postsResult] = await Promise.all([
+        supabase.from('social_profiles').select('user_id,username,display_name,bio').eq('user_id', session.user.id).maybeSingle(),
+        supabase.from('social_posts').select('id,author_user_id,body,media_url,visibility,status,created_at').eq('status', 'published').or(`visibility.eq.public,author_user_id.eq.${session.user.id}`).order('created_at', { ascending: false }).limit(30),
+      ]);
+      if (profileResult.error) setMessage('Profil social indisponible : ' + profileResult.error.message);
+      else {
+        const item = (profileResult.data ?? null) as SocialProfile | null;
+        setSocialProfile(item);
+        if (item) setProfileUsername(item.username);
+        else if (!profileUsername) setProfileUsername((session.user.email?.split('@')[0] || 'membre').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20) + '_' + session.user.id.slice(0, 4));
+      }
+      if (postsResult.error) setMessage('Fil JDV Social indisponible : ' + postsResult.error.message);
+      else {
+        const rows = (postsResult.data ?? []) as SocialPost[];
+        setSocialPosts(rows);
+        const ids = Array.from(new Set([session.user.id, ...rows.map((item) => item.author_user_id)]));
+        if (ids.length) {
+          const authorResult = await supabase.from('social_profiles').select('user_id,username,display_name,bio').in('user_id', ids);
+          if (authorResult.error) setMessage((current) => current || 'Les noms des auteurs ne peuvent pas être chargés.');
+          else {
+            const lookup: Record<string, SocialProfile> = {};
+            for (const item of (authorResult.data ?? []) as SocialProfile[]) lookup[item.user_id] = item;
+            setSocialAuthors(lookup);
+          }
+        } else setSocialAuthors({});
+      }
+    } catch {
+      setMessage('Erreur réseau lors du chargement du fil JDV Social.');
+    } finally {
+      setFeedBusy(false);
+    }
+  }, [session?.user.id, session?.user.email, profileUsername]);
+
+  useEffect(() => { void loadSocialFeed(); }, [loadSocialFeed]);
+
+  const createSocialProfile = async () => {
+    if (!session) return;
+    const username = profileUsername.trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,30}$/.test(username)) {
+      setMessage('Le nom d’utilisateur doit contenir 3 à 30 caractères : lettres, chiffres ou _.');
+      return;
+    }
+    setBusy(true); setMessage('');
+    try {
+      const { data, error } = await supabase.from('social_profiles')
+        .insert({ user_id: session.user.id, username, profile_status: 'active' })
+        .select('user_id,username,display_name,bio').single();
+      if (error) setMessage(error.message);
+      else {
+        setSocialProfile(data as SocialProfile);
+        setSocialAuthors((current) => ({ ...current, [session.user.id]: data as SocialProfile }));
+        setMessage('Votre profil JDV Social est créé.');
+      }
+    } catch {
+      setMessage('Erreur réseau : impossible de créer le profil social.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const publishSocialPost = async () => {
+    if (!session || !socialProfile) {
+      setMessage('Créez votre profil JDV Social avant de publier.');
+      return;
+    }
+    const body = postBody.trim();
+    if (!body) { setMessage('Écrivez un message avant de publier.'); return; }
+    setPostBusy(true); setMessage('');
+    try {
+      const { data, error } = await supabase.from('social_posts')
+        .insert({ author_user_id: session.user.id, body, visibility: 'public', status: 'published' })
+        .select('id,author_user_id,body,media_url,visibility,status,created_at').single();
+      if (error) setMessage(error.message);
+      else {
+        setSocialPosts((current) => [data as SocialPost, ...current]);
+        setPostBody('');
+        setMessage('Publication ajoutée au fil JDV Social.');
+      }
+    } catch {
+      setMessage('Erreur réseau : la publication n’a pas pu être envoyée.');
+    } finally {
+      setPostBusy(false);
+    }
+  };
 
   const authenticate = async (mode: 'signin' | 'signup') => {
     if (!supabaseConfigured) {
@@ -236,6 +337,26 @@ export default function App() {
           </Pressable>
         </View>
 
+        {session && <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Mon profil JDV Social</Text>
+          {socialProfile ? <Text style={styles.body}>Profil actif : @{socialProfile.username}{socialProfile.display_name ? ' · ' + socialProfile.display_name : ''}</Text> : <>
+            <Text style={styles.body}>Créez votre identifiant communautaire pour publier dans le fil commun avec la version Web.</Text>
+            <TextInput accessibilityLabel="Nom d’utilisateur JDV Social" autoCapitalize="none" autoCorrect={false} placeholder="nom_utilisateur" placeholderTextColor="#8799B6" value={profileUsername} onChangeText={setProfileUsername} maxLength={30} style={styles.input} />
+            <Pressable accessibilityRole="button" disabled={busy} style={styles.primaryButton} onPress={() => void createSocialProfile()}><Text style={styles.primaryButtonText}>{busy ? 'Création…' : 'Créer mon profil social'}</Text></Pressable>
+          </>}
+          <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Publier un message</Text>
+          <TextInput accessibilityLabel="Texte de la publication" multiline textAlignVertical="top" placeholder="Que souhaitez-vous partager ?" placeholderTextColor="#8799B6" value={postBody} onChangeText={setPostBody} maxLength={5000} style={[styles.input, { minHeight: 90 }]} />
+          <Pressable accessibilityRole="button" disabled={postBusy || !socialProfile} style={styles.primaryButton} onPress={() => void publishSocialPost()}><Text style={styles.primaryButtonText}>{postBusy ? 'Publication…' : 'Publier dans JDV Social'}</Text></Pressable>
+          <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, { marginTop: 18 }]}>Fil communautaire</Text><Pressable accessibilityRole="button" onPress={() => void loadSocialFeed()} disabled={feedBusy}><Text style={styles.openLabel}>{feedBusy ? 'Actualisation…' : 'Actualiser'}</Text></Pressable></View>
+          {feedBusy && <ActivityIndicator color="#F28C28" />}
+          {!feedBusy && socialPosts.length === 0 && <Text style={styles.body}>Aucune publication visible pour le moment.</Text>}
+          {socialPosts.map((post) => <View key={post.id} style={styles.postCard}>
+            <Text style={styles.postAuthor}>{socialAuthors[post.author_user_id]?.display_name || '@' + (socialAuthors[post.author_user_id]?.username || 'membre')}</Text>
+            <Text style={styles.postDate}>{new Date(post.created_at).toLocaleString()}</Text>
+            {!!post.body && <Text style={styles.postBody}>{post.body}</Text>}
+            {!!post.media_url && <Pressable accessibilityRole="link" onPress={() => void openUrl(post.media_url!)}><Text style={styles.openLabel}>Ouvrir le média ↗</Text></Pressable>}
+          </View>)}
+        </View>}
         <View style={styles.section}>
           <View style={styles.sectionHeading}>
             <Text style={styles.sectionTitle}>Applications sociales</Text>
@@ -284,6 +405,10 @@ const styles = StyleSheet.create({
   secondaryButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   message: { color: '#F6B36E', fontSize: 13, lineHeight: 19, marginTop: 12, marginBottom: 4 },
   appRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0A1A35', padding: 14, borderRadius: 12, marginTop: 8 },
+  postCard: { backgroundColor: '#0A1A35', borderColor: '#243B5F', borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 10 },
+  postAuthor: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  postDate: { color: '#8799B6', fontSize: 11, marginTop: 4 },
+  postBody: { color: '#C9D4E8', fontSize: 14, lineHeight: 22, marginTop: 10 },
   appHidden: { opacity: 0.65 },
   appMark: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
   appName: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', flex: 1 },
