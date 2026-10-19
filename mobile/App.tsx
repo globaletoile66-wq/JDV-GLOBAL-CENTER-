@@ -13,6 +13,7 @@ type SocialGroup = { id: string; name: string; description: string | null; visib
 type SocialMembership = { group_id: string; user_id: string; role: string; status: string };
 type SocialEvent = { id: string; title: string; description: string | null; starts_at: string; location: string | null; visibility: string; group_id: string | null };
 type SocialRegistration = { event_id: string; user_id: string; status: string };
+type SocialComment = { id: string; post_id: string; user_id: string; body: string; status: string; created_at: string };
 
 const webSpaceUrl = process.env.EXPO_PUBLIC_JDV_WEB_URL;
 const apps: SocialApp[] = [
@@ -45,6 +46,9 @@ export default function App() {
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
   const [socialAuthors, setSocialAuthors] = useState<Record<string, SocialProfile>>({});
   const [myReactions, setMyReactions] = useState<Record<string, string>>({});
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, SocialComment[]>>({});
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [commentBusy, setCommentBusy] = useState('');
   const [reactionBusy, setReactionBusy] = useState('');
   const [socialGroups, setSocialGroups] = useState<SocialGroup[]>([]);
   const [groupMemberships, setGroupMemberships] = useState<SocialMembership[]>([]);
@@ -101,7 +105,7 @@ export default function App() {
 
   const loadSocialFeed = useCallback(async () => {
     if (!session?.user.id) {
-      setSocialProfile(null); setSocialPosts([]); setSocialAuthors({}); setMyReactions({}); setSocialGroups([]); setGroupMemberships([]); setSocialEvents([]); setEventRegistrations([]);
+      setSocialProfile(null); setSocialPosts([]); setSocialAuthors({}); setMyReactions({}); setCommentsByPost({}); setSocialGroups([]); setGroupMemberships([]); setSocialEvents([]); setEventRegistrations([]);
       return;
     }
     setFeedBusy(true);
@@ -123,9 +127,10 @@ export default function App() {
         setSocialPosts(rows);
         const ids = Array.from(new Set([session.user.id, ...rows.map((item) => item.author_user_id)]));
         if (ids.length) {
-          const [authorResult, reactionResult] = await Promise.all([
+          const [authorResult, reactionResult, commentsResult] = await Promise.all([
             supabase.from('social_profiles').select('user_id,username,display_name,bio').in('user_id', ids),
             rows.length ? supabase.from('social_reactions').select('id,post_id,user_id,reaction_type').eq('user_id', session.user.id).eq('reaction_type', 'like').in('post_id', rows.map((item) => item.id)) : Promise.resolve({ data: [], error: null }),
+            rows.length ? supabase.from('social_comments').select('id,post_id,user_id,body,status,created_at').in('post_id', rows.map((item) => item.id)).eq('status', 'published').order('created_at', { ascending: true }).limit(200) : Promise.resolve({ data: [], error: null }),
           ]);
           if (authorResult.error) setMessage((current) => current || 'Les noms des auteurs ne peuvent pas être chargés.');
           else {
@@ -138,6 +143,12 @@ export default function App() {
             const lookup: Record<string, string> = {};
             for (const item of (reactionResult.data ?? []) as SocialReaction[]) lookup[item.post_id] = item.id;
             setMyReactions(lookup);
+          }
+          if (commentsResult.error) setMessage((current) => current || 'Les commentaires ne peuvent pas être chargés.');
+          else {
+            const lookup: Record<string, SocialComment[]> = {};
+            for (const item of (commentsResult.data ?? []) as SocialComment[]) lookup[item.post_id] = [...(lookup[item.post_id] ?? []), item];
+            setCommentsByPost(lookup);
           }
         } else { setSocialAuthors({}); setMyReactions({}); }
       }
@@ -269,6 +280,28 @@ export default function App() {
       setMessage('Erreur réseau : impossible de modifier votre inscription.');
     } finally {
       setCommunityAction('');
+    }
+  };
+
+  const addSocialComment = async (post: SocialPost) => {
+    if (!session || commentBusy) return;
+    const body = (commentDrafts[post.id] ?? '').trim();
+    if (!body) { setMessage('Écrivez un commentaire avant de l’envoyer.'); return; }
+    setCommentBusy(post.id); setMessage('');
+    try {
+      const { data, error } = await supabase.from('social_comments')
+        .insert({ post_id: post.id, user_id: session.user.id, body, status: 'published' })
+        .select('id,post_id,user_id,body,status,created_at').single();
+      if (error) setMessage(error.message);
+      else {
+        const item = data as SocialComment;
+        setCommentsByPost((current) => ({ ...current, [post.id]: [...(current[post.id] ?? []), item] }));
+        setCommentDrafts((current) => ({ ...current, [post.id]: '' }));
+      }
+    } catch {
+      setMessage('Erreur réseau : le commentaire n’a pas pu être envoyé.');
+    } finally {
+      setCommentBusy('');
     }
   };
 
@@ -475,6 +508,12 @@ export default function App() {
             <Pressable accessibilityRole="button" disabled={reactionBusy === post.id} onPress={() => void togglePostLike(post)} style={styles.likeButton}>
               <Text style={styles.visibilityText}>{reactionBusy === post.id ? 'Enregistrement…' : myReactions[post.id] ? '♥ J’aime' : '♡ J’aime'}</Text>
             </Pressable>
+            {(commentsByPost[post.id] ?? []).map((comment) => <View key={comment.id} style={styles.commentCard}>
+              <Text style={styles.postAuthor}>{socialAuthors[comment.user_id]?.display_name || '@' + (socialAuthors[comment.user_id]?.username || 'membre')}</Text>
+              <Text style={styles.postBody}>{comment.body}</Text>
+            </View>)}
+            <TextInput accessibilityLabel="Écrire un commentaire" placeholder="Écrire un commentaire…" placeholderTextColor="#8799B6" value={commentDrafts[post.id] ?? ''} onChangeText={(value) => setCommentDrafts((current) => ({ ...current, [post.id]: value }))} maxLength={2000} style={styles.input} />
+            <Pressable accessibilityRole="button" disabled={commentBusy === post.id} onPress={() => void addSocialComment(post)} style={styles.likeButton}><Text style={styles.visibilityText}>{commentBusy === post.id ? 'Envoi…' : 'Commenter'}</Text></Pressable>
           </View>)}
         </View>}
         {session && <View style={styles.section}>
@@ -558,6 +597,7 @@ const styles = StyleSheet.create({
   postDate: { color: '#8799B6', fontSize: 11, marginTop: 4 },
   postBody: { color: '#C9D4E8', fontSize: 14, lineHeight: 22, marginTop: 10 },
   likeButton: { alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: '#102343' },
+  commentCard: { backgroundColor: '#102343', borderRadius: 8, padding: 10, marginTop: 8 },
   appHidden: { opacity: 0.65 },
   appMark: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
   appName: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', flex: 1 },
