@@ -1,17 +1,21 @@
 import React from 'react';
-import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, Pressable, View } from 'react-native';
+import { Alert, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, Pressable, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-const webSpaceUrl = 'https://www.jdvglobalcenter.com/social/networks';
+const webSpaceUrl = process.env.EXPO_PUBLIC_JDV_WEB_URL;
 
 const apps = [
   { name: 'WhatsApp', url: 'https://www.whatsapp.com/download', color: '#25D366' },
+  { name: 'WhatsApp Business', url: 'https://www.whatsapp.com/business/', color: '#25D366' },
   { name: 'Facebook', url: 'https://www.facebook.com/', color: '#1877F2' },
   { name: 'Instagram', url: 'https://www.instagram.com/', color: '#E4405F' },
+  { name: 'X', url: 'https://x.com/', color: '#111827' },
   { name: 'TikTok', url: 'https://www.tiktok.com/download', color: '#111827' },
   { name: 'YouTube', url: 'https://www.youtube.com/', color: '#FF0033' },
   { name: 'Telegram', url: 'https://telegram.org/apps', color: '#229ED9' },
   { name: 'LinkedIn', url: 'https://www.linkedin.com/', color: '#0A66C2' },
+  { name: 'Snapchat', url: 'https://www.snapchat.com/download', color: '#FFFC00' },
+  { name: 'Pinterest', url: 'https://www.pinterest.com/', color: '#BD081C' },
 ];
 
 export default function App() {
@@ -19,8 +23,16 @@ export default function App() {
     try {
       await Linking.openURL(url);
     } catch {
-      // Keep the app usable if a device cannot open a target URL.
+      if (Platform.OS !== 'web') Alert.alert('Lien indisponible', 'Impossible d’ouvrir ce lien sur cet appareil.');
     }
+  };
+
+  const openWebSpace = () => {
+    if (!webSpaceUrl || webSpaceUrl.includes('YOUR_WEB_DOMAIN')) {
+      Alert.alert('Configuration requise', 'L’adresse officielle de JDV Global Center doit être définie dans EXPO_PUBLIC_JDV_WEB_URL.');
+      return;
+    }
+    void openUrl(webSpaceUrl);
   };
 
   return (
@@ -39,9 +51,9 @@ export default function App() {
           <Text style={styles.sectionTitle}>Mon espace</Text>
           <Text style={styles.body}>
             Retrouvez les applications sociales utiles et accédez à leurs sites officiels.
-            La synchronisation du compte JDV sera branchée dans l'étape suivante.
+            La connexion au compte JDV et la synchronisation des préférences seront ajoutées dans la prochaine étape.
           </Text>
-          <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={() => void openUrl(webSpaceUrl)}>
+          <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={openWebSpace}>
             <Text style={styles.primaryButtonText}>Ouvrir mon espace Web</Text>
           </Pressable>
         </View>
