@@ -1,4 +1,4 @@
--- JDB Social access rules: public profiles, visibility-aware posts, and real interactions.
+-- JDV Social access rules: public profiles, visibility-aware posts, and real interactions.
 -- Additive branch migration only. Review and test before applying to any shared/production database.
 
 begin;
