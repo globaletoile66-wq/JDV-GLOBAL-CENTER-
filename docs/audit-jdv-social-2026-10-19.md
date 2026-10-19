@@ -316,3 +316,6 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 - Les fichiers modifiés par rapport à cette base concernent les workflows, l'audit/checklist, la configuration Mobile, les pages de groupes et les migrations RLS/privilèges JDV Social. Aucun fichier de l'ancienne CRM n'apparaît dans la liste comparée.
 - Aucun rebase ni fusion n'a été réalisé.
 
+### Vérification du registre des migrations Supabase
+- Lecture seule de `supabase_migrations.schema_migrations` : les versions enregistrées pour le 19 octobre vont jusqu'à `20261019080401`; les versions candidates `20261019190000`, `20261019200000`, `20261019210000`, `20261019220000` et `20261019230000` n'y figurent pas.
+- Cela confirme que les cinq migrations de correction RLS/privilèges de cette série ne sont pas enregistrées comme appliquées dans le projet distant. Aucun SQL de modification n'a été exécuté sur la base.
