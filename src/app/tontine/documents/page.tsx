@@ -48,8 +48,8 @@ export default function TontineDocumentsPage() {
   const load = useCallback(async () => {
     if (!user) return;
     const [memberResult, classResult] = await Promise.all([
-      supabase.from('tontine_members').select('tontine_id,tontines!inner(id,name,tontine_class,tontine_type)').eq('user_id', user.id).in('membership_status', ['active', 'pending']).limit(200),
-      supabase.from('tontine_classes').select('code,name,description').eq('is_active', true).order('name'),
+      (supabase as any).from('tontine_members').select('tontine_id,tontines!inner(id,name,tontine_class,tontine_type)').eq('user_id', user.id).in('membership_status', ['active', 'pending']).limit(200),
+      (supabase as any).from('tontine_classes').select('code,name,description').eq('is_active', true).order('name'),
     ]);
     if (memberResult.error) setError(memberResult.error.message);
     else {
@@ -79,7 +79,7 @@ export default function TontineDocumentsPage() {
       setError('Téléversement refusé : ' + uploaded.error.message);
       setBusy(false); return;
     }
-    const saved = await supabase.from('tontine_documents').insert({
+    const saved = await (supabase as any).from('tontine_documents').insert({
       tontine_id: selected, document_kind: docKind, storage_path: path, original_filename: file.name,
       mime_type: file.type, file_size_bytes: file.size, uploaded_by: user.id, status: 'submitted',
     });
@@ -100,7 +100,7 @@ export default function TontineDocumentsPage() {
     const entries = board.filter((row) => row.full_name.trim());
     if (!entries.length) { setError('Saisis au moins le nom complet du président.'); return; }
     setBusy(true); setError(''); setNotice('');
-    const result = await supabase.from('tontine_organization_board').insert(entries.map((row) => ({
+    const result = await (supabase as any).from('tontine_organization_board').insert(entries.map((row) => ({
       tontine_id: selected, function_title: row.function_title, full_name: row.full_name.trim(),
       phone: row.phone.trim() || null, created_by: user.id, status: 'pending',
     })));
@@ -121,7 +121,7 @@ export default function TontineDocumentsPage() {
     const path = selected + '/' + user.id + '/identity-' + role + '-' + crypto.randomUUID() + '_' + safeName;
     const uploaded = await supabase.storage.from(BUCKET).upload(path, identityFile, { contentType: identityFile.type, upsert: false });
     if (uploaded.error) { setError('Téléversement privé impossible : ' + uploaded.error.message); setBusy(false); return; }
-    const result = await supabase.from('tontine_party_verifications').insert({
+    const result = await (supabase as any).from('tontine_party_verifications').insert({
       tontine_id: selected, party_role: role, user_id: user.id, full_name: party.full_name.trim(), phone: party.phone.trim(),
       country_code: party.country_code, identity_document_type: party.identity_document_type,
       identity_document_number_masked: party.identity_document_number_masked.trim() || null,
