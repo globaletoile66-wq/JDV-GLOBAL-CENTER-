@@ -169,7 +169,7 @@ export default function TransportPage() {
         <div className="absolute -bottom-40 left-1/3 h-80 w-80 rounded-full bg-orange-400/10 blur-3xl" />
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-14 pt-8 sm:px-6 md:grid-cols-[1.1fr_.9fr] md:items-center md:pb-20 md:pt-14 lg:px-8">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/20 bg-teal-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[.18em] text-teal-200"><Zap size={14} /> Gilles DV Transport</div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/20 bg-teal-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[.18em] text-teal-200"><Zap size={14} /> JDV Transport</div>
             <h1 className="mt-5 max-w-2xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">L’Afrique avance.<br /><span className="text-teal-300">On vous accompagne.</span></h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-white/65 sm:text-lg">Déplacez-vous, envoyez un colis ou organisez votre transport professionnel depuis un seul espace, simple et adapté à vos réalités.</p>
             <div className="mt-7 flex flex-wrap gap-3 text-sm text-white/75">
