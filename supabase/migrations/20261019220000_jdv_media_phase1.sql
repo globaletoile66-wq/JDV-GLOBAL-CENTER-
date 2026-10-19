@@ -152,3 +152,11 @@ create policy media_production_request_owner_access on public.media_production_r
   for all to authenticated
   using (requester_user_id = auth.uid() or is_super_admin())
   with check (requester_user_id = auth.uid() or is_super_admin());
+
+
+-- Explicit API privileges; RLS remains the row-level boundary.
+grant select on public.media_contents to anon, authenticated;
+grant select, insert, update on public.media_creator_profiles to authenticated;
+grant select on public.media_creator_profiles to anon;
+grant select, insert, update on public.media_editorial_reviews to authenticated;
+grant select, insert, update on public.media_production_requests to authenticated;
