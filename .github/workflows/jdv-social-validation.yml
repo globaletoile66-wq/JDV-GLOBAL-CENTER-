@@ -41,7 +41,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Install Web dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci
       - name: Check Web types
         run: npm run type-check
       - name: Build Web application
