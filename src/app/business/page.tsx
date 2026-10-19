@@ -109,6 +109,8 @@ export default function JDVBusinessDashboard() {
         .from('business_profiles')
         .select('*')
         .eq('owner_user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) throw error;
@@ -120,6 +122,8 @@ export default function JDVBusinessDashboard() {
           .select('business_id, business_profiles(*)')
           .eq('user_id', user.id)
           .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (memberData?.business_profiles) {
