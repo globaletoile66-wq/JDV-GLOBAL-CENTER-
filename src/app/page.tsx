@@ -27,7 +27,7 @@ const modules = [
   ['JDV COMMUNITY','Communautés et espaces collectifs','/community',Users],
   ['JDV SERVICES','Catalogue de services et prestations','/services',Wrench],
   ['JDV EVENTS','Organisation et gestion d’événements','/events',CalendarDays],
-  ['JDV JOBS','Offres d’emploi et recrutement','/coming-soon?name=JDV%20JOBS',BriefcaseBusiness],
+  ['JDV JOBS','Offres d’emploi et recrutement','/jobs',BriefcaseBusiness],
   ['JDV LEGAL','Ressources et services juridiques','/coming-soon?name=JDV%20LEGAL',Scale],
   ['JDV ACCOUNTING','Comptabilité et clôtures financières','/coming-soon?name=JDV%20ACCOUNTING',Calculator],
   ['JDV HR','Gestion des ressources humaines','/coming-soon?name=JDV%20HR',UserRoundCog],
