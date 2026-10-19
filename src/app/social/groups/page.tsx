@@ -63,8 +63,12 @@ export default function SocialGroupsPage() {
     else {
       const { error: memberError } = await supabase.from('social_group_memberships')
         .insert({ group_id: data.id, user_id: user.id, role: 'owner', status: 'active' });
-      if (memberError) setError('Le groupe a été créé, mais le rôle propriétaire n’a pas pu être enregistré : ' + memberError.message);
-      else {
+      if (memberError) {
+        const { error: cleanupError } = await supabase.from('social_groups').delete().eq('id', data.id).eq('created_by', user.id);
+        setError(cleanupError
+          ? 'Le groupe a été créé, mais son rôle propriétaire a échoué et le nettoyage automatique aussi. Actualisez la page avant de continuer.'
+          : 'La création du groupe a été annulée car le rôle propriétaire n’a pas pu être enregistré. Réessayez.');
+      } else {
         setGroups((current) => [data as Group, ...current]);
         setMemberships((current) => [...current, { group_id: data.id, user_id: user.id, role: 'owner', status: 'active' }]);
         setName(''); setDescription(''); setVisibility('public');
