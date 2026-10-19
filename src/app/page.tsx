@@ -28,10 +28,10 @@ const modules = [
   ['JDV SERVICES','Catalogue de services et prestations','/service-marketplace',Wrench],
   ['JDV EVENTS','Organisation et gestion d’événements','/events',CalendarDays],
   ['JDV JOBS','Offres d’emploi et recrutement','/jobs',BriefcaseBusiness],
-  ['JDV LEGAL','Ressources et services juridiques','/coming-soon?name=JDV%20LEGAL',Scale],
-  ['JDV ACCOUNTING','Comptabilité et clôtures financières','/coming-soon?name=JDV%20ACCOUNTING',Calculator],
-  ['JDV HR','Gestion des ressources humaines','/coming-soon?name=JDV%20HR',UserRoundCog],
-  ['JDV PROCUREMENT','Achats et validations fournisseurs','/coming-soon?name=JDV%20PROCUREMENT',ClipboardList],
+  ['JDV LEGAL','Ressources et services juridiques','/legal',Scale],
+  ['JDV ACCOUNTING','Comptabilité et clôtures financières','/accounting',Calculator],
+  ['JDV HR','Gestion des ressources humaines','/hr',UserRoundCog],
+  ['JDV PROCUREMENT','Achats et validations fournisseurs','/procurement',ClipboardList],
   ['JDV INVENTORY','Stocks et traçabilité des articles','/inventory',Package],
 ] as const;
 
