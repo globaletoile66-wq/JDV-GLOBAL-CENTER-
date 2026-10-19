@@ -39,6 +39,7 @@ Ne mettez jamais une clé `service_role` ou une clé secrète dans l'application
 - Réactions « J'aime » et commentaires sur les publications.
 - Consultation des groupes actifs, adhésion aux groupes publics et demande d'accès aux groupes privés.
 - Consultation des événements publiés, inscription et annulation d'inscription.
+- Lecture des notifications du compte et marquage individuel comme lu.
 - Catalogue de 11 applications sociales et ouverture de leurs sites officiels.
 - Synchronisation des préférences d'affichage et d'alertes par application avec `public.social_app_preferences`.
 
