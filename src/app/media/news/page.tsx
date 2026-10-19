@@ -49,7 +49,8 @@ export default function MediaNewsPage() {
     <div className="mx-auto max-w-7xl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/media" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Espace média</Link>
-        <Link href="/media/creators" className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:border-[#F28C28]"><UserRound size={16} /> Créateurs</Link>\n        <Link href="/media/production" className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:border-[#F28C28]">Demander une production</Link>
+        <Link href="/media/creators" className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:border-[#F28C28]"><UserRound size={16} /> Créateurs</Link>
+        <Link href="/media/production" className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:border-[#F28C28]">Demander une production</Link>
       </header>
       <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.05] p-6 sm:p-9">
         <p className="text-xs font-bold uppercase tracking-[.24em] text-[#F28C28]">JDV GLOBAL CENTER · INFORMATION & CULTURE</p>
