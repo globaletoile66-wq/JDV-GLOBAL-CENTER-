@@ -50,6 +50,10 @@ export default function SocialEventsPage() {
   const createEvent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) return;
+    const cleanTitle = title.trim();
+    if (cleanTitle.length < 3 || cleanTitle.length > 160) {
+      setError('Le titre de l’événement doit contenir entre 3 et 160 caractères.'); return;
+    }
     const start = new Date(startsAt);
     const end = endsAt ? new Date(endsAt) : null;
     if (Number.isNaN(start.getTime()) || (end && (Number.isNaN(end.getTime()) || end < start))) {
@@ -57,7 +61,7 @@ export default function SocialEventsPage() {
     }
     setSaving(true); setError(''); setNotice('');
     const { data, error: createError } = await supabase.from('social_events').insert({
-      title: title.trim(), description: description.trim() || null, starts_at: start.toISOString(),
+      title: cleanTitle, description: description.trim() || null, starts_at: start.toISOString(),
       ends_at: end?.toISOString() ?? null, location: location.trim() || null,
       visibility: 'public', status: 'published', created_by: user.id,
     }).select('id,title,description,starts_at,ends_at,location,group_id,visibility,status,created_by,created_at').single();

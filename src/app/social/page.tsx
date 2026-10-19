@@ -46,7 +46,7 @@ export default function SocialPage() {
     if (!user) { setProfile(null); setPosts([]); setReactions([]); setComments([]); setFollows([]); setProfilesByUser({}); setBusy(false); return; }
     const [profileResult, postsResult, followResult] = await Promise.all([
       supabase.from('social_profiles').select('id,user_id,username,display_name,bio,avatar_url,profile_status').eq('user_id', user.id).maybeSingle(),
-      supabase.from('social_posts').select('id,author_user_id,body,media_url,visibility,status,created_at').order('created_at', { ascending: false }).limit(100),
+      supabase.from('social_posts').select('id,author_user_id,body,media_url,visibility,status,created_at').eq('status', 'published').or(`visibility.eq.public,author_user_id.eq.${user.id}`).order('created_at', { ascending: false }).limit(100),
       supabase.from('social_follows').select('follower_user_id,following_user_id,status').eq('follower_user_id', user.id),
     ]);
     if (followResult.error) setError((current) => current || followResult.error!.message);
@@ -134,8 +134,8 @@ export default function SocialPage() {
   const toggleFollow = async (authorUserId: string) => {
     if (!user || authorUserId === user.id) return;
     setActingOn(authorUserId); setError(''); setMessage('');
-    const existing = follows.find((item) => item.following_user_id === authorUserId && item.follower_user_id === user.id && item.status === 'active');
-    if (existing) {
+    const existing = follows.find((item) => item.following_user_id === authorUserId && item.follower_user_id === user.id);
+    if (existing?.status === 'active') {
       const { error: deleteError } = await supabase.from('social_follows').delete().eq('follower_user_id', user.id).eq('following_user_id', authorUserId);
       if (deleteError) setError(deleteError.message);
       else setFollows((current) => current.filter((item) => item.following_user_id !== authorUserId));

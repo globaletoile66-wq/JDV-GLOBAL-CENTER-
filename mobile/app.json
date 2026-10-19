@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "JDV Social",
+    "slug": "jdv-social",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "jdvsocial",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jdvglobalcenter.social"
+    },
+    "android": {
+      "package": "com.jdvglobalcenter.social",
+      "adaptiveIcon": {
+        "backgroundColor": "#07152F"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

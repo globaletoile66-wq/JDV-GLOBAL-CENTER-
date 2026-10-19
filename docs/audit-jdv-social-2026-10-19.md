@@ -153,3 +153,94 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - `/social/messages` : point d'entrée de la messagerie sociale, avec indication explicite de la dépendance CORE non résolue. Cette route ne prétend pas envoyer de messages.
 - Le fil principal relie maintenant les paramètres du profil, notifications, messagerie, groupes, événements et réseaux externes.
 - La lecture des relations de suivi est indépendante du chargement du fil; les relations existantes non actives sont gérées sans tentative d'insertion en doublon.
+
+## Tranche de développement Web + Mobile — 19 octobre 2026
+
+### Web
+- Le fil applique désormais un filtre explicite sur les publications publiées et sur les publications publiques ou appartenant au membre connecté.
+- La création de groupes inclut un nettoyage compensatoire si l'enregistrement du rôle propriétaire échoue.
+- Le formulaire de création d'événement vérifie le titre avant l'envoi, en cohérence avec la contrainte de longueur du schéma.
+
+### Mobile
+- L'application Expo utilise le même projet Supabase et les mêmes tables sociales que le Web.
+- Le parcours couvre maintenant l'authentification, la création et la modification du profil, le fil communautaire, les publications texte, les réactions, les commentaires, les groupes, les adhésions, les événements, les inscriptions, les notifications et les préférences du catalogue d'applications.
+- Le catalogue mobile synchronise les préférences d'affichage et d'alertes dans `social_app_preferences`.
+- La documentation mobile a été actualisée pour refléter ces fonctionnalités.
+
+### Accès et validation
+- Une migration candidate `20261019190000_jdv_social_public_reads.sql` sépare les règles de lecture et d'écriture des profils, réactions et commentaires, pour permettre la lecture des profils actifs et des interactions sur les publications visibles.
+- Cette migration est versionnée dans la branche de développement, mais **n'a pas été appliquée à Supabase distant**. Elle doit être revue et testée sur un environnement isolé avant application.
+- Un workflow GitHub Actions `.github/workflows/jdv-social-validation.yml` a été ajouté pour lancer les contrôles TypeScript Web et Mobile.
+- À la clôture de cette tranche, aucun résultat de compilation complet ni test navigateur/appareil n'est déclaré. Les dépendances Mobile n'ont pas été installées localement et l'installation/déploiement restent différés.
+- Aucun changement n'a été apporté au CRM historique.
+
+
+### Suite du travail — Web + Mobile
+- Le mobile charge désormais aussi les profils des auteurs de commentaires afin d'afficher leur identité lorsque les droits RLS le permettent.
+- Le mobile permet de quitter un groupe ou d'annuler une demande en attente en conservant l'enregistrement d'adhésion avec le statut `left`.
+- Une checklist manuelle Web/Mobile est disponible dans `docs/jdv-social-validation-checklist-2026-10-19.md`.
+- Ces changements sont committés sur la branche de travail; compilation, tests d'appareil, application de migration et déploiement restent non confirmés.
+
+
+## Vérification complémentaire — 19 octobre 2026
+- Lecture seule du schéma Supabase distant : les tables `social_profiles`, `social_posts`, `social_reactions` et `social_comments` existent et ont la RLS activée. Les politiques actuellement en place portent encore les noms `social_*_access` ; la migration de lecture publique reste donc candidate et n'a pas été appliquée.
+- Les colonnes utilisées par la migration candidate (`profile_status`, `author_user_id`, `visibility`, `status`, `post_id`, `user_id`) ont été retrouvées dans le schéma distant.
+- Durcissement du workflow GitHub Actions : permission réduite à `contents: read` et suppression de l'étape qui tentait de pousser automatiquement un `package-lock.json` modifié. Le workflow ne doit pas écrire dans la branche pour exécuter les validations.
+- Toujours en attente : résultat effectif du build Web, du contrôle TypeScript Mobile et validation fonctionnelle avec plusieurs comptes. Aucun déploiement, aucune installation et aucune migration distante ne sont déclarés comme effectués.
+
+
+## Suite sans branche payante — 19 octobre 2026
+- La création de branche Supabase payante a été volontairement écartée. Les vérifications complémentaires ont été limitées à des lectures du schéma et des politiques.
+- Les politiques distantes actuelles confirment un point fonctionnel à traiter : les profils sont principalement lisibles par leur propriétaire ou le super-administrateur, et les réactions/commentaires sont également restreints. La migration candidate vise à autoriser les lectures nécessaires au fil public, tout en gardant les écritures contrôlées. Elle n'est toujours pas appliquée.
+- Le workflow de validation est maintenant déclenchable manuellement depuis GitHub Actions (`workflow_dispatch`), en plus des déclencheurs push/PR. La consultation effectuée n'a pas retourné de statut de contrôle ni de run exploitable ; aucune réussite de build n'est donc revendiquée.
+- La suite sans frais : déclencher les validations depuis GitHub Actions, corriger les erreurs de compilation éventuelles, puis continuer les tests fonctionnels. Ne pas appliquer la migration distante ni déployer sans validation distincte.
+
+- Vérification des contraintes d'unicité distantes : les inscriptions aux événements ont bien une clé unique `(event_id, user_id)`, les adhésions aux groupes `(group_id, user_id)`, et les réactions `(post_id, user_id, reaction_type)`. Les opérations d'inscription/adhésion prévues dans Mobile correspondent aux clés vérifiées.
+
+## Vérification complémentaire — navigation et messagerie (19 octobre 2026)
+
+### Constat confirmé sur Supabase (lecture seule)
+- Les tables sociales principales sont présentes : profils, publications, réactions, commentaires, groupes, adhésions, événements, inscriptions, abonnements et préférences des applications sociales.
+- La table `notifications` existe et sa politique de lecture/écriture limite les lignes à `user_id = auth.uid()`.
+- Les politiques des groupes et événements contrôlent les adhésions et les accès aux événements de groupe. Les inscriptions d'événement disposent d'une clé primaire composite `(event_id, user_id)`.
+- Les tables `marketplace_messages` et `ai_messages` existent, mais aucune table de conversation/message direct générique n'a été confirmée dans le schéma inspecté.
+- La page Web `/social/messages` est donc explicitement un écran d'attente et ne prétend pas envoyer des messages.
+
+### Décision de sécurité
+- Ne pas réutiliser `marketplace_messages` pour les messages privés sociaux.
+- Ne pas créer de messagerie active sans modèle de conversations, membres, messages et politiques RLS dédiées, puis validation des scénarios d'accès.
+- La migration candidate `20261019190000_jdv_social_public_reads.sql` reste non appliquée à la base distante.
+- Aucune donnée de production n'a été insérée, modifiée ou supprimée pendant ces contrôles.
+
+### Prochaines validations
+1. Exécuter le workflow GitHub Actions sur la branche de travail et examiner les logs Web et Mobile.
+2. Corriger chaque erreur TypeScript ou build à partir des logs réels, sans annoncer de réussite avant résultat vérifiable.
+3. Valider les politiques de lecture des profils, réactions et commentaires dans un environnement isolé avant toute application distante.
+4. Concevoir la messagerie sociale dans une migration séparée et une interface dédiée, avec accès strictement limité aux membres des conversations.
+5. Maintenir l'ancienne CRM hors périmètre.
+
+### Vérification complémentaire du workflow CI (après inspection)
+- Le dépôt contient bien un `package-lock.json` racine suivi par Git ; le fichier est récupérable depuis la branche malgré la règle d'ignorance présente dans `.gitignore`. Le cache npm du job Web est donc conservé.
+- Aucun `mobile/package-lock.json` n'a été confirmé ; le job Mobile utilise `npm install --no-audit --no-fund` sans cache npm configuré.
+- Aucun résultat TypeScript ou build n'est déduit de ces ajustements. Les résultats CI restent à vérifier dans GitHub Actions.
+
+### Alignement du workflow Mobile
+- Un second workflow `jdv-social-mobile.yml` contenait encore le nom d'une ancienne branche (`feat/jdv-social-cross-platform-2026-10-19`) pour les déclenchements `push`.
+- Son déclencheur a été aligné sur la branche active `feat/jdv-social-foundation-2026-10-19`. Il ajoute aux vérifications Mobile le contrôle de compatibilité Expo et l'export Web Expo.
+- Les workflows sont configurés, mais leurs étapes ne sont pas déclarées réussies tant qu'un résultat GitHub Actions vérifiable n'est pas disponible.
+
+### Cohérence des dépendances (contrôle statique)
+- Le `package-lock.json` racine utilise le format lockfile v3 et les entrées `dependencies` / `devDependencies` correspondent exactement aux versions déclarées dans `package.json` au moment de l'inspection.
+- Le dossier Mobile déclare 9 dépendances et ne contient pas de `mobile/package-lock.json`; son installation CI n'est donc pas verrouillée au même niveau que l'application Web.
+- Contrôle statique uniquement : aucune installation de paquets, compilation ou export Expo n'a été exécuté dans cette vérification.
+
+### Comparaison de branche
+- La branche de travail a été comparée à la branche par défaut `supabase-sync-2026-09-24` : GitHub indique une divergence (65 commits en avance et 1 commit en retard au moment du contrôle).
+- Les chemins de fichiers remontés dans cette comparaison concernent JDV Social, Mobile, les workflows, les migrations sociales, la documentation, le lockfile racine et la configuration TypeScript. Aucun chemin de l'ancien CRM n'apparaît dans cette liste.
+- Aucune fusion ou rebase automatique n'a été effectué : la divergence doit être revue avant intégration.
+
+### Revue de sécurité RLS — adhésions aux groupes privés
+- Le contrôle en lecture seule des politiques réellement actives dans Supabase a confirmé que la règle actuelle `social_group_memberships_update` autorise un utilisateur à passer lui-même son statut à `active`, même pour un groupe privé. Une demande `pending` pourrait donc être approuvée sans intervention d'un administrateur du groupe.
+- Une migration corrective distincte a été ajoutée : `20261019200000_jdv_social_private_group_membership_guard.sql`. Elle conserve la migration initiale immuable et limite l'auto-activation aux groupes publics ou aux adhésions privées déjà actives ; l'approbation d'une demande privée doit venir d'un administrateur du groupe.
+- **Risque toujours présent en production tant que la migration corrective n'est pas appliquée.** Elle n'a pas été appliquée au Supabase distant, conformément à la consigne de ne pas modifier la production sans validation isolée.
+- Test à effectuer dans un environnement isolé : un utilisateur non membre ne peut pas s'auto-ajouter à un groupe privé en statut `active`; une demande `pending` ne peut pas s'auto-activer; un administrateur du groupe peut approuver; les adhésions publiques continuent de fonctionner.

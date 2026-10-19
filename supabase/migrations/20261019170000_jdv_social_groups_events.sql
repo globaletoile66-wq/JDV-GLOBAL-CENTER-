@@ -90,12 +90,12 @@ stable
 security definer
 set search_path = public, auth, pg_temp
 set row_security = off
-as $
+as $$
   select exists (
     select 1 from public.social_groups g
     where g.id = p_group_id and g.visibility = 'public' and g.status = 'active'
   );
-$;
+$$;
 
 create or replace function public.social_has_group_request(p_group_id uuid)
 returns boolean
@@ -104,14 +104,14 @@ stable
 security definer
 set search_path = public, auth, pg_temp
 set row_security = off
-as $
+as $$
   select exists (
     select 1 from public.social_group_memberships m
     where m.group_id = p_group_id
       and m.user_id = auth.uid()
       and m.status in ('active', 'pending')
   );
-$;
+$$;
 
 revoke all on function public.social_is_group_member(uuid) from public, anon;
 revoke all on function public.social_is_group_admin(uuid) from public, anon;
@@ -207,6 +207,8 @@ with check (user_id = (select auth.uid()) and status in ('registered', 'cancelle
 create policy social_event_registrations_delete on public.social_event_registrations for delete to authenticated
 using (user_id = (select auth.uid()));
 
+grant select, insert, update, delete on public.social_groups, public.social_group_memberships, public.social_events, public.social_event_registrations to authenticated;
+
 create index if not exists social_groups_status_created_idx on public.social_groups (status, created_at desc);
 create index if not exists social_group_memberships_user_status_idx on public.social_group_memberships (user_id, status);
 create index if not exists social_events_start_status_idx on public.social_events (starts_at, status);
@@ -214,3 +216,5 @@ create index if not exists social_events_group_start_idx on public.social_events
 create index if not exists social_event_registrations_user_status_idx on public.social_event_registrations (user_id, status);
 
 commit;
+
+notify pgrst, 'reload schema';

@@ -1,0 +1,68 @@
+name: JDV Social Web and Mobile validation
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+      - feat/jdv-social-foundation-2026-10-19
+    paths:
+      - 'src/app/social/**'
+      - 'mobile/**'
+      - 'supabase/migrations/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - '.github/workflows/jdv-social-validation.yml'
+  pull_request:
+    paths:
+      - 'src/app/social/**'
+      - 'mobile/**'
+      - 'supabase/migrations/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - '.github/workflows/jdv-social-validation.yml'
+
+jobs:
+  web-typecheck:
+    name: Web — TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install Web dependencies
+        run: npm ci
+      - name: Check Web types
+        run: npm run type-check
+      - name: Build Web application
+        run: npm run build
+
+  mobile-typecheck:
+    name: Mobile — TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: .
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Mobile dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check Mobile types
+        run: npm run type-check
