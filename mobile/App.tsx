@@ -551,6 +551,15 @@ export default function App() {
     void openUrl(webSpaceUrl);
   };
 
+  const openSocialMessages = () => {
+    if (!webSpaceUrl || webSpaceUrl.includes('YOUR_WEB_DOMAIN')) {
+      setMessage('Définissez EXPO_PUBLIC_JDV_WEB_URL pour ouvrir la messagerie sécurisée.');
+      return;
+    }
+    const baseUrl = webSpaceUrl.replace(/\\/+$/, '');
+    void openUrl(`${baseUrl}/social/messages`);
+  };
+
   if (!authReady) {
     return <SafeAreaView style={styles.safe}><ActivityIndicator color="#F28C28" size="large" /></SafeAreaView>;
   }
@@ -591,6 +600,9 @@ export default function App() {
           {!!message && <Text accessibilityRole="alert" style={styles.message}>{message}</Text>}
           <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={openWebSpace}>
             <Text style={styles.primaryButtonText}>Ouvrir mon espace Web</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={openSocialMessages}>
+            <Text style={styles.secondaryButtonText}>Ouvrir les messages privés</Text>
           </Pressable>
         </View>
 
