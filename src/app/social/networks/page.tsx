@@ -69,7 +69,10 @@ function BrandIcon({ platform, size = 24 }: { platform: Platform; size?: number 
 export default function SocialNetworksPage() {
   const { user, loading } = useAuth();
   const supabase = useMemo(() => createClient(), []);
-  const [links, setLinks] = useState<ExternalLink[]>([]);\n  const [appPreferences, setAppPreferences] = useState<AppPreference[]>([]);\n  const [appBusy, setAppBusy] = useState(false);\n  const [appNotice, setAppNotice] = useState('');
+  const [links, setLinks] = useState<ExternalLink[]>([]);
+  const [appPreferences, setAppPreferences] = useState<AppPreference[]>([]);
+  const [appBusy, setAppBusy] = useState(false);
+  const [appNotice, setAppNotice] = useState('');
   const [platform, setPlatform] = useState<Platform>('whatsapp');
   const [label, setLabel] = useState('');
   const [handle, setHandle] = useState('');
