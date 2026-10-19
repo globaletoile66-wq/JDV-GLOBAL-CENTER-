@@ -1,0 +1,67 @@
+name: JDV Social SQL migration smoke test
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - ".github/workflows/jdv-social-sql-smoke.yml"
+  push:
+    branches:
+      - feat/jdv-social-foundation-2026-10-19
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - ".github/workflows/jdv-social-sql-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-migration-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jdv_social_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jdv_social_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: jdv_social_test
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare disposable schema fixture
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_social_migration_fixture.sql
+      - name: Apply candidate migrations to disposable PostgreSQL
+        run: |
+          for migration in \
+            supabase/migrations/20261019160000_jdv_social_external_links.sql \
+            supabase/migrations/20261019170000_jdv_social_groups_events.sql \
+            supabase/migrations/20261019190000_jdv_social_public_reads.sql \
+            supabase/migrations/20261019200000_jdv_social_private_group_membership_guard.sql \
+            supabase/migrations/20261019210000_jdv_social_registration_update_guard.sql \
+            supabase/migrations/20261019220000_jdv_social_posts_policy_guard.sql \
+            supabase/migrations/20261019230000_jdv_social_privilege_hardening.sql \
+            supabase/migrations/20261019240000_jdv_social_owner_fields_guard.sql; do
+            echo "Applying $migration"
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Assert expected RLS policies and effective privileges
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_social_migration_assertions.sql
+      - name: Seed disposable RLS test cases
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_social_rls_seed.sql
+      - name: Exercise RLS with distinct user identities
+        run: bash supabase/tests/jdv_social_rls_behavior.sh

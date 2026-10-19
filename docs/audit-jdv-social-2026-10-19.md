@@ -319,3 +319,27 @@ Ces constats proviennent de la lecture de `pg_policies` et des privilèges de sc
 ### Vérification du registre des migrations Supabase
 - Lecture seule de `supabase_migrations.schema_migrations` : les versions enregistrées pour le 19 octobre vont jusqu'à `20261019080401`; les versions candidates `20261019190000`, `20261019200000`, `20261019210000`, `20261019220000` et `20261019230000` n'y figurent pas.
 - Cela confirme que les cinq migrations de correction RLS/privilèges de cette série ne sont pas enregistrées comme appliquées dans le projet distant. Aucun SQL de modification n'a été exécuté sur la base.
+
+
+### Revue statique finale complémentaire — 19 octobre 2026
+- La revue ligne par ligne de `20261019190000_jdv_social_public_reads.sql` a détecté une référence de colonne incorrecte dans la politique INSERT de `social_profiles` (référence accidentelle à `social_comments.post_id`). Elle a été corrigée dans la branche par une règle propriétaire/super-administrateur simple. La migration n'a pas été exécutée sur Supabase.
+- La revue de `20261019170000_jdv_social_groups_events.sql` a identifié deux défauts dans les politiques de mise à jour : les administrateurs de groupe non créateurs pouvaient être refusés par `WITH CHECK`, et les champs d'identité du créateur étaient modifiables par un UPDATE de table trop large.
+- Migration corrective candidate ajoutée : `20261019240000_jdv_social_owner_fields_guard.sql`. Elle révoque UPDATE de table sur les groupes/événements, accorde UPDATE seulement sur les champs fonctionnels modifiables, et autorise les administrateurs légitimes à éditer les groupes/événements de leur périmètre sans transférer le champ `created_by`.
+- Les cinq workflows CI du dernier commit applicatif précédent avaient réussi : validation Web + Mobile, contrôle TypeScript Web, build Web, contrôle TypeScript Mobile et export Web Expo. Après les nouveaux commits de correction SQL/doc, leur exécution spécifique doit être vérifiée avant de considérer la tranche validée.
+- Les migrations `20261019190000` à `20261019240000` restent des candidates non appliquées. Aucune écriture SQL ni migration n'a été exécutée sur le projet Supabase distant.
+- Cette revue est statique : sans environnement Supabase isolé, elle ne prouve pas les résultats des scénarios RLS à l'exécution. La fusion et le déploiement ne sont pas déclarés effectués.
+
+
+### Vérification SQL automatisée en PostgreSQL jetable — 19 octobre 2026
+- Ajout du workflow `.github/workflows/jdv-social-sql-smoke.yml`, qui crée un PostgreSQL 16 éphémère dans GitHub Actions, installe un schéma minimal de test puis applique dans l'ordre les migrations candidates JDV Social.
+- Ajout des fixtures `supabase/tests/jdv_social_migration_fixture.sql` et des assertions `supabase/tests/jdv_social_migration_assertions.sql`.
+- **Résultat réel : réussi au commit `4000de047635b2590c8f84b1dd3c2eaae1a70de2`** : les migrations candidates se sont appliquées sans erreur sur PostgreSQL jetable et les assertions ont confirmé les politiques attendues, l'absence de privilèges `anon` sur les publications, le retrait de `TRUNCATE`, la restriction UPDATE de `social_event_registrations.status` et l'immutabilité de `created_by` sur groupes/événements.
+- Ce test ne touche pas Supabase distant et ne remplace pas les tests RLS comportementaux avec deux sessions utilisateur réelles. Il réduit toutefois le risque de syntaxe et vérifie les privilèges SQL déterminants avant toute promotion.
+- La politique de mise à jour des événements a aussi été durcie : un créateur ne peut pas réaffecter un événement à un groupe dont il n'est pas administrateur; le contrôle porte sur le groupe cible.
+- Le workflow Web/Mobile et les aperçus Netlify du commit le plus récent sont encore en cours de validation au moment de cette note. Aucun déploiement de production n'a été déclenché.
+
+
+### Tests RLS comportementaux sur PostgreSQL jetable — résultat
+- Le workflow SQL a été étendu avec trois identités distinctes et des cas de test couvrant l'auto-approbation d'un groupe privé, l'auto-suppression d'une adhésion bloquée, la modification de `event_id`, la modification de `post_id`, le transfert des champs `created_by`, la réaffectation d'un événement à un groupe non autorisé, la visibilité des publications et les droits d'édition d'un administrateur de groupe.
+- **Résultat réel : tous ces tests ont réussi au commit `bae05c3fd57507c15dafecd4d7d5d3f4669ec6b0`** dans PostgreSQL jetable.
+- Ces résultats vérifient le comportement des politiques et privilèges dans le fixture de test. Ils ne prouvent pas encore l'intégration exacte avec les helpers, données et sessions du projet Supabase distant; aucun test n'a été exécuté sur les données de production.
