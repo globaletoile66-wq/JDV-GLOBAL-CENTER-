@@ -14,6 +14,7 @@ type SocialMembership = { group_id: string; user_id: string; role: string; statu
 type SocialEvent = { id: string; title: string; description: string | null; starts_at: string; location: string | null; visibility: string; group_id: string | null };
 type SocialRegistration = { event_id: string; user_id: string; status: string };
 type SocialComment = { id: string; post_id: string; user_id: string; body: string; status: string; created_at: string };
+type SocialNotification = { id: string; title: string; message: string | null; action_url: string | null; is_read: boolean; read_at: string | null; created_at: string; notification_type: string };
 
 const webSpaceUrl = process.env.EXPO_PUBLIC_JDV_WEB_URL;
 const apps: SocialApp[] = [
@@ -59,6 +60,9 @@ export default function App() {
   const [eventRegistrations, setEventRegistrations] = useState<SocialRegistration[]>([]);
   const [communityBusy, setCommunityBusy] = useState(false);
   const [communityAction, setCommunityAction] = useState('');
+  const [socialNotifications, setSocialNotifications] = useState<SocialNotification[]>([]);
+  const [notificationsBusy, setNotificationsBusy] = useState(false);
+  const [notificationAction, setNotificationAction] = useState('');
   const [feedBusy, setFeedBusy] = useState(false);
   const [postBusy, setPostBusy] = useState(false);
 
@@ -270,6 +274,40 @@ export default function App() {
   }, [session?.user.id]);
 
   useEffect(() => { void loadCommunity(); }, [loadCommunity]);
+
+  const loadSocialNotifications = useCallback(async () => {
+    if (!session?.user.id) { setSocialNotifications([]); return; }
+    setNotificationsBusy(true);
+    try {
+      const { data, error } = await supabase.from('notifications')
+        .select('id,title,message,action_url,is_read,read_at,created_at,notification_type')
+        .eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(30);
+      if (error) setMessage((current) => current || 'Les notifications ne peuvent pas être chargées.');
+      else setSocialNotifications((data ?? []) as SocialNotification[]);
+    } catch {
+      setMessage('Erreur réseau lors du chargement des notifications.');
+    } finally {
+      setNotificationsBusy(false);
+    }
+  }, [session?.user.id]);
+
+  useEffect(() => { void loadSocialNotifications(); }, [loadSocialNotifications]);
+
+  const markSocialNotificationRead = async (item: SocialNotification) => {
+    if (!session || item.is_read || notificationAction) return;
+    setNotificationAction(item.id);
+    const readAt = new Date().toISOString();
+    try {
+      const { error } = await supabase.from('notifications').update({ is_read: true, read_at: readAt })
+        .eq('id', item.id).eq('user_id', session.user.id);
+      if (error) setMessage(error.message);
+      else setSocialNotifications((current) => current.map((row) => row.id === item.id ? { ...row, is_read: true, read_at: readAt } : row));
+    } catch {
+      setMessage('Erreur réseau : la notification n’a pas pu être marquée comme lue.');
+    } finally {
+      setNotificationAction('');
+    }
+  };
 
   const joinSocialGroup = async (group: SocialGroup) => {
     if (!session || communityAction) return;
@@ -549,6 +587,20 @@ export default function App() {
           </View>)}
         </View>}
         {session && <View style={styles.section}>
+          <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Notifications</Text><Pressable accessibilityRole="button" disabled={notificationsBusy} onPress={() => void loadSocialNotifications()}><Text style={styles.openLabel}>{notificationsBusy ? 'Actualisation…' : 'Actualiser'}</Text></Pressable></View>
+          {socialNotifications.filter((item) => !item.is_read).length > 0 && <Text style={styles.postDate}>{socialNotifications.filter((item) => !item.is_read).length} notification(s) non lue(s)</Text>}
+          {socialNotifications.length === 0 && !notificationsBusy && <Text style={styles.body}>Aucune notification pour le moment.</Text>}
+          {socialNotifications.map((item) => <View key={item.id} style={[styles.postCard, item.is_read && styles.notificationRead]}>
+            <Text style={styles.postAuthor}>{item.title}</Text>
+            {!!item.message && <Text style={styles.postBody}>{item.message}</Text>}
+            <Text style={styles.postDate}>{new Date(item.created_at).toLocaleString()}</Text>
+            <View style={styles.notificationActions}>
+              {!item.is_read && <Pressable accessibilityRole="button" disabled={notificationAction === item.id} onPress={() => void markSocialNotificationRead(item)} style={styles.likeButton}><Text style={styles.visibilityText}>{notificationAction === item.id ? 'Enregistrement…' : 'Marquer comme lue'}</Text></Pressable>}
+              {!!item.action_url && <Pressable accessibilityRole="link" onPress={() => { try { const url = new URL(item.action_url!); if (url.protocol === 'https:' || url.protocol === 'http:') void openUrl(url.toString()); else setMessage('Lien de notification non autorisé.'); } catch { setMessage('Lien de notification invalide.'); } }} style={styles.likeButton}><Text style={styles.visibilityText}>Ouvrir ↗</Text></Pressable>}
+            </View>
+          </View>)}
+        </View>}
+        {session && <View style={styles.section}>
           <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Groupes JDV Social</Text><Pressable accessibilityRole="button" disabled={communityBusy} onPress={() => void loadCommunity()}><Text style={styles.openLabel}>{communityBusy ? 'Actualisation…' : 'Actualiser'}</Text></Pressable></View>
           {socialGroups.length === 0 && !communityBusy && <Text style={styles.body}>Aucun groupe disponible actuellement.</Text>}
           {socialGroups.map((group) => {
@@ -630,6 +682,8 @@ const styles = StyleSheet.create({
   postBody: { color: '#C9D4E8', fontSize: 14, lineHeight: 22, marginTop: 10 },
   likeButton: { alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: '#102343' },
   commentCard: { backgroundColor: '#102343', borderRadius: 8, padding: 10, marginTop: 8 },
+  notificationRead: { opacity: 0.72 },
+  notificationActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   appHidden: { opacity: 0.65 },
   appMark: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
   appName: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', flex: 1 },
