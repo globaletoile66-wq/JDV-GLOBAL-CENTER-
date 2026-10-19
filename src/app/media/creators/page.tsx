@@ -44,7 +44,7 @@ export default function MediaCreatorsPage() {
       user_id: user.id, display_name: displayName.trim(), bio: bio.trim() || null,
       country_code: countryCode.trim().toUpperCase() || null,
       specialties: specialties.split(',').map((item) => item.trim()).filter(Boolean).slice(0, 12),
-      website_url: website.trim() || null, is_public: false, verification_status: 'pending',
+      website_url: website.trim() || null,
     }, { onConflict: 'user_id' });
     if (saveError) setError(saveError.message);
     else { setNotice('Candidature enregistrée. Le profil restera privé jusqu’à sa vérification par JDV Media.'); setDisplayName(''); setBio(''); setWebsite(''); await load(); }
