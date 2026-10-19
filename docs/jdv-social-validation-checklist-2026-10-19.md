@@ -39,6 +39,8 @@ Cette liste est un plan de test, pas un compte rendu de tests réussis. Aucun r�
 - [ ] Le compte B ajoute un commentaire; le commentaire apparaît sans rechargement.
 - [ ] Le nom du commentateur s'affiche lorsqu'un profil social lisible existe.
 - [ ] Une publication privée/non publiée ne fuit pas dans le fil public.
+- [ ] Un compte B ne peut ni modifier ni supprimer la publication publique du compte A; les écritures restent limitées à l'auteur ou au super-administrateur.
+- [ ] Une publication `public` en brouillon n'est pas lisible par le compte B via l'API directe.
 - [ ] Les erreurs RLS sont visibles sans casser le fil.
 
 ## 5. Groupes et événements
