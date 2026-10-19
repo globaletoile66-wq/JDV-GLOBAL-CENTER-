@@ -254,7 +254,7 @@ export default function App() {
                 {session && <Pressable accessibilityRole="button" disabled={Boolean(preferenceSaving)} onPress={() => void toggleVisibility(app)} style={styles.visibilityButton}>
                   <Text style={styles.visibilityText}>{preferenceSaving === app.key ? 'Enregistrement…' : visible ? 'Masquer' : 'Afficher'}</Text>
                 </Pressable>}
-                {session && <Pressable accessibilityRole="button" disabled={Boolean(preferenceSaving)} onPress={() => void toggleNotifications(app)} style={styles.visibilityButton}><Text style={styles.visibilityText}>{preferenceSaving === app.key ? 'Enregistrement…' : preferences[app.key]?.notifications_enabled ? 'Alertes : oui' : 'Alertes : non'}</Text></Pressable>}
+                {session && <Pressable accessibilityRole="button" disabled={Boolean(preferenceSaving)} onPress={() => void toggleNotifications(app)} style={styles.visibilityButton}><Text style={styles.visibilityText}>{preferenceSaving === app.key ? 'Enregistrement…' : (preferences[app.key]?.notifications_enabled ?? true) ? 'Alertes : oui' : 'Alertes : non'}</Text></Pressable>}
                 <Pressable accessibilityRole="link" onPress={() => void openUrl(app.url)}><Text style={styles.openLabel}>Ouvrir ↗</Text></Pressable>
               </View>
             );
