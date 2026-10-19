@@ -9,7 +9,7 @@ create policy social_group_memberships_update
 on public.social_group_memberships
 for update to authenticated
 using (
-  user_id = (select auth.uid())
+  (user_id = (select auth.uid()) and status <> 'blocked')
   or public.social_is_group_admin(group_id)
 )
 with check (
@@ -31,6 +31,16 @@ with check (
     public.social_is_group_admin(group_id)
     and role in ('owner', 'admin', 'member')
   )
+);
+
+-- A blocked member must not be able to remove their blocked row and rejoin.
+drop policy if exists social_group_memberships_delete on public.social_group_memberships;
+create policy social_group_memberships_delete
+on public.social_group_memberships
+for delete to authenticated
+using (
+  (user_id = (select auth.uid()) and status <> 'blocked')
+  or public.social_is_group_admin(group_id)
 );
 
 commit;
