@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type Organization = { id: string; name: string; org_status: string };
 type Currency = { id: string; code: string; symbol: string };
+type TontineClass = { code: string; name: string; description: string };
 
 type TontineRow = {
   id: string; name: string; organization_id: string; contribution_amount: number;
@@ -25,6 +26,8 @@ export default function TontineConcepteurPage() {
   const supabase = useMemo(() => createClient(), []);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [classes, setClasses] = useState<TontineClass[]>([]);
+  const [tontineClass, setTontineClass] = useState('rotating_classic');
   const [tontines, setTontines] = useState<TontineRow[]>([]);
   const [organizationId, setOrganizationId] = useState('');
   const [currencyId, setCurrencyId] = useState('');
@@ -48,10 +51,11 @@ export default function TontineConcepteurPage() {
     if (!user) return;
     setBusy(true);
     setError('');
-    const [orgResult, currencyResult, tontineResult] = await Promise.all([
+    const [orgResult, currencyResult, tontineResult, classResult] = await Promise.all([
       isSuperAdmin ? supabase.from('organizations').select('id,name,org_status').order('name').limit(500) : supabase.from('organization_members').select('organization_id, organizations!inner(id,name,org_status)').eq('user_id', user.id).eq('member_status', 'active').limit(500),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).order('code').limit(100),
       supabase.from('tontines').select('id,name,organization_id,contribution_amount,frequency,cycle_periods,member_limit,status,tontine_type').order('created_at', { ascending: false }).limit(100),
+      (supabase as any).from('tontine_classes').select('code,name,description').eq('is_active', true).order('name'),
     ]);
     if (orgResult.error) setError('Chargement des organisations impossible : ' + orgResult.error.message);
     else {
@@ -67,6 +71,8 @@ export default function TontineConcepteurPage() {
     }
     if (tontineResult.error) setError((current) => current || 'Chargement des tontines impossible : ' + tontineResult.error.message);
     else setTontines((tontineResult.data ?? []) as TontineRow[]);
+    if (classResult.error) setError((current) => current || 'Chargement des classes impossible : ' + classResult.error.message);
+    else setClasses((classResult.data ?? []) as TontineClass[]);
     setBusy(false);
   }, [isSuperAdmin, supabase, user]);
 
@@ -80,8 +86,8 @@ export default function TontineConcepteurPage() {
     setError('');
     setSuccess('');
     setJoinPath('');
-    if (!organizationId || !currencyId) {
-      setError('Choisis une organisation et une devise avant de continuer.');
+    if (!organizationId || !currencyId || !tontineClass) {
+      setError('Choisis une organisation, une devise et une classe de tontine avant de continuer.');
       return;
     }
     if (!name.trim() || Number(amount) <= 0 || !Number.isInteger(Number(periods)) || Number(periods) < 1 || Number(periods) > 366 ||
@@ -144,9 +150,15 @@ export default function TontineConcepteurPage() {
       }
     }
 
+    if (!createError && created) {
+      const classResult = await (supabase as any).rpc('tontine_set_class_draft', { p_tontine_id: created.id, p_tontine_class: tontineClass });
+      if (classResult.error) createError = { message: 'Brouillon créé mais classe non enregistrée : ' + classResult.error.message };
+    }
     setSaving(false);
     if (createError || !created) {
-      setError('La création a été refusée par la base de données : ' + (createError?.message || 'réponse vide') + '. Aucune cotisation ni aucun paiement n’a été lancé.');
+      setError(created
+        ? 'Le brouillon a bien été créé, mais sa classe n’a pas pu être enregistrée : ' + (createError?.message || 'erreur inconnue') + '. Aucun paiement n’a été lancé; ouvre Documents & identités et contacte le support avant de continuer.'
+        : 'La création a été refusée par la base de données : ' + (createError?.message || 'réponse vide') + '. Aucune cotisation ni aucun paiement n’a été lancé.');
       return;
     }
     setSuccess(tontineType === 'individual'
@@ -167,7 +179,7 @@ export default function TontineConcepteurPage() {
 
   return <main className="min-h-screen bg-[#0B1B3D] p-5 text-white sm:p-8">
     <div className="mx-auto max-w-7xl">
-      <Link href="/tontine" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> Retour à JDV TONTINE</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3"><Link href="/tontine" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> Retour à JDV TONTINE</Link><Link href="/tontine/documents" className="rounded-xl border border-white/15 px-4 py-2 text-sm">Documents, bureau et identités</Link></div>
       <header className="mt-6 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
         <div className="flex items-start gap-4"><div className="rounded-2xl bg-emerald-400/10 p-3 text-emerald-300"><ShieldCheck size={25}/></div><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#F28C28]">Espace concepteur · accès indépendant</p><h1 className="mt-2 text-3xl font-black">Atelier de vérification — Tontine</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">Créer des tontines de test en brouillon, vérifier les paramètres et examiner les tontines existantes. La création ne lance ni cycle, ni cotisation, ni paiement.</p></div></div>
       </header>
@@ -177,6 +189,7 @@ export default function TontineConcepteurPage() {
         <form onSubmit={createDraft} className="space-y-5 rounded-2xl border border-white/10 bg-white/[.04] p-5 sm:p-7">
           <div className="flex items-center gap-2"><PlusCircle className="text-[#F28C28]" size={21}/><h2 className="text-xl font-bold">Créer une tontine (brouillon)</h2></div>
           <div><label className="mb-2 block text-sm text-white/70">Organisation propriétaire *</label><select required value={organizationId} onChange={(e) => setOrganizationId(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"><option value="">Choisir une organisation</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.name} · {org.org_status}</option>)}</select></div>
+          <div><label className="mb-2 block text-sm text-white/70">Classe de tontine *</label><select required value={tontineClass} onChange={(e) => setTontineClass(e.target.value)} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm">{classes.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select><p className="mt-2 text-xs leading-5 text-white/50">{classes.find((item) => item.code === tontineClass)?.description}</p></div>
           <div><label className="mb-2 block text-sm text-white/70">Type de tontine *</label><select required value={tontineType} onChange={(e) => setTontineType(e.target.value as 'group' | 'individual')} className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"><option value="group">Tontine de groupe — adhésions et rotation</option><option value="individual">Tontine individuelle — épargne personnelle</option></select><p className="mt-2 text-xs leading-5 text-white/50">{tontineType === 'individual' ? 'Un seul titulaire, sans lien d’invitation ni rotation de bénéficiaires. Le dossier reste en attente jusqu’à la validation KYC et contractuelle.' : 'Plusieurs membres, invitation contrôlée, calendrier partagé et ordre de bénéficiaires.'}</p></div>
           <div><label className="mb-2 block text-sm text-white/70">Nom de la tontine *</label><input required minLength={3} maxLength={120} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Tontine solidarité quartier" className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div>
           <div><label className="mb-2 block text-sm text-white/70">Description / objectif</label><textarea maxLength={1000} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Objectif, conditions et public concerné…" className="w-full rounded-xl border border-white/15 bg-[#09152f] p-3 text-sm"/></div>
