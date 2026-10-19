@@ -1,9 +1,9 @@
-# JDB Social — audit initial de l'existant
+# JDV Social — audit initial de l'existant
 Date : 19 octobre 2026
 Dépôt : `globaletoile66-wq/JDV-GLOBAL-CENTER-`
 Branche de départ : `supabase-sync-2026-09-24`
 Branche de travail : `feat/jdv-social-foundation-2026-10-19`
-Projet Supabase inspecté : `lncgghdbnkehdcyhqdfo` (JDV GLOGBAL CENTER FINAL)
+Projet Supabase inspecté : `lncgghdbnkehdcyhqdfo` (JDV GLOBAL CENTER FINAL)
 
 ## Périmètre et règles
 - Auditer le frontend Social, les tables et politiques Supabase associées, les migrations versionnées et les points d'entrée de navigation.
