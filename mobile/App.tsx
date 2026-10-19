@@ -55,8 +55,9 @@ export default function App() {
     setPreferencesBusy(true);
     const { data, error } = await supabase
       .from('social_app_preferences')
-      .select('app_key,is_visible,sort_order,category,notifications_enabled')
-      .eq('user_id', session.user.id);
+      .select('app_key,is_added,is_visible,sort_order,category,notifications_enabled')
+      .eq('user_id', session.user.id)
+      .eq('is_added', true);
     if (error) {
       setMessage('Connexion active, mais les préférences ne peuvent pas être chargées. Vérifiez les droits RLS et la connexion réseau.');
     } else {
@@ -108,6 +109,7 @@ export default function App() {
     setPreferences((previous) => ({ ...previous, [app.key]: next }));
     const { error } = await supabase.from('social_app_preferences').upsert({
       user_id: session.user.id,
+      is_added: true,
       ...next,
     }, { onConflict: 'user_id,app_key' });
     if (error) {
