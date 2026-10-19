@@ -345,6 +345,30 @@ export default function App() {
     }
   };
 
+  const leaveSocialGroup = async (group: SocialGroup) => {
+    if (!session || communityAction) return;
+    const existing = groupMemberships.find((item) => item.group_id === group.id && (item.status === 'active' || item.status === 'pending'));
+    if (!existing) return;
+    setCommunityAction(group.id); setMessage('');
+    try {
+      const { error } = await supabase.from('social_group_memberships')
+        .update({ status: 'left' })
+        .eq('group_id', group.id)
+        .eq('user_id', session.user.id);
+      if (error) setMessage(error.message);
+      else {
+        setGroupMemberships((current) => current.map((item) =>
+          item.group_id === group.id ? { ...item, status: 'left' } : item
+        ));
+        setMessage(existing.status === 'pending' ? 'Votre demande d’adhésion a été annulée.' : 'Vous avez quitté le groupe.');
+      }
+    } catch {
+      setMessage('Erreur réseau : impossible de modifier votre adhésion au groupe.');
+    } finally {
+      setCommunityAction('');
+    }
+  };
+
   const registerSocialEvent = async (item: SocialEvent) => {
     if (!session || communityAction) return;
     const current = eventRegistrations.find((row) => row.event_id === item.id);
@@ -626,8 +650,9 @@ export default function App() {
               <Text style={styles.postAuthor}>{group.name}</Text>
               {!!group.description && <Text style={styles.postBody}>{group.description}</Text>}
               <Text style={styles.postDate}>{group.visibility === 'public' ? 'Groupe public' : 'Groupe privé'}</Text>
-              {!active && <Pressable accessibilityRole="button" disabled={Boolean(communityAction) || pending} onPress={() => void joinSocialGroup(group)} style={styles.likeButton}><Text style={styles.visibilityText}>{communityAction === group.id ? 'Enregistrement…' : pending ? 'Demande envoyée' : group.visibility === 'public' ? 'Rejoindre' : 'Demander l’accès'}</Text></Pressable>}
-              {active && <Text style={styles.openLabel}>Membre ✓</Text>}
+              {(active || pending)
+                ? <Pressable accessibilityRole="button" disabled={Boolean(communityAction)} onPress={() => void leaveSocialGroup(group)} style={styles.likeButton}><Text style={styles.visibilityText}>{communityAction === group.id ? 'Enregistrement…' : pending ? 'Annuler la demande' : 'Quitter le groupe'}</Text></Pressable>
+                : <Pressable accessibilityRole="button" disabled={Boolean(communityAction)} onPress={() => void joinSocialGroup(group)} style={styles.likeButton}><Text style={styles.visibilityText}>{communityAction === group.id ? 'Enregistrement…' : group.visibility === 'public' ? 'Rejoindre' : 'Demander l’accès'}</Text></Pressable>}
             </View>;
           })}
           <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Événements JDV Social</Text>
