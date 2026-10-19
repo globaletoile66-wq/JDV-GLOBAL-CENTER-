@@ -39,6 +39,10 @@ create index if not exists idx_jdv_job_applications_applicant
 create index if not exists idx_jdv_job_applications_job
   on public.jdv_job_applications (job_id, created_at desc);
 
+grant select on public.jdv_jobs to anon, authenticated;
+grant insert, update, delete on public.jdv_jobs to authenticated;
+grant select, insert, update on public.jdv_job_applications to authenticated;
+
 alter table public.jdv_jobs enable row level security;
 alter table public.jdv_job_applications enable row level security;
 
