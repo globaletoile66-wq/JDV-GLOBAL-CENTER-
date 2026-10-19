@@ -44,10 +44,13 @@ export default function SocialPage() {
   const load = useCallback(async () => {
     setBusy(true); setError('');
     if (!user) { setProfile(null); setPosts([]); setReactions([]); setComments([]); setFollows([]); setProfilesByUser({}); setBusy(false); return; }
-    const [profileResult, postsResult] = await Promise.all([
+    const [profileResult, postsResult, followResult] = await Promise.all([
       supabase.from('social_profiles').select('id,user_id,username,display_name,bio,avatar_url,profile_status').eq('user_id', user.id).maybeSingle(),
       supabase.from('social_posts').select('id,author_user_id,body,media_url,visibility,status,created_at').order('created_at', { ascending: false }).limit(100),
+      supabase.from('social_follows').select('follower_user_id,following_user_id,status').eq('follower_user_id', user.id).eq('status', 'active'),
     ]);
+    if (followResult.error) setError((current) => current || followResult.error!.message);
+    else setFollows((followResult.data ?? []) as SocialFollow[]);
     if (profileResult.error) setError(profileResult.error.message);
     else {
       setProfile((profileResult.data ?? null) as SocialProfile | null);
@@ -63,11 +66,10 @@ export default function SocialPage() {
       const ids = nextPosts.map((post) => post.id);
       const authorIds = Array.from(new Set([user.id, ...nextPosts.map((post) => post.author_user_id)]));
       if (ids.length) {
-        const [profileList, reactionList, commentList, followList] = await Promise.all([
+        const [profileList, reactionList, commentList] = await Promise.all([
           supabase.from('social_profiles').select('user_id,username,display_name,avatar_url,profile_status').in('user_id', authorIds),
           supabase.from('social_reactions').select('id,post_id,user_id,reaction_type').in('post_id', ids),
           supabase.from('social_comments').select('id,post_id,user_id,body,status,created_at').in('post_id', ids).eq('status', 'published').order('created_at', { ascending: true }).limit(300),
-          supabase.from('social_follows').select('follower_user_id,following_user_id,status').eq('follower_user_id', user.id).eq('status', 'active'),
         ]);
         if (profileList.error) setError((current) => current || profileList.error!.message);
         else {
