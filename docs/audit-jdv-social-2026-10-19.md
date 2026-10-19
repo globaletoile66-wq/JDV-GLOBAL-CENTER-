@@ -223,3 +223,8 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Le dépôt contient bien un `package-lock.json` racine suivi par Git ; le fichier est récupérable depuis la branche malgré la règle d'ignorance présente dans `.gitignore`. Le cache npm du job Web est donc conservé.
 - Aucun `mobile/package-lock.json` n'a été confirmé ; le job Mobile utilise `npm install --no-audit --no-fund` sans cache npm configuré.
 - Aucun résultat TypeScript ou build n'est déduit de ces ajustements. Les résultats CI restent à vérifier dans GitHub Actions.
+
+### Alignement du workflow Mobile
+- Un second workflow `jdv-social-mobile.yml` contenait encore le nom d'une ancienne branche (`feat/jdv-social-cross-platform-2026-10-19`) pour les déclenchements `push`.
+- Son déclencheur a été aligné sur la branche active `feat/jdv-social-foundation-2026-10-19`. Il ajoute aux vérifications Mobile le contrôle de compatibilité Expo et l'export Web Expo.
+- Les workflows sont configurés, mais leurs étapes ne sont pas déclarées réussies tant qu'un résultat GitHub Actions vérifiable n'est pas disponible.
