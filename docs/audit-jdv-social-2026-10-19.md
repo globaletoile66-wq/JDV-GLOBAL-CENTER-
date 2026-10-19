@@ -180,3 +180,10 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Le mobile permet de quitter un groupe ou d'annuler une demande en attente en conservant l'enregistrement d'adhésion avec le statut `left`.
 - Une checklist manuelle Web/Mobile est disponible dans `docs/jdv-social-validation-checklist-2026-10-19.md`.
 - Ces changements sont committés sur la branche de travail; compilation, tests d'appareil, application de migration et déploiement restent non confirmés.
+
+
+## Vérification complémentaire — 19 octobre 2026
+- Lecture seule du schéma Supabase distant : les tables `social_profiles`, `social_posts`, `social_reactions` et `social_comments` existent et ont la RLS activée. Les politiques actuellement en place portent encore les noms `social_*_access` ; la migration de lecture publique reste donc candidate et n'a pas été appliquée.
+- Les colonnes utilisées par la migration candidate (`profile_status`, `author_user_id`, `visibility`, `status`, `post_id`, `user_id`) ont été retrouvées dans le schéma distant.
+- Durcissement du workflow GitHub Actions : permission réduite à `contents: read` et suppression de l'étape qui tentait de pousser automatiquement un `package-lock.json` modifié. Le workflow ne doit pas écrire dans la branche pour exécuter les validations.
+- Toujours en attente : résultat effectif du build Web, du contrôle TypeScript Mobile et validation fonctionnelle avec plusieurs comptes. Aucun déploiement, aucune installation et aucune migration distante ne sont déclarés comme effectués.
