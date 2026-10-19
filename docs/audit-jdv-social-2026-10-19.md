@@ -256,3 +256,9 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - GitHub indique que la PR `#130` a été fusionnée le 19 octobre 2026 à 13:03:31 UTC. Aucune commande de fusion n'a été lancée dans cette session; la fusion a été constatée après coup lors de la vérification.
 - La branche par défaut pointe maintenant sur `5e640964...`. Les deux correctifs postérieurs à la tête fusionnée sont suivis dans la PR brouillon `#131` : alignement des versions Expo/TypeScript et configuration d'environnement de build.
 - La PR `#131` reste ouverte en brouillon et ne doit pas être fusionnée avant résultats CI concluants et revue. Aucune action de déploiement n'a été lancée.
+
+### Dépendances — signal de sécurité CI
+- L'installation Web au commit `5e3b1230...` a signalé 30 vulnérabilités dans l'arbre de dépendances (dont 1 critique et 22 élevées).
+- L'installation Mobile a signalé 22 vulnérabilités (dont 15 élevées).
+- Ces chiffres sont ceux affichés par `npm install` dans les journaux CI; ils ne constituent pas encore un audit de l'exploitabilité ni une liste des paquets concernés.
+- Aucune commande `npm audit fix` automatique n'a été lancée : les mises à jour correctives doivent être examinées package par package afin d'éviter une mise à niveau majeure non maîtrisée. Une analyse dédiée des advisories est requise avant publication.
