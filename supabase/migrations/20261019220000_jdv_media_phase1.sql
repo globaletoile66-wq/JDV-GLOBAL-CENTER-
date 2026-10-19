@@ -148,10 +148,22 @@ create policy media_editorial_review_admin_update on public.media_editorial_revi
 
 -- Production briefs are private to their requester and super admins in phase 1.
 drop policy if exists media_production_request_owner_access on public.media_production_requests;
-create policy media_production_request_owner_access on public.media_production_requests
-  for all to authenticated
-  using (requester_user_id = auth.uid() or is_super_admin())
-  with check (requester_user_id = auth.uid() or is_super_admin());
+drop policy if exists media_production_request_owner_read on public.media_production_requests;
+drop policy if exists media_production_request_owner_insert on public.media_production_requests;
+drop policy if exists media_production_request_admin_update on public.media_production_requests;
+drop policy if exists media_production_request_admin_delete on public.media_production_requests;
+create policy media_production_request_owner_read on public.media_production_requests
+  for select to authenticated
+  using (requester_user_id = auth.uid() or is_super_admin());
+create policy media_production_request_owner_insert on public.media_production_requests
+  for insert to authenticated
+  with check (requester_user_id = auth.uid() and status = 'submitted');
+create policy media_production_request_admin_update on public.media_production_requests
+  for update to authenticated
+  using (is_super_admin()) with check (is_super_admin());
+create policy media_production_request_admin_delete on public.media_production_requests
+  for delete to authenticated
+  using (is_super_admin());
 
 
 -- Explicit API privileges; RLS remains the row-level boundary.
