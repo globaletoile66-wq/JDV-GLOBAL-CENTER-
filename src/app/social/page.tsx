@@ -9,7 +9,8 @@ import { createClient } from '@/lib/supabase/client';
 type SocialProfile = { id?: string; user_id: string; username: string; display_name: string | null; bio?: string | null; avatar_url?: string | null; profile_status?: string };
 type SocialPost = { id: string; author_user_id: string; body: string | null; media_url: string | null; visibility: string; status: string; created_at: string };
 type SocialReaction = { id: string; post_id: string; user_id: string; reaction_type: string };
-type SocialComment = { id: string; post_id: string; user_id: string; body: string; status: string; created_at: string };\ntype SocialFollow = { follower_user_id: string; following_user_id: string; status: string };
+type SocialComment = { id: string; post_id: string; user_id: string; body: string; status: string; created_at: string };
+type SocialFollow = { follower_user_id: string; following_user_id: string; status: string };
 const inputClass = 'w-full rounded-xl border border-white/10 bg-[#09152f] px-3 py-3 text-sm text-white outline-none focus:border-[#F28C28]';
 const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50';
 
@@ -24,7 +25,8 @@ export default function SocialPage() {
   const [profilesByUser, setProfilesByUser] = useState<Record<string, SocialProfile>>({});
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [reactions, setReactions] = useState<SocialReaction[]>([]);
-  const [comments, setComments] = useState<SocialComment[]>([]);\n  const [follows, setFollows] = useState<SocialFollow[]>([]);
+  const [comments, setComments] = useState<SocialComment[]>([]);
+  const [follows, setFollows] = useState<SocialFollow[]>([]);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [username, setUsername] = useState('');
@@ -64,7 +66,8 @@ export default function SocialPage() {
         const [profileList, reactionList, commentList, followList] = await Promise.all([
           supabase.from('social_profiles').select('user_id,username,display_name,avatar_url,profile_status').in('user_id', authorIds),
           supabase.from('social_reactions').select('id,post_id,user_id,reaction_type').in('post_id', ids),
-          supabase.from('social_comments').select('id,post_id,user_id,body,status,created_at').in('post_id', ids).eq('status', 'published').order('created_at', { ascending: true }).limit(300),\n          supabase.from('social_follows').select('follower_user_id,following_user_id,status').eq('follower_user_id', user.id).eq('status', 'active'),
+          supabase.from('social_comments').select('id,post_id,user_id,body,status,created_at').in('post_id', ids).eq('status', 'published').order('created_at', { ascending: true }).limit(300),
+          supabase.from('social_follows').select('follower_user_id,following_user_id,status').eq('follower_user_id', user.id).eq('status', 'active'),
         ]);
         if (profileList.error) setError((current) => current || profileList.error!.message);
         else {
