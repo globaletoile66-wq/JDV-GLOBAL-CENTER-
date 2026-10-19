@@ -281,3 +281,7 @@ Les politiques actuellement présentes sur Supabase confirment trois points qui 
 2. `social_event_registrations_update` limite actuellement l'identité du propriétaire et les valeurs de statut, mais ne restreint pas la colonne `event_id` par privilèges SQL. La migration candidate `20261019210000_jdv_social_registration_update_guard.sql` révoque UPDATE global et n'accorde que UPDATE sur `status`.
 3. `social_comments_access` autorise actuellement les commentaires liés aux publications de l'auteur, mais sa règle UPDATE ne vérifie pas la visibilité de la nouvelle publication associée. Le correctif de la migration candidate `20261019190000_jdv_social_public_reads.sql` ajoute cette vérification.
 Ces constats proviennent de la lecture de `pg_policies` et des privilèges de schéma; aucun test d'écriture ni changement de données n'a été réalisé. Les trois migrations restent non appliquées à la production et doivent être testées sur une base isolée avec deux comptes distincts avant toute mise en service.
+
+### Renforcement de la checklist de tests
+- La checklist Web + Mobile inclut désormais des scénarios négatifs explicites pour l'auto-approbation d'une adhésion privée, la modification de `event_id`/`user_id`, la réactivation d'inscription sans accès valide, le déplacement de commentaires vers des publications privées et les accès anonymes.
+- Ces tests sont définis mais non exécutés sur la base distante. Ils doivent être joués sur un environnement isolé avec deux comptes de test avant d'approuver les migrations RLS.
