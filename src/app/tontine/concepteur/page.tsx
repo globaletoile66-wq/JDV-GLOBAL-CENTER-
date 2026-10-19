@@ -55,7 +55,7 @@ export default function TontineConcepteurPage() {
       isSuperAdmin ? supabase.from('organizations').select('id,name,org_status').order('name').limit(500) : supabase.from('organization_members').select('organization_id, organizations!inner(id,name,org_status)').eq('user_id', user.id).eq('member_status', 'active').limit(500),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).order('code').limit(100),
       supabase.from('tontines').select('id,name,organization_id,contribution_amount,frequency,cycle_periods,member_limit,status,tontine_type').order('created_at', { ascending: false }).limit(100),
-      supabase.from('tontine_classes').select('code,name,description').eq('is_active', true).order('name'),
+      (supabase as any).from('tontine_classes').select('code,name,description').eq('is_active', true).order('name'),
     ]);
     if (orgResult.error) setError('Chargement des organisations impossible : ' + orgResult.error.message);
     else {
@@ -151,7 +151,7 @@ export default function TontineConcepteurPage() {
     }
 
     if (!createError && created) {
-      const classResult = await supabase.rpc('tontine_set_class_draft', { p_tontine_id: created.id, p_tontine_class: tontineClass });
+      const classResult = await (supabase as any).rpc('tontine_set_class_draft', { p_tontine_id: created.id, p_tontine_class: tontineClass });
       if (classResult.error) createError = { message: 'Brouillon créé mais classe non enregistrée : ' + classResult.error.message };
     }
     setSaving(false);
