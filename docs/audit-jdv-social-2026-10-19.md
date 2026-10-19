@@ -233,3 +233,8 @@ L'introspection de la base a trouvé des tables de messagerie liées à la marke
 - Le `package-lock.json` racine utilise le format lockfile v3 et les entrées `dependencies` / `devDependencies` correspondent exactement aux versions déclarées dans `package.json` au moment de l'inspection.
 - Le dossier Mobile déclare 9 dépendances et ne contient pas de `mobile/package-lock.json`; son installation CI n'est donc pas verrouillée au même niveau que l'application Web.
 - Contrôle statique uniquement : aucune installation de paquets, compilation ou export Expo n'a été exécuté dans cette vérification.
+
+### Comparaison de branche
+- La branche de travail a été comparée à la branche par défaut `supabase-sync-2026-09-24` : GitHub indique une divergence (65 commits en avance et 1 commit en retard au moment du contrôle).
+- Les chemins de fichiers remontés dans cette comparaison concernent JDV Social, Mobile, les workflows, les migrations sociales, la documentation, le lockfile racine et la configuration TypeScript. Aucun chemin de l'ancien CRM n'apparaît dans cette liste.
+- Aucune fusion ou rebase automatique n'a été effectué : la divergence doit être revue avant intégration.
