@@ -23,6 +23,35 @@ const platforms: { value: Platform; label: string }[] = [
 ];
 const fieldClass = 'w-full rounded-xl border border-white/10 bg-[#09152f] px-3 py-3 text-sm text-white outline-none focus:border-[#F28C28]';
 
+const platformBrand: Record<Platform, { slug: string; color: string }> = {
+  whatsapp: { slug: 'whatsapp', color: '25D366' },
+  whatsapp_business: { slug: 'whatsappbusiness', color: '25D366' },
+  facebook: { slug: 'facebook', color: '0866FF' },
+  instagram: { slug: 'instagram', color: 'E4405F' },
+  x: { slug: 'x', color: 'FFFFFF' },
+  tiktok: { slug: 'tiktok', color: 'FFFFFF' },
+  youtube: { slug: 'youtube', color: 'FF0033' },
+  telegram: { slug: 'telegram', color: '26A5E4' },
+  linkedin: { slug: 'linkedin', color: '0A66C2' },
+  snapchat: { slug: 'snapchat', color: 'FFFC00' },
+  pinterest: { slug: 'pinterest', color: 'BD081C' },
+};
+
+function BrandIcon({ platform, size = 24 }: { platform: Platform; size?: number }) {
+  const brand = platformBrand[platform];
+  return (
+    <img
+      src={`https://cdn.simpleicons.org/${brand.slug}/${brand.color}`}
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      loading="lazy"
+      className="shrink-0 object-contain"
+    />
+  );
+}
+
 export default function SocialNetworksPage() {
   const { user, loading } = useAuth();
   const supabase = useMemo(() => createClient(), []);
@@ -100,7 +129,7 @@ export default function SocialNetworksPage() {
             <section className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5">
               <h2 className="flex items-center gap-2 text-lg font-bold"><Plus size={19} className="text-[#F28C28]"/> Ajouter un profil externe</h2>
               <form onSubmit={addLink} className="mt-4 space-y-4">
-                <div><label htmlFor="social-platform" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">Plateforme</label><select id="social-platform" className={fieldClass} value={platform} onChange={(event) => setPlatform(event.target.value as Platform)}>{platforms.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+                <div><p id="social-platform-label" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/50">Choisir un réseau</p><div role="group" aria-labelledby="social-platform-label" className="grid grid-cols-2 gap-2 sm:grid-cols-3">{platforms.map((item) => <button key={item.value} type="button" aria-pressed={platform === item.value} onClick={() => setPlatform(item.value)} className={`flex min-h-12 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition ${platform === item.value ? 'border-[#F28C28] bg-[#F28C28]/10 text-white ring-1 ring-[#F28C28]/40' : 'border-white/10 bg-[#09152f] text-white/70 hover:border-white/30'}`}><BrandIcon platform={item.value} size={22}/><span>{item.label}</span></button>)}</div></div>
                 <div><label htmlFor="social-link-label" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">Nom du profil ou de la chaîne</label><input id="social-link-label" className={fieldClass} value={label} onChange={(event) => setLabel(event.target.value)} maxLength={120} placeholder="Ex. Ma chaîne officielle"/></div>
                 <div><label htmlFor="social-link-handle" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">Identifiant (facultatif)</label><input id="social-link-handle" className={fieldClass} value={handle} onChange={(event) => setHandle(event.target.value)} maxLength={120} placeholder="@monprofil"/></div>
                 <div><label htmlFor="social-link-url" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">URL du profil *</label><input id="social-link-url" type="url" required className={fieldClass} value={url} onChange={(event) => setUrl(event.target.value)} maxLength={2000} placeholder="https://…"/></div>
@@ -110,7 +139,7 @@ export default function SocialNetworksPage() {
             </section>
             <section className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5">
               <h2 className="text-lg font-bold">Mes réseaux sociaux <span className="ml-2 rounded-full bg-white/10 px-2 py-1 text-xs">{links.length}</span></h2>
-              {links.length === 0 && !busy ? <p className="mt-4 rounded-xl border border-dashed border-white/15 p-7 text-center text-sm text-white/45">Aucun profil externe ajouté pour le moment.</p> : <div className="mt-4 space-y-3">{links.map((item) => <article key={item.id} className="rounded-xl border border-white/10 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{platforms.find((p) => p.value === item.platform)?.label || item.platform}</p><p className="mt-1 text-sm text-white/70">{item.label || item.handle || item.profile_url}</p>{item.handle && item.label && <p className="mt-1 text-xs text-white/40">{item.handle}</p>}<p className="mt-2 text-xs text-white/40">Visibilité : {item.visibility === 'public' ? 'publique' : 'privée'}</p></div><button type="button" onClick={() => void removeLink(item)} className="rounded-lg p-2 text-white/50 hover:bg-red-400/10 hover:text-red-200" aria-label="Supprimer ce lien"><Trash2 size={16}/></button></div><a href={item.profile_url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm text-[#F28C28] hover:underline">Ouvrir le profil <ExternalLink size={14}/></a></article>)}</div>}
+              {links.length === 0 && !busy ? <p className="mt-4 rounded-xl border border-dashed border-white/15 p-7 text-center text-sm text-white/45">Aucun profil externe ajouté pour le moment.</p> : <div className="mt-4 space-y-3">{links.map((item) => <article key={item.id} className="rounded-xl border border-white/10 p-4"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.04]"><BrandIcon platform={item.platform} size={25}/></div><div className="min-w-0"><p className="font-semibold">{platforms.find((p) => p.value === item.platform)?.label || item.platform}</p><p className="mt-1 text-sm text-white/70">{item.label || item.handle || item.profile_url}</p>{item.handle && item.label && <p className="mt-1 text-xs text-white/40">{item.handle}</p>}<p className="mt-2 text-xs text-white/40">Visibilité : {item.visibility === 'public' ? 'publique' : 'privée'}</p></div></div><button type="button" onClick={() => void removeLink(item)} className="rounded-lg p-2 text-white/50 hover:bg-red-400/10 hover:text-red-200" aria-label="Supprimer ce lien"><Trash2 size={16}/></button></div><a href={item.profile_url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm text-[#F28C28] hover:underline">Ouvrir le profil <ExternalLink size={14}/></a></article>)}</div>}
             </section>
           </div>}
           <p className="mt-6 border-t border-white/10 pt-4 text-xs leading-5 text-white/40">Sécurité : cette page ne demande ni ne conserve les mots de passe des plateformes externes. Les autorisations OAuth, jetons et opérations de publication ne seront ajoutés qu'au moyen d'intégrations officielles sécurisées.</p>
