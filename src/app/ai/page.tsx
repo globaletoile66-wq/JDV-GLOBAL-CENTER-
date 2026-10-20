@@ -23,6 +23,7 @@ export default function AIPage() {
   const [message, setMessage] = useState('');
   const [prompt, setPrompt] = useState('');
   const [sending, setSending] = useState(false);
+  const [providerStatus, setProviderStatus] = useState<{ checked: boolean; configured: boolean; model: string | null } | null>(null);
 
   const loadConversations = useCallback(async () => {
     if (!user) { setConversations([]); setMessages([]); setSelectedId(''); setBusy(false); return; }
@@ -45,6 +46,14 @@ export default function AIPage() {
   }, [supabase, user]);
 
   useEffect(() => { if (!loading) void loadConversations(); }, [loading, loadConversations]);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/ai/chat', { cache: 'no-store' })
+      .then(async (response) => { if (!response.ok) throw new Error('Configuration indisponible'); return response.json(); })
+      .then((data: { configured?: boolean; model?: string | null }) => { if (active) setProviderStatus({ checked: true, configured: Boolean(data.configured), model: data.model || null }); })
+      .catch(() => { if (active) setProviderStatus({ checked: true, configured: false, model: null }); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => { if (selectedId) void loadMessages(selectedId); else setMessages([]); }, [selectedId, loadMessages]);
 
   const createConversation = async (event: FormEvent<HTMLFormElement>) => {
@@ -97,7 +106,7 @@ export default function AIPage() {
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center justify-between gap-3"><Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Accueil</Link><button onClick={() => void loadConversations()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV AI</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Un assistant intelligent pour apprendre, créer, analyser et entreprendre. Les messages sont traités côté serveur et enregistrés dans ton historique privé.</p></div><div className="rounded-2xl border border-white/10 px-5 py-4"><div className="text-xs text-white/40">Mes conversations</div><div className="mt-1 text-2xl font-bold">{conversations.length}</div></div></div>
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV AI</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Un assistant intelligent pour apprendre, créer, analyser et entreprendre. Les messages sont traités côté serveur et enregistrés dans ton historique privé.</p></div><div className="flex flex-wrap gap-3"><div className="rounded-2xl border border-white/10 px-5 py-4"><div className="text-xs text-white/40">Mes conversations</div><div className="mt-1 text-2xl font-bold">{conversations.length}</div></div><div className="rounded-2xl border border-white/10 px-5 py-4"><div className="text-xs text-white/40">Fournisseur IA</div><div className={'mt-1 font-bold ' + (providerStatus?.configured ? 'text-emerald-300' : 'text-amber-200')}>{!providerStatus ? 'Vérification…' : providerStatus.configured ? 'Configuré' : 'À configurer'}</div>{providerStatus?.configured && providerStatus.model && <div className="mt-1 text-xs text-white/40">{providerStatus.model}</div>}</div></div></div>
           {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
           {message && <div role="status" className="mt-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-4 text-sm text-[#F28C28]">{message}</div>}
           {!user ? <p className="mt-7 rounded-2xl border border-white/10 p-6 text-sm text-white/60">Connectez-vous pour consulter vos conversations privées.</p> : <div className="mt-7 grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
