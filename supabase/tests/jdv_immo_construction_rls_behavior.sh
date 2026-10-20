@@ -8,7 +8,7 @@ set request.jwt.claim.sub = '${OWNER}';
 insert into public.immo_construction_briefs (user_id, title, parcel_area)
 values ('${OWNER}', 'Brouillon propriétaire', 216);
 SQL
-VISIBLE=$(psql -v ON_ERROR_STOP=1 -tA <<SQL
+VISIBLE=$(psql -q -v ON_ERROR_STOP=1 -tA <<SQL
 set role authenticated;
 set request.jwt.claim.sub = '${OTHER}';
 select count(*) from public.immo_construction_briefs;
