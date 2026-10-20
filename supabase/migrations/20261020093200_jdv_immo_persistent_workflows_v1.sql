@@ -203,11 +203,11 @@ create table if not exists public.jdv_studio_settings (
   updated_by uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now(),
   constraint jdv_studio_settings_public_config_check check (
-    (config - 'theme' - 'design') = '{}'::jsonb
+    (config - 'theme'::text - 'design'::text) = '{}'::jsonb
     and (
       not (config ? 'theme') or (
         jsonb_typeof(config->'theme') = 'object'
-        and (config->'theme' - 'primary' - 'accent') = '{}'::jsonb
+        and (config->'theme' - 'primary'::text - 'accent'::text) = '{}'::jsonb
         and coalesce(config->'theme'->>'primary','') ~ '^#[0-9A-Fa-f]{6}$'
         and coalesce(config->'theme'->>'accent','') ~ '^#[0-9A-Fa-f]{6}$'
       )
@@ -215,7 +215,7 @@ create table if not exists public.jdv_studio_settings (
     and (
       not (config ? 'design') or (
         jsonb_typeof(config->'design') = 'object'
-        and (config->'design' - 'font' - 'radius' - 'density' - 'cardStyle' - 'showMedia' - 'showHighlights' - 'showAnimations' - 'imageUrl' - 'videoUrl' - 'imageData' - 'videoData') = '{}'::jsonb
+        and (config->'design' - 'font'::text - 'radius'::text - 'density'::text - 'cardStyle'::text - 'showMedia'::text - 'showHighlights'::text - 'showAnimations'::text - 'imageUrl'::text - 'videoUrl'::text - 'imageData'::text - 'videoData'::text) = '{}'::jsonb
         and coalesce(config->'design'->>'imageData','') = ''
         and coalesce(config->'design'->>'videoData','') = ''
       )
