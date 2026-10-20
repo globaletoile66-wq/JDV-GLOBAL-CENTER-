@@ -84,6 +84,10 @@ Les contrôles de sécurité et de performance ont également signalé des élé
 
 Ces résultats ne justifient pas une suppression ou une révocation massive. Chaque fonction financière, d'administration, de certification et de workflow doit être classée selon son contrat d'accès avant modification.
 
+## Snapshot de types générés
+
+Le snapshot TypeScript généré depuis la base active est versionné dans `supabase/snapshot/database.types.ts`. Il inclut `public.immo_construction_briefs` et reflète les tables réellement présentes au moment de sa génération. Les tables JDV Services absentes ne figurent donc pas dans ce snapshot. Ce fichier est un artefact de référence ; le raccordement automatique de tous les clients Supabase à ce contrat de types reste à réaliser séparément.
+
 ## Synchronisation GitHub / Supabase : ce qui reste à faire
 
 1. Comparer la liste complète des migrations enregistrées à celle du dépôt et marquer les migrations historiques manquantes sans les rejouer en production.
