@@ -52,3 +52,26 @@ insert into public.user_settings (id, user_id)
 values ('80000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001');
 
 create table public.business_profiles (id uuid primary key);
+
+-- Minimal cross-module reference fixture for the direct-FK smoke test.
+create table public.countries (id uuid primary key);
+create table public.currencies (id uuid primary key);
+create table public.documents (id uuid primary key);
+create table public.wallet_transactions (id uuid primary key);
+create table public.billing_checkouts (id uuid primary key);
+create table public.audit_events (id uuid primary key, user_id uuid);
+create table public.health_provider_applications (id uuid primary key, country_id uuid);
+create table public.immo_maintenance_interventions (id uuid primary key, provider_business_id uuid);
+create table public.immo_maintenance_invoices (id uuid primary key, provider_business_id uuid);
+create table public.immo_maintenance_quotes (id uuid primary key, provider_business_id uuid);
+create table public.immo_maintenance_requests (id uuid primary key, assigned_provider_business_id uuid);
+create table public.immo_project_cost_items (id uuid primary key, business_id uuid not null, vendor_business_id uuid);
+create table public.insurance_payments (id uuid primary key, wallet_transaction_id uuid);
+create table public.insurance_premium_schedules (id uuid primary key, wallet_transaction_id uuid);
+create table public.notification_events (id uuid primary key, user_id uuid);
+create table public.pub_partners (id uuid primary key, organization_id uuid);
+create table public.subscription_payments (id uuid primary key, checkout_id uuid);
+create table public.tontine_financial_reconciliations (id uuid primary key, currency_id uuid not null);
+create table public.user_permissions (id uuid primary key, user_id uuid not null);
+create table public.warehouse_users (id uuid primary key, user_id uuid not null);
+create table public.warehouses (id uuid primary key, manager_user_id uuid);
