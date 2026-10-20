@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Bot, MessageSquare, Plus, RefreshCw, Search } from 'lucide-react';
+import { ArrowLeft, Bot, MessageSquare, Plus, RefreshCw, Search, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
@@ -21,6 +21,8 @@ export default function AIPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [sending, setSending] = useState(false);
 
   const loadConversations = useCallback(async () => {
     if (!user) { setConversations([]); setMessages([]); setSelectedId(''); setBusy(false); return; }
@@ -58,9 +60,33 @@ export default function AIPage() {
       setConversations((current) => [created, ...current]);
       setSelectedId(created.id);
       setTitle('');
-      setMessage('Conversation créée. L’envoi de prompts et l’exécution d’un modèle IA nécessitent encore le raccordement du service IA.');
+      setMessage('Conversation créée. Tu peux maintenant envoyer un message à JDV AI.');
     }
     setSaving(false);
+  };
+
+  const sendPrompt = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const text = prompt.trim();
+    if (!user || !selectedId || !text || sending) return;
+    setSending(true); setError(''); setMessage('');
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: selectedId, prompt: text }),
+      });
+      const result = await response.json() as { answer?: string; error?: string; code?: string };
+      if (!response.ok) throw new Error(result.error || 'Le message n’a pas pu être envoyé.');
+      setPrompt('');
+      await loadMessages(selectedId);
+      await loadConversations();
+      setMessage('Réponse reçue de JDV AI.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur inattendue est survenue.');
+    } finally {
+      setSending(false);
+    }
   };
 
   const filtered = conversations.filter((item) => [item.title, item.status].join(' ').toLowerCase().includes(query.toLowerCase()));
@@ -71,7 +97,7 @@ export default function AIPage() {
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center justify-between gap-3"><Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Accueil</Link><button onClick={() => void loadConversations()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
         <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV AI</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Gestion des conversations et consultation de l’historique. Aucun faux message IA n’est généré : le service de modèle doit encore être raccordé.</p></div><div className="rounded-2xl border border-white/10 px-5 py-4"><div className="text-xs text-white/40">Mes conversations</div><div className="mt-1 text-2xl font-bold">{conversations.length}</div></div></div>
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">JDV AI</h1><p className="mt-2 max-w-2xl text-sm text-white/60">Un assistant intelligent pour apprendre, créer, analyser et entreprendre. Les messages sont traités côté serveur et enregistrés dans ton historique privé.</p></div><div className="rounded-2xl border border-white/10 px-5 py-4"><div className="text-xs text-white/40">Mes conversations</div><div className="mt-1 text-2xl font-bold">{conversations.length}</div></div></div>
           {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
           {message && <div role="status" className="mt-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-4 text-sm text-[#F28C28]">{message}</div>}
           {!user ? <p className="mt-7 rounded-2xl border border-white/10 p-6 text-sm text-white/60">Connectez-vous pour consulter vos conversations privées.</p> : <div className="mt-7 grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
@@ -84,7 +110,16 @@ export default function AIPage() {
             <section className="rounded-2xl border border-white/10 bg-[#09152f]/50 p-5"><div className="flex items-center gap-2"><Bot size={20} className="text-[#F28C28]" /><h2 className="text-lg font-bold">{conversations.find((item) => item.id === selectedId)?.title || 'Historique de conversation'}</h2></div>
               {!selectedId ? <p className="mt-4 text-sm text-white/45">Créez ou sélectionnez une conversation.</p> : <><div className="mt-4 space-y-3">{messages.map((item) => <article key={item.id} className="rounded-xl border border-white/10 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><span className="rounded-full bg-white/10 px-2.5 py-1 text-xs">{item.role}</span><span className="text-xs text-white/35">{new Date(item.created_at).toLocaleString('fr-FR')}</span></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/75">{item.content}</p>{(item.provider || item.model) && <p className="mt-3 text-xs text-white/35">{[item.provider, item.model].filter(Boolean).join(' · ')}{item.token_input != null || item.token_output != null ? ' · Tokens : ' + (item.token_input || 0) + ' entrée / ' + (item.token_output || 0) + ' sortie' : ''}</p>}</article>)}
                 {messages.length === 0 && <div className="rounded-xl border border-dashed border-white/15 p-8 text-center"><MessageSquare size={24} className="mx-auto text-white/30" /><p className="mt-3 text-sm text-white/50">Aucun message dans cette conversation.</p></div>}
-              </div><div className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100/80">Le gestionnaire de conversations est connecté. Le fournisseur IA, le contrôle des quotas et l’envoi des prompts ne sont pas encore raccordés à cette interface.</div></>}
+              </div>
+              <form onSubmit={sendPrompt} className="mt-5 space-y-3">
+                <label htmlFor="jdv-ai-prompt" className="block text-sm font-semibold text-white/75">Ton message</label>
+                <textarea id="jdv-ai-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} maxLength={4000} rows={4} disabled={sending} placeholder="Pose une question, demande une analyse ou prépare un document…" className="w-full resize-y rounded-xl border border-white/10 bg-[#0B1B3D] px-4 py-3 text-sm leading-6 outline-none focus:border-[#F28C28] disabled:opacity-60" />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-white/40">4 000 caractères maximum · 10 demandes/minute · Ne saisis pas de secrets.</p>
+                  <button type="submit" disabled={sending || !prompt.trim() || !selectedId} className="inline-flex items-center gap-2 rounded-xl bg-[#F28C28] px-5 py-3 font-bold text-[#0B1B3D] disabled:cursor-not-allowed disabled:opacity-50"><Send size={16} />{sending ? 'JDV AI répond…' : 'Envoyer'}</button>
+                </div>
+              </form>
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/[.03] p-3 text-xs leading-5 text-white/45">Les réponses dépendent de la configuration du fournisseur IA côté serveur. En cas d’absence de clé ou de quota, l’application affichera une erreur explicite sans inventer de réponse.</div></>}
             </section>
           </div>}
         </section>
