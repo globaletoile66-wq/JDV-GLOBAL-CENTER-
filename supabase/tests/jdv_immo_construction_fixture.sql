@@ -75,3 +75,30 @@ create table public.tontine_financial_reconciliations (id uuid primary key, curr
 create table public.user_permissions (id uuid primary key, user_id uuid not null);
 create table public.warehouse_users (id uuid primary key, user_id uuid not null);
 create table public.warehouses (id uuid primary key, manager_user_id uuid);
+
+-- Minimal fixture for the persistent JDV Immo workflows.
+create type public.immo_verification_status as enum ('unverified','submitted','under_review','verified','rejected','suspended');
+create table public.immo_properties (id uuid primary key);
+create table public.immo_leases (id uuid primary key, tenant_user_id uuid not null, landlord_user_id uuid);
+create table public.immo_agents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users(id),
+  business_id uuid not null references public.business_profiles(id),
+  specialties text[] default '{}',
+  zones text[] default '{}',
+  verification_status public.immo_verification_status not null default 'unverified',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create schema storage;
+create table storage.buckets (
+  id text primary key, name text not null, public boolean not null default false,
+  file_size_limit bigint, allowed_mime_types text[]
+);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text not null);
+alter table storage.objects enable row level security;
+insert into public.business_profiles(id) values ('b0000000-0000-4000-8000-000000000001');
+insert into public.immo_properties(id) values ('c0000000-0000-4000-8000-000000000001');
+insert into public.immo_leases(id, tenant_user_id, landlord_user_id)
+values ('d0000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000003');
+insert into auth.users(id) values ('00000000-0000-4000-8000-000000000004');
