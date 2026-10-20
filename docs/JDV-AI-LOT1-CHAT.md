@@ -14,8 +14,10 @@ Relier l'interface `/ai` à un véritable fournisseur de modèles via une route 
 
 ## Configuration de déploiement requise
 - `OPENAI_API_KEY` : secret serveur requis.
-- `JDV_AI_MODEL` : facultatif, modèle compatible avec l'API Chat Completions; valeur par défaut `gpt-5-mini`.
-- `OPENAI_BASE_URL` : facultatif si un endpoint compatible OpenAI est utilisé.
+- `JDV_AI_MODEL` : facultatif, nom du modèle à utiliser.
+- Si `JDV_AI_MODEL` n'est pas défini, l'application essaie `JDV_ASSISTANT_MODEL`, puis `JDV_ACADEMY_TUTOR_MODEL`, puis `gpt-5-mini`.
+- `OPENAI_BASE_URL` : facultatif pour un endpoint compatible OpenAI; lorsqu'il est défini, la route l'utilise explicitement.
+- L'interface affiche l'état de configuration du fournisseur sans exposer la clé.
 
 Ne jamais définir la clé dans une variable `NEXT_PUBLIC_*`. La disponibilité réelle du modèle doit être vérifiée dans les secrets du déploiement et par un test authentifié.
 
