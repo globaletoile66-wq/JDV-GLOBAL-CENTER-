@@ -51,7 +51,18 @@ export default function ConcepteurStudioPage() {
       const raw=localStorage.getItem('jdv-design-v1');
       if(raw){const next={...defaultDesign,...JSON.parse(raw)} as DesignPrefs;setDesign(next);applyDesign(next);}
     } catch {/* Paramètres locaux facultatifs. */}
-  },[]);
+    const loadGlobal=async()=>{
+      try{
+        const {data,error}=await supabase.from('jdv_studio_settings').select('config').eq('scope_key','global').maybeSingle();
+        const config=data?.config as {theme?:JdvTheme;design?:Partial<DesignPrefs>}|null;
+        if(!error&&config){
+          if(config.theme&&isHex(config.theme.primary)&&isHex(config.theme.accent)){setDraft(config.theme);setTheme(config.theme);}
+          if(config.design){const next={...defaultDesign,...config.design} as DesignPrefs;setDesign(next);applyDesign(next);try{localStorage.setItem('jdv-design-v1',JSON.stringify(next));}catch{}}
+        }
+      }catch{/* Le Studio reste utilisable localement si le stockage global n'est pas déployé. */}
+    };
+    void loadGlobal();
+  },[supabase,setTheme]);
   const updateDesign=(patch:Partial<DesignPrefs>)=>setDesign(current=>({...current,...patch}));
   const apply=async()=>{
     setTheme(draft);
