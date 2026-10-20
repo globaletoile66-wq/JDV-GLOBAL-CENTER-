@@ -226,3 +226,48 @@ drop policy if exists "Super admins update JDV Studio brand media" on storage.ob
 create policy "Super admins update JDV Studio brand media" on storage.objects for update to authenticated using (bucket_id = 'jdv-studio-media' and exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active')) with check (bucket_id = 'jdv-studio-media' and exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
 drop policy if exists "Super admins delete JDV Studio brand media" on storage.objects;
 create policy "Super admins delete JDV Studio brand media" on storage.objects for delete to authenticated using (bucket_id = 'jdv-studio-media' and exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
+
+
+-- A participant can accept only their own side of a mandate; activation requires both acceptances.
+create or replace function public.accept_immo_mandate(p_mandate_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  accepted_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  update public.immo_mandates m
+  set owner_accepted_at = case
+        when m.owner_user_id = auth.uid() then coalesce(m.owner_accepted_at, now())
+        else m.owner_accepted_at
+      end,
+      agent_accepted_at = case
+        when m.agent_user_id = auth.uid() then coalesce(m.agent_accepted_at, now())
+        else m.agent_accepted_at
+      end,
+      mandate_status = case
+        when (m.owner_accepted_at is not null or m.owner_user_id = auth.uid())
+         and (m.agent_accepted_at is not null or m.agent_user_id = auth.uid())
+         and m.agent_user_id is not null then 'active'
+        else 'pending_signature'
+      end,
+      updated_at = now()
+  where m.id = p_mandate_id
+    and m.mandate_status = 'pending_signature'
+    and (m.owner_user_id = auth.uid() or m.agent_user_id = auth.uid())
+  returning m.id into accepted_id;
+
+  if accepted_id is null then
+    raise exception 'Mandate not found, not awaiting signatures, or user is not a participant';
+  end if;
+  return accepted_id;
+end;
+$$;
+revoke all on function public.accept_immo_mandate(uuid) from public;
+grant execute on function public.accept_immo_mandate(uuid) to authenticated;
