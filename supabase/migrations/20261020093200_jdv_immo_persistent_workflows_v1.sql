@@ -207,7 +207,7 @@ create table if not exists public.jdv_studio_settings (
     and (
       not (config ? 'theme') or (
         jsonb_typeof(config->'theme') = 'object'
-        and (config->'theme' - 'primary'::text - 'accent'::text) = '{}'::jsonb
+        and ((config->'theme') - 'primary'::text - 'accent'::text) = '{}'::jsonb
         and coalesce(config->'theme'->>'primary','') ~ '^#[0-9A-Fa-f]{6}$'
         and coalesce(config->'theme'->>'accent','') ~ '^#[0-9A-Fa-f]{6}$'
       )
@@ -215,7 +215,7 @@ create table if not exists public.jdv_studio_settings (
     and (
       not (config ? 'design') or (
         jsonb_typeof(config->'design') = 'object'
-        and (config->'design' - 'font'::text - 'radius'::text - 'density'::text - 'cardStyle'::text - 'showMedia'::text - 'showHighlights'::text - 'showAnimations'::text - 'imageUrl'::text - 'videoUrl'::text - 'imageData'::text - 'videoData'::text) = '{}'::jsonb
+        and ((config->'design') - 'font'::text - 'radius'::text - 'density'::text - 'cardStyle'::text - 'showMedia'::text - 'showHighlights'::text - 'showAnimations'::text - 'imageUrl'::text - 'videoUrl'::text - 'imageData'::text - 'videoData'::text) = '{}'::jsonb
         and coalesce(config->'design'->>'imageData','') = ''
         and coalesce(config->'design'->>'videoData','') = ''
       )
