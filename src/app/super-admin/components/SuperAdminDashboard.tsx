@@ -116,6 +116,7 @@ export default function SuperAdminDashboard({ stats, recentUsers, recentOrgs, ad
             </h1>
           </div>
           <div className="flex-1" />
+          <Link href="/hidden-concepteur-gate/dashboard/studio" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:border-accent"><SlidersHorizontal size={15}/>Studio Concepteur</Link>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-danger/10 border border-danger/20">
             <div className="w-2 h-2 rounded-full bg-danger animate-pulse" />
             <span className="text-xs font-bold text-danger">MODE ADMIN</span>
