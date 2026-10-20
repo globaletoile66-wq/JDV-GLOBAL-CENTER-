@@ -209,7 +209,7 @@ create table if not exists public.jdv_studio_settings (
 insert into public.jdv_studio_settings (scope_key, config) values ('global', '{}'::jsonb) on conflict (scope_key) do nothing;
 alter table public.jdv_studio_settings enable row level security;
 drop policy if exists "Super admins read global Studio settings" on public.jdv_studio_settings;
-create policy "Super admins read global Studio settings" on public.jdv_studio_settings for select to authenticated using (exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
+create policy "Authenticated users read global Studio settings" on public.jdv_studio_settings for select to anon, authenticated using (true);
 drop policy if exists "Super admins create global Studio settings" on public.jdv_studio_settings;
 create policy "Super admins create global Studio settings" on public.jdv_studio_settings for insert to authenticated with check (exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
 drop policy if exists "Super admins update global Studio settings" on public.jdv_studio_settings;
