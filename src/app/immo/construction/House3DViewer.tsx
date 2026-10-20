@@ -4,13 +4,20 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 
+type RoomLayout = { id: number; name: string; x: number; y: number; w: number; h: number; color?: string };
+type OpeningLayout = { id: number; kind: 'Porte' | 'Fenêtre'; roomId: number; wall: 'nord' | 'sud' | 'est' | 'ouest'; offset: number; width: number };
 type House3DViewerProps = {
   levels: number;
   facadeColor: string;
   roofColor: string;
   showFurniture: boolean;
-  rooms: string[];
+  rooms: Array<string | RoomLayout>;
+  openings?: OpeningLayout[];
+  parcelWidth?: number;
+  parcelDepth?: number;
+  showRoof?: boolean;
   parking: number;
 };
 
@@ -25,8 +32,11 @@ function disposeObject(root: THREE.Object3D) {
   });
 }
 
-export default function House3DViewer({ levels, facadeColor, roofColor, showFurniture, rooms, parking }: House3DViewerProps) {
+export default function House3DViewer({ levels, facadeColor, roofColor, showFurniture, rooms, openings = [], parcelWidth, parcelDepth, showRoof = true, parking }: House3DViewerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const [walkthrough, setWalkthrough] = useState(false);
+  const layoutRooms = rooms.filter((room): room is RoomLayout => typeof room !== 'string');
+  const roomNames = rooms.map((room) => typeof room === 'string' ? room : room.name);
   const [webglError, setWebglError] = useState('');
 
   useEffect(() => {
@@ -34,6 +44,9 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
     if (!mount) return;
     let renderer: THREE.WebGLRenderer;
     let controls: OrbitControls | undefined;
+    let pointerControls: PointerLockControls | undefined;
+    const pressed = new Set<string>();
+    let lastFrame = 0;
     let frame = 0;
     let resizeObserver: ResizeObserver | undefined;
     const scene = new THREE.Scene();
@@ -84,8 +97,10 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
 
     const house = new THREE.Group();
     scene.add(house);
-    const width = 9;
-    const depth = 6.5;
+    const width = layoutRooms.length ? Math.max(1, ...layoutRooms.map((room) => room.x + room.w)) : 9;
+    const depth = layoutRooms.length ? Math.max(1, ...layoutRooms.map((room) => room.y + room.h)) : 6.5;
+    const originX = width / 2;
+    const originZ = depth / 2;
     const floorHeight = 2.7;
     const wall = 0.2;
     const wallMaterial = new THREE.MeshStandardMaterial({ color: facadeColor, roughness: 0.82 });
@@ -106,7 +121,64 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
       return mesh;
     };
 
-    for (let floor = 0; floor < levels; floor++) {
+    if (layoutRooms.length) {
+      for (let floor = 0; floor < levels; floor++) {
+        const baseY = floor * floorHeight;
+        for (const room of layoutRooms) {
+          const centerX = room.x + room.w / 2 - originX;
+          const centerZ = room.y + room.h / 2 - originZ;
+          const roomFloor = new THREE.MeshStandardMaterial({ color: room.color || '#e5e7eb', roughness: 0.92 });
+          addBox(house, room.w, 0.12, room.h, roomFloor, centerX, baseY + 0.02, centerZ);
+          const wallY = baseY + floorHeight / 2;
+          const wallMaterialForRoom = new THREE.MeshStandardMaterial({ color: facadeColor, roughness: 0.86 });
+          const roomOpenings = openings.filter((opening) => opening.roomId === room.id);
+          const drawWall = (wallSide: OpeningLayout['wall'], run: number, cx: number, cz: number, horizontal: boolean) => {
+            const relevant = roomOpenings.filter((opening) => opening.wall === wallSide && opening.kind === 'Porte').map((opening) => ({ start: Math.max(0, opening.offset - opening.width / 2), end: Math.min(run, opening.offset + opening.width / 2) })).filter((opening) => opening.end > opening.start).sort((a, b) => a.start - b.start);
+            let cursor = 0;
+            for (const opening of relevant) {
+              if (opening.start > cursor) {
+                const length = opening.start - cursor;
+                addBox(house, horizontal ? length : wall, floorHeight, horizontal ? wall : length, wallMaterialForRoom, horizontal ? room.x + cursor + length / 2 - originX : cx, wallY, horizontal ? cz : room.y + cursor + length / 2 - originZ);
+              }
+              cursor = Math.max(cursor, opening.end);
+            }
+            if (cursor < run) {
+              const length = run - cursor;
+              addBox(house, horizontal ? length : wall, floorHeight, horizontal ? wall : length, wallMaterialForRoom, horizontal ? room.x + cursor + length / 2 - originX : cx, wallY, horizontal ? cz : room.y + cursor + length / 2 - originZ);
+            }
+          };
+          drawWall('nord', room.w, centerX, room.y - originZ, true);
+          drawWall('sud', room.w, centerX, room.y + room.h - originZ, true);
+          drawWall('ouest', room.h, room.x - originX, centerZ, false);
+          drawWall('est', room.h, room.x + room.w - originX, centerZ, false);
+          for (const opening of roomOpenings.filter((item) => item.kind === 'Fenêtre')) {
+            const position = opening.wall === 'nord' ? { x: room.x + opening.offset - originX, y: room.y - originZ - wall / 2 - 0.015, z: -1 } : opening.wall === 'sud' ? { x: room.x + opening.offset - originX, y: room.y + room.h - originZ + wall / 2 + 0.015, z: 1 } : opening.wall === 'ouest' ? { x: room.x - originX - wall / 2 - 0.015, y: room.y + opening.offset - originZ, z: -1 } : { x: room.x + room.w - originX + wall / 2 + 0.015, y: room.y + opening.offset - originZ, z: 1 };
+            if (opening.wall === 'nord' || opening.wall === 'sud') {
+              addBox(house, Math.min(opening.width, room.w), 1.05, 0.055, frameMaterial, position.x, baseY + 1.55, position.y);
+              addBox(house, Math.min(opening.width * 0.86, room.w), 0.88, 0.03, glassMaterial, position.x, baseY + 1.55, position.y + (opening.wall === 'nord' ? -0.035 : 0.035));
+            } else {
+              addBox(house, 0.055, 1.05, Math.min(opening.width, room.h), frameMaterial, position.x, baseY + 1.55, position.y);
+              addBox(house, 0.03, 0.88, Math.min(opening.width * 0.86, room.h), glassMaterial, position.x + (opening.wall === 'ouest' ? -0.035 : 0.035), baseY + 1.55, position.y);
+            }
+          }
+          for (const opening of roomOpenings.filter((item) => item.kind === 'Porte')) {
+            const doorMaterialForRoom = new THREE.MeshStandardMaterial({ color: '#8b5e3c', roughness: 0.78 });
+            if (opening.wall === 'nord' || opening.wall === 'sud') {
+              addBox(house, Math.min(opening.width, room.w) * 0.92, 2.05, 0.055, doorMaterialForRoom, room.x + opening.offset - originX, baseY + 1.025, (opening.wall === 'nord' ? room.y - originZ : room.y + room.h - originZ) + (opening.wall === 'nord' ? -0.04 : 0.04));
+            } else {
+              addBox(house, 0.055, 2.05, Math.min(opening.width, room.h) * 0.92, doorMaterialForRoom, (opening.wall === 'ouest' ? room.x - originX : room.x + room.w - originX) + (opening.wall === 'ouest' ? -0.04 : 0.04), baseY + 1.025, room.y + opening.offset - originZ);
+            }
+          }
+          if (showFurniture) {
+            const furniture = new THREE.MeshStandardMaterial({ color: '#64748b', roughness: 0.88 });
+            const furnitureW = Math.min(1.4, room.w * 0.42);
+            const furnitureD = Math.min(0.75, room.h * 0.28);
+            addBox(house, furnitureW, 0.42, furnitureD, furniture, centerX, baseY + 0.3, centerZ);
+          }
+        }
+      }
+    } else {
+      for (let floor = 0; floor < levels; floor++) {
       const baseY = floor * floorHeight;
       addBox(house, width, 0.18, depth, floorMaterial, 0, baseY + 0.02, 0);
       // Back and side walls are continuous; the front is split to leave a visible entrance.
@@ -146,9 +218,14 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
       }
     }
 
-    // Flat roof with a raised ridge-like cap to make the roof form legible from all sides.
-    addBox(house, width + 0.55, 0.22, depth + 0.55, roofMaterial, 0, levels * floorHeight + 0.08, 0);
-    addBox(house, width + 0.3, 0.18, 0.38, roofMaterial, 0, levels * floorHeight + 0.27, 0);
+      }
+    }
+
+    // Flat roof follows the current room layout when the architectural editor supplies room geometry.
+    if (showRoof) {
+      addBox(house, width + 0.35, 0.22, depth + 0.35, roofMaterial, 0, levels * floorHeight + 0.08, 0);
+      if (!layoutRooms.length) addBox(house, width + 0.3, 0.18, 0.38, roofMaterial, 0, levels * floorHeight + 0.27, 0);
+    }
 
     // Site access and a parking bay if one was requested.
     addBox(scene, 3.1, 0.035, 4.4, new THREE.MeshStandardMaterial({ color: '#b9c0c7', roughness: 1 }), 0, -0.07, 6, false);
@@ -165,7 +242,7 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
       labelContext.fillStyle = '#334155';
       labelContext.font = 'bold 34px sans-serif';
       labelContext.textAlign = 'center';
-      labelContext.fillText(`JDV IMMO · ${levels} niveau(x) · ${rooms.length} pièces`, 256, 56);
+      labelContext.fillText(`JDV IMMO · ${levels} niveau(x) · ${roomNames.length} pièces · ${layoutRooms.length ? 'plan synchronisé' : 'volume indicatif'}`, 256, 56);
       const labelTexture = new THREE.CanvasTexture(labelCanvas);
       const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture, transparent: true }));
       label.scale.set(5, 0.95, 1);
@@ -175,6 +252,58 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
 
     camera.aspect = Math.max(mount.clientWidth, 320) / 390;
     camera.updateProjectionMatrix();
+    camera.position.set(Math.max(width, depth) * 1.25, Math.max(8, levels * floorHeight), Math.max(width, depth) * 1.35);
+    if (walkthrough && layoutRooms.length) {
+      pointerControls = new PointerLockControls(camera, renderer.domElement);
+      scene.add(pointerControls.getObject());
+      const firstRoom = layoutRooms[0];
+      camera.position.set(firstRoom.x + firstRoom.w / 2 - originX, 1.6, firstRoom.y + firstRoom.h / 2 - originZ);
+      const onCanvasClick = () => pointerControls?.lock();
+      const onKeyDown = (event: KeyboardEvent) => pressed.add(event.key.toLowerCase());
+      const onKeyUp = (event: KeyboardEvent) => pressed.delete(event.key.toLowerCase());
+      renderer.domElement.addEventListener('click', onCanvasClick);
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+      resizeObserver = new ResizeObserver(() => {
+        if (!mount || !renderer) return;
+        const w = Math.max(mount.clientWidth, 320);
+        camera.aspect = w / 390;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, 390);
+      });
+      resizeObserver.observe(mount);
+      const render = (timestamp: number) => {
+        frame = window.requestAnimationFrame(render);
+        const delta = Math.min((timestamp - (lastFrame || timestamp)) / 1000, 0.05);
+        lastFrame = timestamp;
+        if (pointerControls?.isLocked) {
+          const speed = 3.2 * delta;
+          if (pressed.has('w') || pressed.has('arrowup')) pointerControls.moveForward(speed);
+          if (pressed.has('s') || pressed.has('arrowdown')) pointerControls.moveForward(-speed);
+          if (pressed.has('a') || pressed.has('arrowleft')) pointerControls.moveRight(-speed);
+          if (pressed.has('d') || pressed.has('arrowright')) pointerControls.moveRight(speed);
+          const halfW = width / 2 - 0.3;
+          const halfD = depth / 2 - 0.3;
+          camera.position.x = Math.max(-halfW, Math.min(halfW, camera.position.x));
+          camera.position.z = Math.max(-halfD, Math.min(halfD, camera.position.z));
+          camera.position.y = 1.6;
+        }
+        renderer.render(scene, camera);
+      };
+      render(0);
+      return () => {
+        window.cancelAnimationFrame(frame);
+        resizeObserver?.disconnect();
+        renderer.domElement.removeEventListener('click', onCanvasClick);
+        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keyup', onKeyUp);
+        pointerControls?.unlock();
+        pointerControls?.dispose?.();
+        disposeObject(scene);
+        renderer.dispose();
+        renderer.domElement.remove();
+      };
+    }
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
@@ -209,13 +338,14 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [levels, facadeColor, roofColor, showFurniture, rooms, parking]);
+  }, [levels, facadeColor, roofColor, showFurniture, rooms, openings, parcelWidth, parcelDepth, showRoof, parking, walkthrough]);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-slate-100 text-slate-700">
       <div ref={mountRef} className="min-h-[390px] w-full" />
       {webglError && <div role="status" className="p-4 text-sm text-amber-800">{webglError}</div>}
-      {!webglError && <div className="absolute bottom-3 left-3 rounded-lg bg-white/90 px-3 py-2 text-xs shadow-sm">Glisser : tourner · Molette : zoomer · Déplacement : clic droit ou deux doigts</div>}
+      {!webglError && <div className="absolute bottom-3 left-3 rounded-lg bg-white/90 px-3 py-2 text-xs shadow-sm">{walkthrough ? 'Visite : cliquez dans la maquette · souris : regarder · W/A/S/D : avancer · Échap : quitter le pointeur' : 'Glisser : tourner · Molette : zoomer'}</div>}
+      {layoutRooms.length > 0 && <button type="button" onClick={() => setWalkthrough((value) => !value)} className="absolute right-3 bottom-14 rounded-lg bg-[#0B1B3D] px-3 py-2 text-xs font-bold text-white shadow">{walkthrough ? 'Quitter la visite' : 'Visite intérieure'}</button>}
       <div className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold shadow-sm">3D interactive</div>
     </div>
   );
