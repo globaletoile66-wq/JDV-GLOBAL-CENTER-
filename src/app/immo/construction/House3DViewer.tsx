@@ -218,7 +218,6 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
       }
     }
 
-      }
     }
 
     // Flat roof follows the current room layout when the architectural editor supplies room geometry.
