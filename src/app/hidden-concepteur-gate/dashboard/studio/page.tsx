@@ -26,6 +26,7 @@ function applyDesign(prefs: DesignPrefs) {
   root.style.setProperty('--font-sans', prefs.font);
   root.style.setProperty('--radius', prefs.radius);
   root.style.setProperty('--jdv-radius', prefs.radius);
+  root.dataset.jdvShape = 'custom';
   root.dataset.jdvDensity = prefs.density;
   root.dataset.jdvCardStyle = prefs.cardStyle;
   root.dataset.jdvHighlights = String(prefs.showHighlights);
