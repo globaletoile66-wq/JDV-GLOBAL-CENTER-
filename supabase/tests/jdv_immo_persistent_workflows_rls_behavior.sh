@@ -28,8 +28,33 @@ SQL
 [[ "$(count_as "$AGENT" "select count(*) from public.immo_tenant_followups where id='${FOLLOWUP}';")" == "1" ]] || { echo "Lease participant cannot read follow-up"; exit 1; }
 [[ "$(count_as "$AGENT" "select count(*) from public.immo_disputes where id='${DISPUTE}';")" == "1" ]] || { echo "Dispute respondent cannot read case"; exit 1; }
 [[ "$(count_as "$OUTSIDER" "select count(*) from public.immo_disputes where id='${DISPUTE}';")" == "0" ]] || { echo "RLS leak: dispute"; exit 1; }
-[[ "$(count_as "$OWNER" "select count(*) from public.jdv_studio_settings;")" == "0" ]] || { echo "Studio settings leaked to non-admin"; exit 1; }
+[[ "$(count_as "$OWNER" "select count(*) from public.jdv_studio_settings;")" == "1" ]] || { echo "Public visual settings should be readable by regular users"; exit 1; }
 [[ "$(count_as "$ADMIN" "select count(*) from public.jdv_studio_settings;")" == "1" ]] || { echo "Super Admin cannot read Studio settings"; exit 1; }
+
+ANON_SETTINGS=$(psql -q -v ON_ERROR_STOP=1 -tA <<SQL
+set role anon;
+select count(*) from public.jdv_studio_settings;
+SQL
+)
+[[ "$ANON_SETTINGS" == "1" ]] || { echo "Anonymous clients cannot read the safe visual settings"; exit 1; }
+
+if psql -v ON_ERROR_STOP=1 <<'SQL'
+select updated_by from public.jdv_studio_settings;
+SQL
+then
+  echo "Anonymous clients can read the private updater identity"
+  exit 1
+fi
+
+if psql -v ON_ERROR_STOP=1 <<'SQL'
+update public.jdv_studio_settings
+set config = '{"theme":{"primary":"#123456","accent":"#abcdef"},"design":{"imageData":"PRIVATE_BASE64"}}'::jsonb
+where scope_key='global';
+SQL
+then
+  echo "Public config allowlist failed to reject embedded private media data"
+  exit 1
+fi
 
 psql -v ON_ERROR_STOP=1 <<SQL
 set role authenticated;
