@@ -204,7 +204,7 @@ create table if not exists public.jdv_studio_settings (
   updated_at timestamptz not null default now(),
   constraint jdv_studio_settings_public_config_check check (
     jsonb_typeof(config) = 'object'
-    and (config - 'theme' - 'design') = '{}'::jsonb
+    and (config - 'theme'::text - 'design'::text) = '{}'::jsonb
   )
 );
 create index if not exists jdv_studio_settings_updated_by_idx on public.jdv_studio_settings(updated_by);
