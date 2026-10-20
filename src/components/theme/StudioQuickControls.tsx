@@ -16,6 +16,19 @@ const languages = [
   { code: 'ar', name: 'العربية' },
 ];
 
+const appearancePalettes: Record<string, Record<string, string>> = {
+  light: { '--background':'#ffffff','--foreground':'#111827','--card':'#ffffff','--card-foreground':'#111827','--popover':'#ffffff','--popover-foreground':'#111827','--muted':'#f3f4f6','--muted-foreground':'#4b5563','--border':'#d1d5db','--input':'#d1d5db','--primary':'#003366','--primary-foreground':'#ffffff','--secondary':'#eef2f7','--secondary-foreground':'#172033','--accent':'#ff6b35','--accent-foreground':'#111827' },
+  dark: { '--background':'#111318','--foreground':'#f3f4f6','--card':'#1b1e25','--card-foreground':'#f3f4f6','--popover':'#1b1e25','--popover-foreground':'#f3f4f6','--muted':'#292d36','--muted-foreground':'#c0c6d2','--border':'#414754','--input':'#414754','--primary':'#7ab6ff','--primary-foreground':'#101827','--secondary':'#292d36','--secondary-foreground':'#f3f4f6','--accent':'#ff9a70','--accent-foreground':'#111318' },
+  blue: { '--background':'#edf4ff','--foreground':'#10284a','--card':'#ffffff','--card-foreground':'#10284a','--popover':'#ffffff','--popover-foreground':'#10284a','--muted':'#dce9fc','--muted-foreground':'#355273','--border':'#b7cbe8','--input':'#b7cbe8','--primary':'#174a8b','--primary-foreground':'#ffffff','--secondary':'#dce9fc','--secondary-foreground':'#10284a','--accent':'#f0783c','--accent-foreground':'#111827' },
+  contrast: { '--background':'#ffffff','--foreground':'#000000','--card':'#ffffff','--card-foreground':'#000000','--popover':'#ffffff','--popover-foreground':'#000000','--muted':'#eeeeee','--muted-foreground':'#222222','--border':'#000000','--input':'#000000','--primary':'#000000','--primary-foreground':'#ffffff','--secondary':'#eeeeee','--secondary-foreground':'#000000','--accent':'#9a2500','--accent-foreground':'#ffffff' },
+};
+function applyAppearance(mode: string) {
+  const resolved = mode === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : mode;
+  const vars = appearancePalettes[resolved] ?? appearancePalettes.light;
+  document.documentElement.dataset.jdvMode = mode;
+  Object.entries(vars).forEach(([key, value]) => document.documentElement.style.setProperty(key, value));
+}
+
 type DesignPrefs = { font: string; radius: string; density: string; cardStyle: string; showHighlights: boolean; showAnimations: boolean; showMedia?: boolean; imageUrl?: string; videoUrl?: string };
 const defaultDesign: DesignPrefs = { font: 'Inter, ui-sans-serif, system-ui, sans-serif', radius: '16px', density: 'comfortable', cardStyle: 'soft', showHighlights: true, showAnimations: true, showMedia: true };
 
@@ -33,8 +46,8 @@ export default function StudioQuickControls() {
       const saved = localStorage.getItem('jdv-appearance-v1');
       const mode = saved && ['light','dark','system','blue','contrast'].includes(saved) ? saved : 'light';
       setAppearance(mode);
-      document.documentElement.dataset.jdvMode = mode;
-    } catch { document.documentElement.dataset.jdvMode = 'light'; }
+      applyAppearance(mode);
+    } catch { applyAppearance('light'); }
     const applyDesign = (prefs: DesignPrefs) => {
       const root = document.documentElement;
       root.style.setProperty('--font-sans', prefs.font);
@@ -85,7 +98,7 @@ export default function StudioQuickControls() {
           </select>
         </label>
         <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-muted-foreground"><span className="mb-1 block">Apparence de la plateforme</span>
-          <select value={appearance} onChange={e => { const mode=e.target.value; setAppearance(mode); document.documentElement.dataset.jdvMode=mode; try { localStorage.setItem('jdv-appearance-v1',mode); } catch { /* Préférence active pour la session. */ } }} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal">
+          <select value={appearance} onChange={e => { const mode=e.target.value; setAppearance(mode); applyAppearance(mode); try { localStorage.setItem('jdv-appearance-v1',mode); } catch { /* Préférence active pour la session. */ } }} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal">
             <option value="light">Clair / blanc</option><option value="dark">Sombre</option><option value="system">Selon le système</option><option value="blue">Bleu professionnel</option><option value="contrast">Contraste élevé</option>
           </select>
         </label>
