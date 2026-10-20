@@ -40,7 +40,10 @@ export const JDVProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (typeof document !== 'undefined') document.documentElement.lang = activeLanguage;
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = activeLanguage;
+      document.documentElement.dir = activeLanguage === 'ar' ? 'rtl' : 'ltr';
+    }
   }, [activeLanguage]);
 
   const setActiveLanguage = useCallback((lang: string) => {
