@@ -22,7 +22,8 @@ export default function AIPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [sending, setSending] = useState(false);\n  const [providerStatus, setProviderStatus] = useState<{ checked: boolean; configured: boolean; model: string | null } | null>(null);
+  const [sending, setSending] = useState(false);
+  const [providerStatus, setProviderStatus] = useState<{ checked: boolean; configured: boolean; model: string | null } | null>(null);
 
   const loadConversations = useCallback(async () => {
     if (!user) { setConversations([]); setMessages([]); setSelectedId(''); setBusy(false); return; }
@@ -44,7 +45,15 @@ export default function AIPage() {
     else setMessages((data ?? []) as Message[]);
   }, [supabase, user]);
 
-  useEffect(() => { if (!loading) void loadConversations(); }, [loading, loadConversations]);\n  useEffect(() => {\n    let active = true;\n    fetch('/api/ai/chat', { cache: 'no-store' })\n      .then(async (response) => { if (!response.ok) throw new Error('Configuration indisponible'); return response.json(); })\n      .then((data: { configured?: boolean; model?: string | null }) => { if (active) setProviderStatus({ checked: true, configured: Boolean(data.configured), model: data.model || null }); })\n      .catch(() => { if (active) setProviderStatus({ checked: true, configured: false, model: null }); });\n    return () => { active = false; };\n  }, []);
+  useEffect(() => { if (!loading) void loadConversations(); }, [loading, loadConversations]);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/ai/chat', { cache: 'no-store' })
+      .then(async (response) => { if (!response.ok) throw new Error('Configuration indisponible'); return response.json(); })
+      .then((data: { configured?: boolean; model?: string | null }) => { if (active) setProviderStatus({ checked: true, configured: Boolean(data.configured), model: data.model || null }); })
+      .catch(() => { if (active) setProviderStatus({ checked: true, configured: false, model: null }); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => { if (selectedId) void loadMessages(selectedId); else setMessages([]); }, [selectedId, loadMessages]);
 
   const createConversation = async (event: FormEvent<HTMLFormElement>) => {
