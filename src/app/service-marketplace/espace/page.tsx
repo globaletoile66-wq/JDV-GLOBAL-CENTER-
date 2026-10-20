@@ -92,7 +92,7 @@ export default function ServiceWorkspacePage() {
 
   const updateRequest = async (request: ServiceRequest) => {
     setSaving(request.id); setError(''); setNotice('');
-    const nextStatus = statuses[request.id] ?? (r.status === 'submitted' ? 'quoted' : r.status);
+    const nextStatus = statuses[request.id] ?? (request.status === 'submitted' ? 'quoted' : request.status);
     const rawPrice = prices[request.id] ?? (request.proposed_price === null ? '' : String(request.proposed_price));
     const response = (responses[request.id] ?? request.provider_response ?? '').trim();
     const proposedPrice = rawPrice.trim() === '' ? null : Number(rawPrice);
