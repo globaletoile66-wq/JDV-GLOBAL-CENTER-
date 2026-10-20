@@ -1,5 +1,5 @@
 -- JDV SERVICES workflow hardening: participant-specific transitions.
--- Staged for review; do not apply to the production database before preview validation.
+-- Canonical version matching the applied Supabase migration 20261020092130.
 
 drop policy if exists "jdv_service_requests_customer_decision" on public.jdv_service_requests;
 create policy "jdv_service_requests_customer_decision" on public.jdv_service_requests

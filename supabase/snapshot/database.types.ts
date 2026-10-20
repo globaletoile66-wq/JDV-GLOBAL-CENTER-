@@ -1,6 +1,3 @@
-/* Generated from the connected JDV GLOBAL CENTER FINAL Supabase schema on 2026-10-20.
- * Reference snapshot only. Review schema migrations before using this as a client type contract.
- */
 export type Json =
   | string
   | number
@@ -1221,7 +1218,15 @@ export type Database = {
           organization_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "article_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       article_serial_assignments: {
         Row: {
@@ -6421,7 +6426,15 @@ export type Database = {
           specialty?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "health_provider_applications_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       health_provider_profiles: {
         Row: {
@@ -7264,6 +7277,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "immo_maintenance_interventions_provider_business_id_fkey"
+            columns: ["provider_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "immo_maintenance_interventions_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
@@ -7351,6 +7371,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "immo_maintenance_invoices_provider_business_id_fkey"
+            columns: ["provider_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "immo_maintenance_invoices_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
@@ -7411,6 +7438,13 @@ export type Database = {
             columns: ["currency_id"]
             isOneToOne: false
             referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "immo_maintenance_quotes_provider_business_id_fkey"
+            columns: ["provider_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -7477,6 +7511,13 @@ export type Database = {
             columns: ["assigned_agent_id"]
             isOneToOne: false
             referencedRelation: "immo_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "immo_maintenance_requests_assigned_provider_business_id_fkey"
+            columns: ["assigned_provider_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -7606,6 +7647,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "immo_project_cost_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "immo_project_cost_items_currency_id_fkey"
             columns: ["currency_id"]
             isOneToOne: false
@@ -7624,6 +7672,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "immo_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "immo_project_cost_items_vendor_business_id_fkey"
+            columns: ["vendor_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -8774,6 +8829,13 @@ export type Database = {
             referencedRelation: "insurance_premium_schedules"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "insurance_payments_wallet_transaction_id_fkey"
+            columns: ["wallet_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_transactions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       insurance_policies: {
@@ -8911,6 +8973,13 @@ export type Database = {
             referencedRelation: "insurance_policies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "insurance_premium_schedules_wallet_transaction_id_fkey"
+            columns: ["wallet_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_transactions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       insurance_products: {
@@ -9032,6 +9101,109 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jdv_service_offerings: {
+        Row: {
+          base_price: number | null
+          business_id: string | null
+          category: string
+          created_at: string
+          currency: string
+          description: string
+          id: string
+          location: string | null
+          pricing_mode: string
+          provider_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          base_price?: number | null
+          business_id?: string | null
+          category: string
+          created_at?: string
+          currency?: string
+          description: string
+          id?: string
+          location?: string | null
+          pricing_mode?: string
+          provider_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number | null
+          business_id?: string | null
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          id?: string
+          location?: string | null
+          pricing_mode?: string
+          provider_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jdv_service_offerings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jdv_service_requests: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          offering_id: string
+          proposed_price: number | null
+          provider_response: string | null
+          requested_for: string | null
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          offering_id: string
+          proposed_price?: number | null
+          provider_response?: string | null
+          requested_for?: string | null
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          offering_id?: string
+          proposed_price?: number | null
+          provider_response?: string | null
+          requested_for?: string | null
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jdv_service_requests_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "jdv_service_offerings"
             referencedColumns: ["id"]
           },
         ]
@@ -13191,6 +13363,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "pub_partners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pub_partners_payout_currency_id_fkey"
             columns: ["payout_currency_id"]
             isOneToOne: false
@@ -14824,6 +15003,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "subscription_payments_checkout_id_fkey"
+            columns: ["checkout_id"]
+            isOneToOne: false
+            referencedRelation: "billing_checkouts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "subscription_payments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -14954,7 +15140,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "super_admin_modules_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "super_admins"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       super_admins: {
         Row: {
@@ -15513,6 +15707,13 @@ export type Database = {
             columns: ["contribution_id"]
             isOneToOne: false
             referencedRelation: "tontine_contributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tontine_financial_reconciliations_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currencies"
             referencedColumns: ["id"]
           },
           {

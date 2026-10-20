@@ -1,5 +1,5 @@
 -- JDV SERVICES: service-provider catalog and quote requests.
--- Staged only. Apply first in a disposable/preview database and validate RLS before production.
+-- Canonical version matching the applied Supabase migration 20261020091544.
 create table if not exists public.jdv_service_offerings (
   id uuid primary key default gen_random_uuid(),
   provider_id uuid not null references auth.users(id) on delete cascade,

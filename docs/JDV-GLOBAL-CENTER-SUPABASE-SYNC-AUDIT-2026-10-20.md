@@ -13,14 +13,14 @@ La base Supabase est active et contient un schéma large, mais la synchronisatio
 
 Requêtes en lecture seule exécutées le 20 octobre 2026 :
 
-- 363 tables dans \`public\`
+- 366 tables dans \`public\`
 - 3 vues dans \`public\`
-- 3 986 colonnes sur les tables publiques
-- 948 clés étrangères
+- 4 059 colonnes sur les tables publiques
+- 974 clés étrangères
 - RLS activé sur les 364 tables publiques (aucune table publique sans RLS)
-- 898 politiques RLS
+- 905 politiques RLS
 - 246 fonctions dans le schéma \`public\`
-- 235 migrations enregistrées après l'ajout du schéma du studio de conception
+- 239 migrations enregistrées après activation du workflow JDV Services
 
 La base est donc loin d'être vide et les relations de clés étrangères sont nombreuses. Cela ne garantit toutefois pas que chaque écran applicatif utilise les bons noms de tables, les bonnes colonnes ou les bonnes autorisations.
 
@@ -37,6 +37,12 @@ Migration \`jdv_immo_construction_editor_v1\`, version Supabase \`20261020084707
 - n'altère aucune table du CRM historique.
 
 La migration est versionnée dans \`supabase/migrations/20261020084707_jdv_immo_construction_editor.sql\`. Après application, une vérification a confirmé la présence de la table, RLS actif, trois politiques, deux clés étrangères et aucune permission de lecture pour \`anon\`.
+
+
+
+Migration globale `20261020090809_jdv_global_user_and_organization_foreign_keys.sql` appliquée après vérification qu'aucune ligne existante n'était orpheline. Elle relie `article_categories.organization_id` à `organizations.id`, `login_security_events.user_id` à `auth.users.id`, `notification_preferences.user_id` et `user_settings.user_id` à `auth.users.id`, et `super_admin_modules.user_id` à `super_admins.user_id`. Cinq index de support ont également été créés.
+
+Exception conservée volontairement : `super_admin_modules.module_code = 'crm'` ne correspond à aucun code de `public.modules`. Il est laissé inchangé pour ne pas modifier le code CRM historique. Aucune clé étrangère n'a été ajoutée sur `module_code` tant que cette référence n'a pas été clarifiée.
 
 ## Écarts de schéma confirmés
 
@@ -56,12 +62,9 @@ Le fichier \`20261020070000_jdv_immo_persistent_workflows.sql\` contient aussi d
 
 ### JDV Services
 
-Les tables suivantes ne sont pas présentes dans le schéma public connecté :
+Les tables jdv_service_offerings et jdv_service_requests sont présentes dans le schéma public, avec RLS activé, 7 politiques combinées et des clés étrangères vers les utilisateurs, les prestataires et les demandes. Les tests PostgreSQL/RLS en base jetable ont réussi.
 
-- \`jdv_service_offerings\`
-- \`jdv_service_requests\`
-
-Deux migrations sont versionnées dans le dépôt (\`20261019191000_jdv_services_marketplace.sql\` et \`20261020100000_jdv_services_workflow_hardening.sql\`). Elles restent à valider en environnement isolé, notamment les politiques RLS et les transitions d'état, avant application à la base active. Les écrans qui les utilisent ne doivent pas être considérés prêts pour la production.
+Les migrations sont alignées sur l'historique Supabase : 20261020091544_jdv_services_marketplace_v1.sql et 20261020092130_jdv_services_workflow_hardening_v1.sql. La seconde migration a été appliquée et vérifiée sur la base active : elle encadre les transitions client/prestataire au moyen d'un trigger SECURITY INVOKER et d'une politique d'UPDATE. Le dernier lancement CI après réconciliation des noms de migration est en cours.
 
 ### JDV Social
 
@@ -71,7 +74,11 @@ Des noms d'essai tels que \`jdv_social_groups\`, \`social_group_members\` et \`s
 
 ## Tables sans clé étrangère
 
-Une vérification des relations a trouvé 13 tables sans clé étrangère entrante ni sortante : `ai_model_catalog`, `article_categories`, `billing_invoice_counters`, `billing_settings`, `contact_messages`, `login_security_events`, `notification_preferences`, `rate_limits`, `super_admin_modules`, `system_settings`, `travel_availability`, `user_settings` et `webhook_events`. Cette liste est un point de revue, pas une liste de défauts : plusieurs sont des tables de configuration, de journalisation ou de système qui peuvent légitimement ne pas avoir de clé étrangère. Il faut rapprocher chaque table de ses consommateurs avant de conclure qu'elle est orpheline.
+Une vérification des relations a trouvé 8 tables sans clé étrangère entrante ni sortante : `ai_model_catalog`, `billing_invoice_counters`, `billing_settings`, `contact_messages`, `rate_limits`, `system_settings`, `travel_availability` et `webhook_events`. Cette liste est un point de revue, pas une liste de défauts : plusieurs sont des tables de configuration, de journalisation ou de système qui peuvent légitimement ne pas avoir de clé étrangère. Il faut rapprocher chaque table de ses consommateurs avant de conclure qu'elle est orpheline.
+
+## Colonnes candidates à une relation
+
+Le scan initial avait identifié 39 colonnes de type UUID/entier se terminant par _id sans contrainte FK. Une migration supplémentaire a maintenant relié 17 références directes après vérification de zéro ligne orpheline, avec 14 index de support. Il reste 22 colonnes candidates à revoir : références polymorphes (entity_id, target_id, resource_id, related_id, reference_id), champs du CRM historique hors périmètre et relations dont la table source doit être confirmée. Aucune contrainte n'est ajoutée sur la seule base du nom du champ.
 
 ## Résultats des conseillers Supabase
 
@@ -94,7 +101,7 @@ Un workflow CI dédié, `.github/workflows/jdv-immo-construction-sql-smoke.yml`,
 
 ## Snapshot de types générés
 
-Le snapshot TypeScript généré depuis la base active est versionné dans `supabase/snapshot/database.types.ts`. Il inclut `public.immo_construction_briefs` et reflète les tables réellement présentes au moment de sa génération. Les tables JDV Services absentes ne figurent donc pas dans ce snapshot. Ce fichier est un artefact de référence ; le raccordement automatique de tous les clients Supabase à ce contrat de types reste à réaliser séparément.
+Le snapshot TypeScript de `supabase/snapshot/database.types.ts` a été régénéré depuis le schéma Supabase actif après l'activation de JDV Services et des relations intermodules. Il inclut les tables `immo_construction_briefs`, `jdv_service_offerings`, `jdv_service_requests` ainsi que les relations disponibles dans les types générés. Il reste à vérifier que chaque client Supabase de l'application importe ce contrat plutôt que de conserver des types locaux divergents.
 
 ## Synchronisation GitHub / Supabase : ce qui reste à faire
 
@@ -110,7 +117,7 @@ Le snapshot TypeScript généré depuis la base active est versionné dans `supa
 
 - Migration ciblée du studio JDV Immo : appliquée et vérifiée.
 - Synchronisation historique complète : en cours, non déclarée terminée.
-- Migrations JDV Services : non appliquées.
+- Migrations JDV Services : appliquées et vérifiées; l'historique est aligné dans la PR #171.
 - Autres tables du workflow Immo : non appliquées.
-- Vérification finale du build/Netlify pour la branche de travail : en attente.
+- Vérification finale du build/Netlify pour le dernier commit : en cours; quatre previews étaient vertes sur le commit précédent et le site jdv-global-center signalait une erreur sans message exploitable dans les métadonnées disponibles.
 - Aucun déploiement Netlify de production effectué.
