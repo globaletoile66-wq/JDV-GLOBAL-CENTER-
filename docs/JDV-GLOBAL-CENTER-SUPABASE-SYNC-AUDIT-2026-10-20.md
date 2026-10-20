@@ -101,7 +101,7 @@ Un workflow CI dédié, `.github/workflows/jdv-immo-construction-sql-smoke.yml`,
 
 ## Snapshot de types générés
 
-Le snapshot TypeScript généré depuis la base active est versionné dans `supabase/snapshot/database.types.ts`. Il inclut `public.immo_construction_briefs` et reflète les tables réellement présentes au moment de sa génération. Les tables JDV Services absentes ne figurent donc pas dans ce snapshot. Ce fichier est un artefact de référence ; le raccordement automatique de tous les clients Supabase à ce contrat de types reste à réaliser séparément.
+Le snapshot TypeScript de `supabase/snapshot/database.types.ts` a été régénéré depuis le schéma Supabase actif après l'activation de JDV Services et des relations intermodules. Il inclut les tables `immo_construction_briefs`, `jdv_service_offerings`, `jdv_service_requests` ainsi que les relations disponibles dans les types générés. Il reste à vérifier que chaque client Supabase de l'application importe ce contrat plutôt que de conserver des types locaux divergents.
 
 ## Synchronisation GitHub / Supabase : ce qui reste à faire
 
