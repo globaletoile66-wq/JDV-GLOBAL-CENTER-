@@ -164,7 +164,7 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
       labelContext.fillStyle = '#334155';
       labelContext.font = 'bold 34px sans-serif';
       labelContext.textAlign = 'center';
-      labelContext.fillText(`JDV IMMO · ${levels} niveau(x)`, 256, 56);
+      labelContext.fillText(`JDV IMMO · ${levels} niveau(x) · ${rooms.length} pièces`, 256, 56);
       const labelTexture = new THREE.CanvasTexture(labelCanvas);
       const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture, transparent: true }));
       label.scale.set(5, 0.95, 1);
