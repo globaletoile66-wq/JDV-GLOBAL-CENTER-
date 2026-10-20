@@ -63,6 +63,7 @@
     "react-hook-form": "^7.88.0",
     "recharts": "^2.15.2",
     "sonner": "^1.7.4",
+    "three": "^0.180.0",
     "openai": "^5.12.2"
   },
   "devDependencies": {
