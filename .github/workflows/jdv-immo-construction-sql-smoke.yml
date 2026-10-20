@@ -8,6 +8,14 @@ on:
       - "supabase/migrations/**"
       - "supabase/tests/jdv_*"
       - ".github/workflows/jdv-immo-construction-sql-smoke.yml"
+  push:
+    branches:
+      - "supabase-sync-2026-09-24"
+      - "feat/**"
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/jdv_*"
+      - ".github/workflows/jdv-immo-construction-sql-smoke.yml"
   workflow_dispatch:
 
 permissions:
