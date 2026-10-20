@@ -271,3 +271,84 @@ end;
 $$;
 revoke all on function public.accept_immo_mandate(uuid) from public;
 grant execute on function public.accept_immo_mandate(uuid) to authenticated;
+
+
+-- Qualification writes are centralized here so an approved application becomes a usable Immo agent.
+create or replace function public.review_immo_agent_application(
+  p_application_id uuid,
+  p_status text,
+  p_reviewer_notes text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_application public.immo_agent_applications%rowtype;
+  v_agent_id uuid;
+begin
+  if auth.uid() is null or not exists (
+    select 1 from public.super_admins sa
+    where sa.user_id = auth.uid() and sa.admin_status = 'active'
+  ) then
+    raise exception 'Active Super Admin required';
+  end if;
+  if p_status not in ('under_review','qualified','rejected','suspended') then
+    raise exception 'Unsupported qualification status';
+  end if;
+
+  select * into v_application
+  from public.immo_agent_applications
+  where id = p_application_id
+  for update;
+
+  if not found then
+    raise exception 'Agent application not found';
+  end if;
+
+  update public.immo_agent_applications
+  set application_status = p_status,
+      reviewer_notes = p_reviewer_notes,
+      reviewed_by = auth.uid(),
+      reviewed_at = now(),
+      updated_at = now()
+  where id = p_application_id;
+
+  select id into v_agent_id
+  from public.immo_agents
+  where user_id = v_application.user_id
+  order by created_at asc
+  limit 1;
+
+  if p_status = 'qualified' then
+    if v_agent_id is null then
+      insert into public.immo_agents (user_id, business_id, specialties, zones, verification_status)
+      values (
+        v_application.user_id,
+        v_application.business_id,
+        coalesce(v_application.specialties, '{}'::text[]),
+        case when nullif(trim(v_application.territory), '') is null then '{}'::text[] else array[v_application.territory] end,
+        'verified'
+      );
+    else
+      update public.immo_agents
+      set business_id = coalesce(v_application.business_id, business_id),
+          specialties = coalesce(v_application.specialties, '{}'::text[]),
+          zones = case when nullif(trim(v_application.territory), '') is null then zones else array[v_application.territory] end,
+          verification_status = 'verified',
+          updated_at = now()
+      where id = v_agent_id;
+    end if;
+  elsif p_status in ('rejected','suspended') and v_agent_id is not null then
+    update public.immo_agents
+    set verification_status = p_status::public.immo_verification_status,
+        updated_at = now()
+    where id = v_agent_id;
+  end if;
+
+  return p_application_id;
+end;
+$$;
+revoke all on function public.review_immo_agent_application(uuid, text, text) from public;
+grant execute on function public.review_immo_agent_application(uuid, text, text) to authenticated;
