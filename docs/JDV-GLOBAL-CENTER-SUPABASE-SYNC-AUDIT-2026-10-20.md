@@ -16,11 +16,11 @@ Requêtes en lecture seule exécutées le 20 octobre 2026 :
 - 366 tables dans \`public\`
 - 3 vues dans \`public\`
 - 4 059 colonnes sur les tables publiques
-- 957 clés étrangères
+- 974 clés étrangères
 - RLS activé sur les 364 tables publiques (aucune table publique sans RLS)
 - 905 politiques RLS
 - 246 fonctions dans le schéma \`public\`
-- 238 migrations enregistrées après activation du workflow JDV Services
+- 239 migrations enregistrées après activation du workflow JDV Services
 
 La base est donc loin d'être vide et les relations de clés étrangères sont nombreuses. Cela ne garantit toutefois pas que chaque écran applicatif utilise les bons noms de tables, les bonnes colonnes ou les bonnes autorisations.
 
@@ -78,7 +78,7 @@ Une vérification des relations a trouvé 8 tables sans clé étrangère entrant
 
 ## Colonnes candidates à une relation
 
-Un scan complémentaire a identifié 39 colonnes de type UUID/entier se terminant par _id sans contrainte FK. Cette liste mélange des références polymorphes (entity_id, target_id, resource_id, related_id, reference_id), des champs du CRM historique hors périmètre, et des candidats de relation directe à valider (utilisateurs, entreprises, devises, documents, transactions). Aucune FK n'est ajoutée sur la seule base du nom du champ : la source doit être confirmée et l'absence de lignes orphelines vérifiée avant migration.
+Le scan initial avait identifié 39 colonnes de type UUID/entier se terminant par _id sans contrainte FK. Une migration supplémentaire a maintenant relié 17 références directes après vérification de zéro ligne orpheline, avec 14 index de support. Il reste 22 colonnes candidates à revoir : références polymorphes (entity_id, target_id, resource_id, related_id, reference_id), champs du CRM historique hors périmètre et relations dont la table source doit être confirmée. Aucune contrainte n'est ajoutée sur la seule base du nom du champ.
 
 ## Résultats des conseillers Supabase
 
