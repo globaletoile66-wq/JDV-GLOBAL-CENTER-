@@ -120,7 +120,12 @@ export async function POST(request: Request) {
   const model = getModel();
   let completion;
   try {
-    const openai = new OpenAI({\n      apiKey: process.env.OPENAI_API_KEY,\n      ...(process.env.OPENAI_BASE_URL?.trim() ? { baseURL: process.env.OPENAI_BASE_URL.trim() } : {}),\n      timeout: 30000,\n      maxRetries: 1,\n    });
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      ...(process.env.OPENAI_BASE_URL?.trim() ? { baseURL: process.env.OPENAI_BASE_URL.trim() } : {}),
+      timeout: 30000,
+      maxRetries: 1,
+    });
     completion = await openai.chat.completions.create({
       model,
       messages: [{ role: 'system', content: systemPrompt }, ...history],
