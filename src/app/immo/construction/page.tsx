@@ -32,7 +32,7 @@ export default function ImmoConstructionPage() {
   const [style, setStyle] = useState('Contemporain');
   const [notes, setNotes] = useState('');
   const [generated, setGenerated] = useState(false);
-  const [simulationMode, setSimulationMode] = useState<'exterieur' | 'interieur' | 'plan'>('exterieur');
+  const [simulationMode, setSimulationMode] = useState<'exterieur' | 'interieur' | 'plan' | 'facade'>('exterieur');
   const [simulationAngle, setSimulationAngle] = useState(0);
   const [facadeColor, setFacadeColor] = useState('#f1e7d5');
   const [roofColor, setRoofColor] = useState('#475569');
@@ -126,7 +126,10 @@ export default function ImmoConstructionPage() {
       'Séjours : ' + livingRooms, 'Cuisines : ' + kitchens, 'Places de parking : ' + parking,
       'Emprise indicative : ' + footprint + ' m²', 'Surface de plancher indicative : ' + estimatedFloorArea + ' m²',
       'Contraintes : ' + (notes || 'À préciser'),
-      'Important : schéma conceptuel généré pour cadrage. Les plans exécutifs, la structure, les réseaux, l’implantation réglementaire et les autorisations doivent être validés par des professionnels habilités.'
+      'Simulation : vue ' + simulationMode + ' ; couleur façade ' + facadeColor + ' ; couleur toiture ' + roofColor + ' ; angle indicatif ' + simulationAngle + '° ; mobilier illustratif ' + (showFurniture ? 'activé' : 'désactivé'),
+      'Pièces demandées : ' + architecturalRooms.map(room => room.name + ' (~' + room.area + ' m²)').join(', '),
+      'Hypothèses : emprise plafonnée à 55 % de la parcelle pour prévisualisation ; surface de plancher calculée par multiplication simple de l’emprise par le nombre de niveaux.',
+      'Important : document de cadrage conceptuel. Les dessins ne sont pas des plans cotés d’exécution. Les plans architecturaux exécutifs, la structure, les réseaux, l’implantation réglementaire, les études de sol et les autorisations doivent être validés par des professionnels habilités.'
     ].join('\n');
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -219,6 +222,7 @@ export default function ImmoConstructionPage() {
                 <button type="button" onClick={()=>setSimulationMode('exterieur')} aria-pressed={simulationMode==='exterieur'} className={'rounded-xl px-3 py-2 text-sm font-semibold '+(simulationMode==='exterieur'?'bg-accent text-white':'border border-border')}>Vue extérieure</button>
                 <button type="button" onClick={()=>setSimulationMode('interieur')} aria-pressed={simulationMode==='interieur'} className={'rounded-xl px-3 py-2 text-sm font-semibold '+(simulationMode==='interieur'?'bg-accent text-white':'border border-border')}>Vue intérieure</button>
                 <button type="button" onClick={()=>setSimulationMode('plan')} aria-pressed={simulationMode==='plan'} className={'rounded-xl px-3 py-2 text-sm font-semibold '+(simulationMode==='plan'?'bg-accent text-white':'border border-border')}>Plan du niveau</button>
+                <button type="button" onClick={()=>setSimulationMode('facade')} aria-pressed={simulationMode==='facade'} className={'rounded-xl px-3 py-2 text-sm font-semibold '+(simulationMode==='facade'?'bg-accent text-white':'border border-border')}>Façade avant</button>
               </div>
               <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-slate-100 p-2 text-slate-900 sm:p-4">
                 {simulationMode==='exterieur'&&<svg viewBox="0 0 440 270" role="img" aria-label="Maquette 3D conceptuelle de la maison, vue extérieure" className="h-auto w-full">
@@ -242,6 +246,22 @@ export default function ImmoConstructionPage() {
                   {planRoomRects.slice(0,10).map((room,i)=>{const cols=3;const w=370/cols;const h=210/Math.max(2,Math.ceil(Math.min(10,planRoomRects.length)/cols));const x=35+(i%cols)*w;const y=28+Math.floor(i/cols)*h;return <g key={room.name+i}><rect x={x} y={y} width={w} height={h} fill={room.color} stroke="#475569" strokeWidth="2"/><text x={x+w/2} y={y+h/2} textAnchor="middle" dominantBaseline="middle" fontSize="10" fill="#0f172a">{room.name}</text>{showFurniture&&i===0&&<><rect x={x+w*.25} y={y+h*.3} width={w*.5} height={h*.35} rx="4" fill="#64748b"/><circle cx={x+w*.5} cy={y+h*.72} r="5" fill="#a16207"/></>}</g>})}
                   <text x="220" y="257" textAnchor="middle" fontSize="11" fill="#334155">Distribution intérieure schématique · mobilier illustratif</text>
                 </svg>}
+                {simulationMode==='facade'&&<svg viewBox="0 0 440 270" role="img" aria-label="Élévation de façade avant conceptuelle" className="h-auto w-full">
+                  <rect x="18" y="18" width="404" height="234" fill="#f8fafc" stroke="#cbd5e1"/>
+                  <line x1="28" y1="226" x2="412" y2="226" stroke="#64748b" strokeWidth="2"/>
+                  <rect x="75" y={226-(levels[levelsValue]*62)} width="290" height={levels[levelsValue]*62} fill={facadeColor} stroke="#334155" strokeWidth="2"/>
+                  <polygon points={`58,${226-(levels[levelsValue]*62)} 220,${190-(levels[levelsValue]*62)} 382,${226-(levels[levelsValue]*62)}`} fill={roofColor} stroke="#334155" strokeWidth="2"/>
+                  {Array.from({length:levels[levelsValue]},(_,i)=><g key={i}>
+                    <rect x="105" y={239-(i+1)*62} width="46" height="34" fill="#bfdbfe" stroke="#334155" strokeWidth="2"/>
+                    <line x1="128" y1={239-(i+1)*62} x2="128" y2={273-(i+1)*62} stroke="#64748b"/>
+                    <rect x="288" y={239-(i+1)*62} width="46" height="34" fill="#bfdbfe" stroke="#334155" strokeWidth="2"/>
+                    <line x1="311" y1={239-(i+1)*62} x2="311" y2={273-(i+1)*62} stroke="#64748b"/>
+                  </g>)}
+                  <rect x="193" y="178" width="54" height="48" fill="#8b5e3c" stroke="#334155" strokeWidth="2"/>
+                  <circle cx="235" cy="203" r="2.5" fill="#fef3c7"/>
+                  <text x="220" y="244" textAnchor="middle" fontSize="10" fill="#334155">{buildingType} · façade conceptuelle</text>
+                  <text x="220" y="260" textAnchor="middle" fontSize="10" fill="#64748b">Ouvertures illustratives · proportions non exécutives</text>
+                </svg>}
                 {simulationMode==='plan'&&<svg viewBox="0 0 440 270" role="img" aria-label="Plan de niveau schématique de la maison" className="h-auto w-full">
                   <rect x="35" y="25" width="370" height="215" fill="#fff" stroke="#0f172a" strokeWidth="6"/>
                   {planRoomRects.slice(0,12).map((room,i)=>{const cols=3;const w=370/cols;const rows=Math.max(2,Math.ceil(Math.min(12,planRoomRects.length)/cols));const h=215/rows;const x=35+(i%cols)*w;const y=25+Math.floor(i/cols)*h;return <g key={room.name+i}><rect x={x} y={y} width={w} height={h} fill={room.color} stroke="#334155" strokeWidth="2"/><text x={x+w/2} y={y+h/2-4} textAnchor="middle" fontSize="10" fill="#0f172a">{room.name}</text><text x={x+w/2} y={y+h/2+10} textAnchor="middle" fontSize="9" fill="#475569">≈ {room.area} m²</text></g>})}
@@ -254,7 +274,7 @@ export default function ImmoConstructionPage() {
                 {simulationMode==='exterieur'&&<label className="text-sm font-medium sm:col-span-2">Angle de vue<input className="mt-2 w-full accent-current" type="range" min="-18" max="18" step="1" value={simulationAngle} onChange={e=>setSimulationAngle(Number(e.target.value))}/><span className="text-xs text-muted-foreground">Rotation de maquette : {simulationAngle}°</span></label>}
                 {simulationMode==='interieur'&&<label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showFurniture} onChange={e=>setShowFurniture(e.target.checked)}/> Afficher le mobilier illustratif</label>}
               </div>
-              <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-muted-foreground">Cette simulation permet d’explorer une représentation 2D/volumétrique simplifiée. Elle ne constitue pas encore une visite immersive navigable, un modèle BIM, un rendu photoréaliste ni une validation des dimensions ou de la structure.</div>
+              <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-muted-foreground">Prototype de visualisation 2D/axonometrique : vues extérieure, intérieure, plan et façade, avec options visuelles exportées dans le brief. Ce n’est pas encore une scène 3D librement navigable, un modèle BIM, un rendu photoréaliste ni une validation des dimensions ou de la structure.</div>
             </div>
           </section>
         </div>
