@@ -154,7 +154,7 @@ export default function ImmoConstructionPage() {
           <p className="mt-3 text-muted-foreground">Décrivez les pièces et les dimensions souhaitées. JDV génère un plan d’agencement préliminaire et un schéma de fondation de principe, que vous pourrez enregistrer et transmettre à un architecte et à un ingénieur structure.</p>
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,.95fr)] print:grid-cols-1">
-          <section className="rounded-3xl border border-border bg-card p-5 sm:p-7">
+          <section className="rounded-3xl border border-border bg-card p-5 sm:p-7 print:hidden">
             <h2 className="text-xl font-bold">Caractéristiques du projet</h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">Type de bâtiment<select className={field + ' mt-2'} value={buildingType} onChange={e=>{setBuildingType(e.target.value);setGenerated(false)}}><option>Maison familiale</option><option>Immeuble locatif</option><option>Villa</option><option>Duplex</option><option>Commerce avec logements</option><option>Bureau</option></select></label>
@@ -228,7 +228,7 @@ export default function ImmoConstructionPage() {
               {generated && <div role="status" className="mt-4 rounded-xl border border-emerald-600/20 bg-emerald-600/10 p-3 text-sm"><strong>Esquisse préparée.</strong> Le brief est prêt à être transmis à un professionnel pour étude, ajustement et validation.</div>}
             </div>
             <div className="rounded-3xl border border-border bg-card p-5 sm:p-7">
-              <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-xl font-bold">Simulateur de maison</h3><p className="mt-1 text-sm text-muted-foreground">Explorez une maquette volumétrique liée au nombre de niveaux et aux pièces saisies.</p></div><span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-700">Prototype interactif</span></div>
+              <div className="flex flex-wrap items-start justify-between gap-3 print:hidden"><div><h3 className="text-xl font-bold">Simulateur de maison</h3><p className="mt-1 text-sm text-muted-foreground">Explorez une maquette volumétrique liée au nombre de niveaux et aux pièces saisies.</p></div><span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-700">Prototype interactif</span></div>
               <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Mode de simulation">
                 <button type="button" onClick={()=>setSimulationMode('exterieur')} aria-pressed={simulationMode==='exterieur'} className={'rounded-xl px-3 py-2 text-sm font-semibold '+(simulationMode==='exterieur'?'bg-accent text-white':'border border-border')}>Vue extérieure</button>
                 <button type="button" onClick={()=>setSimulationMode('interieur')} aria-pressed={simulationMode==='interieur'} className={'rounded-xl px-3 py-2 text-sm font-semibold '+(simulationMode==='interieur'?'bg-accent text-white':'border border-border')}>Vue intérieure</button>
