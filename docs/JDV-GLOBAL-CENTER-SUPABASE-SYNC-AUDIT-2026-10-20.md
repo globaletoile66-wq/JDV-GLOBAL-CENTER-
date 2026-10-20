@@ -13,14 +13,14 @@ La base Supabase est active et contient un schéma large, mais la synchronisatio
 
 Requêtes en lecture seule exécutées le 20 octobre 2026 :
 
-- 363 tables dans \`public\`
+- 364 tables dans \`public\`
 - 3 vues dans \`public\`
 - 3 986 colonnes sur les tables publiques
-- 948 clés étrangères
+- 953 clés étrangères
 - RLS activé sur les 364 tables publiques (aucune table publique sans RLS)
 - 898 politiques RLS
 - 246 fonctions dans le schéma \`public\`
-- 235 migrations enregistrées après l'ajout du schéma du studio de conception
+- 236 migrations enregistrées après l'ajout du schéma du studio de conception
 
 La base est donc loin d'être vide et les relations de clés étrangères sont nombreuses. Cela ne garantit toutefois pas que chaque écran applicatif utilise les bons noms de tables, les bonnes colonnes ou les bonnes autorisations.
 
@@ -37,6 +37,12 @@ Migration \`jdv_immo_construction_editor_v1\`, version Supabase \`20261020084707
 - n'altère aucune table du CRM historique.
 
 La migration est versionnée dans \`supabase/migrations/20261020084707_jdv_immo_construction_editor.sql\`. Après application, une vérification a confirmé la présence de la table, RLS actif, trois politiques, deux clés étrangères et aucune permission de lecture pour \`anon\`.
+
+
+
+Migration globale `20261020090809_jdv_global_user_and_organization_foreign_keys.sql` appliquée après vérification qu'aucune ligne existante n'était orpheline. Elle relie `article_categories.organization_id` à `organizations.id`, `login_security_events.user_id` à `auth.users.id`, `notification_preferences.user_id` et `user_settings.user_id` à `auth.users.id`, et `super_admin_modules.user_id` à `super_admins.user_id`. Cinq index de support ont également été créés.
+
+Exception conservée volontairement : `super_admin_modules.module_code = 'crm'` ne correspond à aucun code de `public.modules`. Il est laissé inchangé pour ne pas modifier le code CRM historique. Aucune clé étrangère n'a été ajoutée sur `module_code` tant que cette référence n'a pas été clarifiée.
 
 ## Écarts de schéma confirmés
 
@@ -71,7 +77,7 @@ Des noms d'essai tels que \`jdv_social_groups\`, \`social_group_members\` et \`s
 
 ## Tables sans clé étrangère
 
-Une vérification des relations a trouvé 13 tables sans clé étrangère entrante ni sortante : `ai_model_catalog`, `article_categories`, `billing_invoice_counters`, `billing_settings`, `contact_messages`, `login_security_events`, `notification_preferences`, `rate_limits`, `super_admin_modules`, `system_settings`, `travel_availability`, `user_settings` et `webhook_events`. Cette liste est un point de revue, pas une liste de défauts : plusieurs sont des tables de configuration, de journalisation ou de système qui peuvent légitimement ne pas avoir de clé étrangère. Il faut rapprocher chaque table de ses consommateurs avant de conclure qu'elle est orpheline.
+Une vérification des relations a trouvé 8 tables sans clé étrangère entrante ni sortante : `ai_model_catalog`, `billing_invoice_counters`, `billing_settings`, `contact_messages`, `rate_limits`, `system_settings`, `travel_availability` et `webhook_events`. Cette liste est un point de revue, pas une liste de défauts : plusieurs sont des tables de configuration, de journalisation ou de système qui peuvent légitimement ne pas avoir de clé étrangère. Il faut rapprocher chaque table de ses consommateurs avant de conclure qu'elle est orpheline.
 
 ## Résultats des conseillers Supabase
 
@@ -81,7 +87,7 @@ Les contrôles de sécurité et de performance ont également signalé des élé
 - 12 fonctions \`SECURITY DEFINER\` exécutables par \`anon\` ;
 - 124 fonctions \`SECURITY DEFINER\` exécutables par \`authenticated\` ;
 - protection des mots de passe compromis désactivée ;
-- 533 clés étrangères sans index couvrant détecté ;
+- 532 clés étrangères sans index couvrant détecté ;
 - 284 politiques RLS susceptibles de réévaluer inutilement les fonctions \`auth\` par ligne ;
 - 60 cas de politiques permissives multiples ;
 - 12 groupes d'index en double et 408 index signalés inutilisés.
