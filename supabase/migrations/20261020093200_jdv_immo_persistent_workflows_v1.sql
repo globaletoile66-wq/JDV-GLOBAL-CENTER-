@@ -203,26 +203,68 @@ create table if not exists public.jdv_studio_settings (
   updated_by uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now(),
   constraint jdv_studio_settings_public_config_check check (
-    (config - 'theme'::text - 'design'::text) = '{}'::jsonb
-    and (
-      not (config ? 'theme') or (
-        jsonb_typeof(config->'theme') = 'object'
-        and ((config->'theme') - 'primary'::text - 'accent'::text) = '{}'::jsonb
-        and coalesce(config->'theme'->>'primary','') ~ '^#[0-9A-Fa-f]{6}$'
-        and coalesce(config->'theme'->>'accent','') ~ '^#[0-9A-Fa-f]{6}$'
-      )
-    )
-    and (
-      not (config ? 'design') or (
-        jsonb_typeof(config->'design') = 'object'
-        and ((config->'design') - 'font'::text - 'radius'::text - 'density'::text - 'cardStyle'::text - 'showMedia'::text - 'showHighlights'::text - 'showAnimations'::text - 'imageUrl'::text - 'videoUrl'::text - 'imageData'::text - 'videoData'::text) = '{}'::jsonb
-        and coalesce(config->'design'->>'imageData','') = ''
-        and coalesce(config->'design'->>'videoData','') = ''
-      )
-    )
+    jsonb_typeof(config) = 'object'
+    and (config - 'theme' - 'design') = '{}'::jsonb
   )
 );
 create index if not exists jdv_studio_settings_updated_by_idx on public.jdv_studio_settings(updated_by);
+
+create or replace function public.jdv_studio_settings_guard_config()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  key_name text;
+begin
+  if jsonb_typeof(new.config) <> 'object' then
+    raise exception 'Studio config must be a JSON object';
+  end if;
+
+  for key_name in select jsonb_object_keys(new.config) loop
+    if key_name not in ('theme','design') then
+      raise exception 'Unsupported public Studio config key: %', key_name;
+    end if;
+  end loop;
+
+  if new.config ? 'theme' then
+    if jsonb_typeof(new.config->'theme') <> 'object' then
+      raise exception 'Studio theme must be a JSON object';
+    end if;
+    for key_name in select jsonb_object_keys(new.config->'theme') loop
+      if key_name not in ('primary','accent') then
+        raise exception 'Unsupported public Studio theme key: %', key_name;
+      end if;
+    end loop;
+    if coalesce(new.config->'theme'->>'primary','') !~ '^#[0-9A-Fa-f]{6}$'
+       or coalesce(new.config->'theme'->>'accent','') !~ '^#[0-9A-Fa-f]{6}$' then
+      raise exception 'Studio theme colors must be six-digit hex values';
+    end if;
+  end if;
+
+  if new.config ? 'design' then
+    if jsonb_typeof(new.config->'design') <> 'object' then
+      raise exception 'Studio design must be a JSON object';
+    end if;
+    for key_name in select jsonb_object_keys(new.config->'design') loop
+      if key_name not in ('font','radius','density','cardStyle','showMedia','showHighlights','showAnimations','imageUrl','videoUrl','imageData','videoData') then
+        raise exception 'Unsupported public Studio design key: %', key_name;
+      end if;
+    end loop;
+    if coalesce(new.config->'design'->>'imageData','') <> ''
+       or coalesce(new.config->'design'->>'videoData','') <> '' then
+      raise exception 'Raw media data cannot be stored in public Studio settings';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+revoke all on function public.jdv_studio_settings_guard_config() from public, anon, authenticated;
+drop trigger if exists jdv_studio_settings_guard_config on public.jdv_studio_settings;
+create trigger jdv_studio_settings_guard_config
+before insert or update of config on public.jdv_studio_settings
+for each row execute function public.jdv_studio_settings_guard_config();
 insert into public.jdv_studio_settings (scope_key, config) values ('global', '{}'::jsonb) on conflict (scope_key) do nothing;
 alter table public.jdv_studio_settings enable row level security;
 grant select, insert, update on public.jdv_studio_settings to authenticated;
