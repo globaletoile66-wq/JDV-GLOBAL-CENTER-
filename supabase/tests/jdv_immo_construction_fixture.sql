@@ -102,3 +102,5 @@ insert into public.immo_properties(id) values ('c0000000-0000-4000-8000-00000000
 insert into public.immo_leases(id, tenant_user_id, landlord_user_id)
 values ('d0000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000003');
 insert into auth.users(id) values ('00000000-0000-4000-8000-000000000004');
+
+grant select on public.super_admins, public.immo_leases to authenticated;
