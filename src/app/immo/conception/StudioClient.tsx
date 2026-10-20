@@ -8,7 +8,10 @@ import { createClient } from '@/lib/supabase/client';
 import House3DViewer from '../construction/House3DViewer';
 
 type Room = { id: number; name: string; x: number; y: number; w: number; h: number; color: string };
-type Opening = { id: number; kind: 'Porte' | 'Fenêtre'; roomId: number; wall: 'nord' | 'sud' | 'est' | 'ouest'; offset: number; width: number };\ntype SiteKind = 'Gazon' | 'Jardin' | 'Piscine' | 'Parking' | 'Terrasse' | 'Arbre' | 'Allée' | 'Clôture';\ntype SiteObject = { id: number; kind: SiteKind; x: number; y: number; w: number; h: number; label: string };\nconst siteKinds: SiteKind[] = ['Gazon','Jardin','Piscine','Parking','Terrasse','Arbre','Allée','Clôture'];
+type Opening = { id: number; kind: 'Porte' | 'Fenêtre'; roomId: number; wall: 'nord' | 'sud' | 'est' | 'ouest'; offset: number; width: number };
+type SiteKind = 'Gazon' | 'Jardin' | 'Piscine' | 'Parking' | 'Terrasse' | 'Arbre' | 'Allée' | 'Clôture';
+type SiteObject = { id: number; kind: SiteKind; x: number; y: number; w: number; h: number; label: string };
+const siteKinds: SiteKind[] = ['Gazon','Jardin','Piscine','Parking','Terrasse','Arbre','Allée','Clôture'];
 const colors = ['#dbeafe', '#fef3c7', '#dcfce7', '#f3e8ff', '#fee2e2', '#cffafe', '#e5e7eb'];
 const inputClass = 'mt-1 w-full rounded-xl border border-white/15 bg-[#09152f] px-3 py-2.5 text-sm text-white outline-none focus:border-[#F28C28]';
 const initialRooms: Room[] = [
@@ -25,7 +28,9 @@ export default function ImmoConceptionPage() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [parcelWidth, setParcelWidth] = useState(12);
   const [parcelDepth, setParcelDepth] = useState(18);
-  const [rooms, setRooms] = useState<Room[]>(initialRooms);\n  const [siteObjects, setSiteObjects] = useState<SiteObject[]>([]);\n  const [selectedSiteId, setSelectedSiteId] = useState<number | null>(null);
+  const [rooms, setRooms] = useState<Room[]>(initialRooms);
+  const [siteObjects, setSiteObjects] = useState<SiteObject[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState(1);
   const [openings, setOpenings] = useState<Opening[]>([
     { id: 1, kind: 'Porte', roomId: 1, wall: 'sud', offset: 2.5, width: 1.0 },
@@ -48,11 +53,29 @@ export default function ImmoConceptionPage() {
   const footprint = rooms.reduce((sum, room) => sum + room.w * room.h, 0);
   const floorArea = footprint * levels;
 
-  const updateRoom = (id: number, patch: Partial<Room>) => setRooms((current) => current.map((room) => room.id === id ? { ...room, ...patch } : room));\n  const addSiteObject = (kind: SiteKind) => { const id = Math.max(0, ...siteObjects.map((item) => item.id)) + 1; const dims = kind === 'Piscine' ? {w: 5, h: 3} : kind === 'Parking' ? {w: 5, h: 5} : kind === 'Arbre' ? {w: 2, h: 2} : kind === 'Terrasse' ? {w: 4, h: 3} : {w: 4, h: 4}; const item = { id, kind, x: Math.max(0, parcelWidth - dims.w - 0.5), y: Math.max(0, parcelDepth - dims.h - 0.5), ...dims, label: kind }; setSiteObjects((current) => [...current, item]); setSelectedSiteId(id); setView('plan'); };\n  const updateSiteObject = (id: number, patch: Partial<SiteObject>) => setSiteObjects((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
+  const updateRoom = (id: number, patch: Partial<Room>) => setRooms((current) => current.map((room) => room.id === id ? { ...room, ...patch } : room));
+  const addSiteObject = (kind: SiteKind) => { const id = Math.max(0, ...siteObjects.map((item) => item.id)) + 1; const dims = kind === 'Piscine' ? {w: 5, h: 3} : kind === 'Parking' ? {w: 5, h: 5} : kind === 'Arbre' ? {w: 2, h: 2} : kind === 'Terrasse' ? {w: 4, h: 3} : {w: 4, h: 4}; const item = { id, kind, x: Math.max(0, parcelWidth - dims.w - 0.5), y: Math.max(0, parcelDepth - dims.h - 0.5), ...dims, label: kind }; setSiteObjects((current) => [...current, item]); setSelectedSiteId(id); setView('plan'); };
+  const updateSiteObject = (id: number, patch: Partial<SiteObject>) => setSiteObjects((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
   const pointFromEvent = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
     return { x: ((event.clientX - rect.left) / rect.width * 800 - marginX) / scale, y: ((event.clientY - rect.top) / rect.height * 500 - marginY) / scale };
+  };
+  const addRentalUnit = () => {
+    const baseId = Math.max(0, ...rooms.map((room) => room.id));
+    const rentalRooms: Room[] = [
+      { id: baseId + 1, name: 'Séjour', x: 0.3, y: 0.3, w: 4.0, h: 3.5, color: colors[0] },
+      { id: baseId + 2, name: 'Chambre', x: 4.5, y: 0.3, w: 3.2, h: 3.2, color: colors[2] },
+      { id: baseId + 3, name: 'Douche / WC', x: 7.9, y: 0.3, w: 1.8, h: 2.0, color: colors[4] },
+      { id: baseId + 4, name: 'Cuisine', x: 0.3, y: 4.0, w: 2.5, h: 2.4, color: colors[1] },
+    ];
+    setRooms((current) => [...current, ...rentalRooms]);
+    const terraceId = Math.max(0, ...siteObjects.map((item) => item.id)) + 1;
+    setSiteObjects((current) => [...current, { id: terraceId, kind: 'Terrasse', x: Math.max(0, parcelWidth - 3.5), y: Math.max(0, parcelDepth - 2.5), w: 3.0, h: 2.0, label: 'Terrasse du logement' }]);
+    setSelectedId(baseId + 1);
+    setSelectedSiteId(terraceId);
+    setDescription((current) => current || 'Logement locatif individuel comprenant un séjour, une chambre, une douche/WC, une cuisine et une terrasse privative. Vérifier les accès, la ventilation, l’intimité et les réseaux.');
+    setView('plan');
   };
   const addRoom = () => {
     const id = Math.max(0, ...rooms.map((room) => room.id)) + 1;
@@ -111,6 +134,7 @@ export default function ImmoConceptionPage() {
             </section>
             <section className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
               <h2 className="font-bold">2. Pièces et mesures</h2>
+              <div className="mb-4 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/[.07] p-3"><p className="text-sm font-bold text-[#F28C28]">Modèles de logement locatif</p><p className="mt-1 text-xs leading-5 text-white/55">Créez d’un clic l’ensemble des pièces pour un seul locataire.</p><button onClick={addRentalUnit} className="mt-3 w-full rounded-xl bg-[#F28C28] px-3 py-3 text-sm font-bold text-[#0B1B3D]">+ Logement : séjour, chambre, douche, cuisine, terrasse</button></div>
               <div className="mt-3 space-y-2">{rooms.map((room) => <button key={room.id} onClick={() => setSelectedId(room.id)} className={'flex w-full items-center justify-between gap-2 rounded-xl border p-3 text-left text-sm ' + (selectedId === room.id ? 'border-[#F28C28]/70 bg-[#F28C28]/10' : 'border-white/10')}><span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ background: room.color }}/>{room.name}</span><span className="text-xs text-white/45">{(room.w * room.h).toFixed(1)} m²</span></button>)}</div>
               <button onClick={addRoom} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 px-3 py-2.5 text-sm"><Plus size={15}/> Ajouter une pièce</button>
               {selected && <div className="mt-4 border-t border-white/10 pt-4">
@@ -125,8 +149,8 @@ export default function ImmoConceptionPage() {
               </div>}
             </section>
             <section className="rounded-2xl border border-white/10 bg-white/[.04] p-5">
-              <h2 id="amenagement-parcelle" className="font-bold">3. Aménagement de la parcelle</h2>
-              <p className="mt-2 text-xs leading-5 text-white/50">Ajoutez les éléments à la parcelle existante, puis déplacez-les directement sur le plan 2D. Sélectionnez un élément pour modifier son emplacement et ses dimensions.</p>
+              <h2 id="amenagement-parcelle" className="font-bold">3. Options Premium : terrain et extérieurs</h2>
+              <p className="mt-2 text-xs leading-5 text-white/50">Options Premium intégrées au même concepteur : terrain, gazon, jardin, piscine, parking, terrasse, arbres, allées et clôture. Ajoutez-les à votre plan existant, déplacez-les en 2D et ajustez leurs dimensions ici, sans ouvrir un outil séparé.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">{siteKinds.map((kind) => <button key={kind} onClick={() => addSiteObject(kind)} className="rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold hover:border-[#F28C28]">+ {kind}</button>)}</div>
               <div className="mt-3 space-y-2">{siteObjects.map((item) => <div key={item.id} className={'rounded-xl border p-3 '+(selectedSiteId===item.id?'border-[#F28C28]/70 bg-[#F28C28]/10':'border-white/10')}><div className="flex items-center justify-between gap-2"><button onClick={()=>{setSelectedSiteId(item.id);setView('plan')}} className="text-sm font-semibold">{item.label} #{item.id}</button><button aria-label="Supprimer aménagement" onClick={()=>{setSiteObjects(s=>s.filter(x=>x.id!==item.id));if(selectedSiteId===item.id)setSelectedSiteId(null)}} className="text-xs text-red-200">Supprimer</button></div><label className="mt-2 block text-xs text-white/60">Nom<input value={item.label} onChange={e=>updateSiteObject(item.id,{label:e.target.value})} className={inputClass}/></label><div className="mt-2 grid grid-cols-2 gap-2"><label className="text-xs text-white/60">X (m)<input type="number" step="0.1" value={item.x} onChange={e=>updateSiteObject(item.id,{x:Math.max(0,Math.min(parcelWidth-item.w,Number(e.target.value)||0))})} className={inputClass}/></label><label className="text-xs text-white/60">Y (m)<input type="number" step="0.1" value={item.y} onChange={e=>updateSiteObject(item.id,{y:Math.max(0,Math.min(parcelDepth-item.h,Number(e.target.value)||0))})} className={inputClass}/></label><label className="text-xs text-white/60">Largeur (m)<input type="number" min="0.5" step="0.5" value={item.w} onChange={e=>updateSiteObject(item.id,{w:Math.max(0.5,Math.min(parcelWidth-item.x,Number(e.target.value)||0.5))})} className={inputClass}/></label><label className="text-xs text-white/60">Profondeur (m)<input type="number" min="0.5" step="0.5" value={item.h} onChange={e=>updateSiteObject(item.id,{h:Math.max(0.5,Math.min(parcelDepth-item.y,Number(e.target.value)||0.5))})} className={inputClass}/></label></div></div>)}</div>
               <h2 className="mt-6 border-t border-white/10 pt-5 font-bold">4. Portes et fenêtres</h2>
@@ -144,7 +168,8 @@ export default function ImmoConceptionPage() {
                 <text x={Math.min(790, marginX + parcelWidth * scale + 12)} y={marginY + parcelDepth * scale / 2} transform={'rotate(90 ' + Math.min(790, marginX + parcelWidth * scale + 12) + ' ' + (marginY + parcelDepth * scale / 2) + ')'} textAnchor="middle" fontSize="13" fill="#334155">{parcelDepth.toFixed(1)} m · profondeur</text>
                 {rooms.map((room) => <g key={room.id} onPointerDown={(event) => { event.stopPropagation(); const point = pointFromEvent(event as unknown as React.PointerEvent<SVGSVGElement>); setSelectedId(room.id); setDrag({ kind: 'room', id: room.id, dx: point.x - room.x, dy: point.y - room.y }); (event.currentTarget as SVGGElement).setPointerCapture?.(event.pointerId); }} style={{ cursor: 'grab' }}><rect x={marginX + room.x * scale} y={marginY + room.y * scale} width={room.w * scale} height={room.h * scale} fill={room.color} stroke={selectedId === room.id ? '#F28C28' : '#334155'} strokeWidth={selectedId === room.id ? 3 : 1.6}/><text x={marginX + (room.x + room.w / 2) * scale} y={marginY + (room.y + room.h / 2) * scale - 5} textAnchor="middle" fontSize="12" fill="#0f172a" pointerEvents="none">{room.name.slice(0, 22)}</text><text x={marginX + (room.x + room.w / 2) * scale} y={marginY + (room.y + room.h / 2) * scale + 12} textAnchor="middle" fontSize="11" fill="#334155" pointerEvents="none">{room.w.toFixed(1)} × {room.h.toFixed(1)} m</text></g>)}
                 {openings.map((opening) => { const room = rooms.find((item) => item.id === opening.roomId); if (!room) return null; const pos = opening.wall === 'nord' ? { x: marginX + (room.x + Math.min(room.w, opening.offset)) * scale, y: marginY + room.y * scale } : opening.wall === 'sud' ? { x: marginX + (room.x + Math.min(room.w, opening.offset)) * scale, y: marginY + (room.y + room.h) * scale } : opening.wall === 'est' ? { x: marginX + (room.x + room.w) * scale, y: marginY + (room.y + Math.min(room.h, opening.offset)) * scale } : { x: marginX + room.x * scale, y: marginY + (room.y + Math.min(room.h, opening.offset)) * scale }; const horizontal = opening.wall === 'nord' || opening.wall === 'sud'; return <g key={opening.id}><line x1={pos.x - (horizontal ? opening.width * scale / 2 : 0)} y1={pos.y - (horizontal ? 0 : opening.width * scale / 2)} x2={pos.x + (horizontal ? opening.width * scale / 2 : 0)} y2={pos.y + (horizontal ? 0 : opening.width * scale / 2)} stroke={opening.kind === 'Porte' ? '#ea580c' : '#0284c7'} strokeWidth="7"/><text x={pos.x + 4} y={pos.y - 5} fontSize="10" fill={opening.kind === 'Porte' ? '#c2410c' : '#0369a1'}>{opening.kind} {opening.id}</text></g>; })}
-                {siteObjects.map((item) => <g key={'site-'+item.id} onPointerDown={(event) => { event.stopPropagation(); const point = pointFromEvent(event as unknown as React.PointerEvent<SVGSVGElement>); setSelectedSiteId(item.id); setDrag({ kind: 'site', id: item.id, dx: point.x - item.x, dy: point.y - item.y }); (event.currentTarget as SVGGElement).setPointerCapture?.(event.pointerId); }} style={{ cursor: 'grab' }}><rect x={marginX + item.x * scale} y={marginY + item.y * scale} width={item.w * scale} height={item.h * scale} rx={item.kind==='Piscine'?10:2} fill={item.kind==='Piscine'?'#38bdf8':item.kind==='Gazon'?'#86b96b':item.kind==='Jardin'||item.kind==='Arbre'?'#4d9b50':item.kind==='Parking'?'#9ca3af':item.kind==='Terrasse'?'#c4a484':item.kind==='Allée'?'#d6d3d1':'#64748b'} fillOpacity={item.kind==='Clôture'?0.35:0.85} stroke={selectedSiteId===item.id?'#F28C28':'#334155'} strokeWidth={selectedSiteId===item.id?3:1.5}/><text x={marginX+(item.x+item.w/2)*scale} y={marginY+(item.y+item.h/2)*scale} textAnchor="middle" dominantBaseline="middle" fontSize="11" fill="#0f172a" pointerEvents="none">{item.kind==='Arbre'?'🌳 ':''}{item.label}</text></g>)}\n                <text x={marginX + 8} y={marginY + parcelDepth * scale - 8} fontSize="11" fill="#64748b">Pièces et aménagements déplaçables · position en mètres</text>
+                {siteObjects.map((item) => <g key={'site-'+item.id} onPointerDown={(event) => { event.stopPropagation(); const point = pointFromEvent(event as unknown as React.PointerEvent<SVGSVGElement>); setSelectedSiteId(item.id); setDrag({ kind: 'site', id: item.id, dx: point.x - item.x, dy: point.y - item.y }); (event.currentTarget as SVGGElement).setPointerCapture?.(event.pointerId); }} style={{ cursor: 'grab' }}><rect x={marginX + item.x * scale} y={marginY + item.y * scale} width={item.w * scale} height={item.h * scale} rx={item.kind==='Piscine'?10:2} fill={item.kind==='Piscine'?'#38bdf8':item.kind==='Gazon'?'#86b96b':item.kind==='Jardin'||item.kind==='Arbre'?'#4d9b50':item.kind==='Parking'?'#9ca3af':item.kind==='Terrasse'?'#c4a484':item.kind==='Allée'?'#d6d3d1':'#64748b'} fillOpacity={item.kind==='Clôture'?0.35:0.85} stroke={selectedSiteId===item.id?'#F28C28':'#334155'} strokeWidth={selectedSiteId===item.id?3:1.5}/><text x={marginX+(item.x+item.w/2)*scale} y={marginY+(item.y+item.h/2)*scale} textAnchor="middle" dominantBaseline="middle" fontSize="11" fill="#0f172a" pointerEvents="none">{item.kind==='Arbre'?'🌳 ':''}{item.label}</text></g>)}
+                <text x={marginX + 8} y={marginY + parcelDepth * scale - 8} fontSize="11" fill="#64748b">Pièces et aménagements déplaçables · position en mètres</text>
               </svg></div>
               <p className="mt-3 text-xs leading-5 text-white/45">Les pièces peuvent être déplacées librement. Les repères de portes et fenêtres sont rattachés à une pièce et à l’un de ses murs. Ce prototype ne résout pas encore automatiquement les collisions entre pièces ni la continuité des murs; contrôlez les chevauchements avant export.</p>
             </div>}
