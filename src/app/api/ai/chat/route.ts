@@ -15,7 +15,7 @@ export async function GET() {
   const configured = isAIConfigured();
   return NextResponse.json({
     configured,
-    model: configured ? (process.env.JDV_AI_MODEL || 'gpt-5-mini') : null,
+    model: configured ? getModel() : null,\n    customEndpoint: configured && Boolean(process.env.OPENAI_BASE_URL?.trim()),
   }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
@@ -109,10 +109,10 @@ export async function POST(request: Request) {
     .map((item) => ({ role: item.role as 'user' | 'assistant', content: item.content }));
   history.push({ role: 'user', content: prompt });
 
-  const model = process.env.JDV_AI_MODEL || 'gpt-5-mini';
+  const model = getModel();
   let completion;
   try {
-    const openai = new OpenAI({ timeout: 30000, maxRetries: 1 });
+    const openai = new OpenAI({\n      apiKey: process.env.OPENAI_API_KEY,\n      ...(process.env.OPENAI_BASE_URL?.trim() ? { baseURL: process.env.OPENAI_BASE_URL.trim() } : {}),\n      timeout: 30000,\n      maxRetries: 1,\n    });
     completion = await openai.chat.completions.create({
       model,
       messages: [{ role: 'system', content: systemPrompt }, ...history],
