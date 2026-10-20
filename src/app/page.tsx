@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { ArrowRight, Building2, ShoppingBag, Sparkles, BriefcaseBusiness, Settings2, GitMerge } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
-import { JDV_MODULES } from '@/lib/jdv/application-registry';
+import { getGroupedJDVModules } from '@/lib/jdv/application-registry';
 
 
 export default function HomePage() {
   const { user, loading, isSuperAdmin } = useAuth();
+  const moduleGroups = getGroupedJDVModules();
+  const moduleCount = moduleGroups.reduce((total, group) => total + group.modules.length, 0);
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
@@ -45,10 +47,18 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-16 flex items-end justify-between"><div><p className="text-sm font-semibold text-accent">SERVICES JDV</p><h2 className="mt-1 text-2xl font-extrabold">Accéder directement à un service</h2></div><span className="hidden text-sm text-muted-foreground sm:block">{JDV_MODULES.length} modules répertoriés dans l’interface</span></div>
+        <div className="mt-16 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-semibold text-accent">ÉCOSYSTÈME JDV</p><h2 className="mt-1 text-2xl font-extrabold">Les applications, regroupées par univers</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Une entrée commune, des pôles plus lisibles et des parcours métier qui restent distincts.</p></div><span className="text-sm text-muted-foreground">{moduleCount} applications · {moduleGroups.length} pôles</span></div>
         {isSuperAdmin && <div className="mt-6 mb-5 rounded-2xl border border-accent/30 bg-accent/5 p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-accent">AUTRES · ESPACE PRIVÉ</p><h3 className="mt-1 font-bold">Centre de contrôle du concepteur</h3><p className="mt-1 text-sm text-muted-foreground">Administration de la plateforme, configuration et pilotage global. Cet espace n’est pas public.</p></div><Link href="/hidden-concepteur-gate/dashboard" className="btn-primary shrink-0">Ouvrir le centre de contrôle<ArrowRight size={16}/></Link></div></div>}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {JDV_MODULES.map(({id,name,description,href,icon:Icon})=><Link href={href} key={id} className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:-translate-y-1 hover:border-accent/40 hover:shadow-xl"><div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent"><Icon size={19}/></div><h3 className="font-bold">{name}</h3><p className="mt-1 text-sm text-muted-foreground">{description}</p><span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-accent">Ouvrir <ArrowRight size={13}/></span></Link>)}
+        <div className="mt-6 space-y-8">
+          {moduleGroups.map((group, groupIndex) => <section key={group.id} aria-labelledby={`module-group-${group.id}`} className="rounded-3xl border border-border bg-card/50 p-4 sm:p-6">
+            <div className="mb-5 flex flex-col gap-2 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
+              <div><div className="flex items-center gap-3"><span className="h-3 w-3 rounded-full" style={{backgroundColor:group.accent}}/><h3 id={`module-group-${group.id}`} className="text-lg font-extrabold">{group.title}</h3></div><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{group.description}</p></div>
+              <span className="shrink-0 text-xs font-semibold text-muted-foreground">{String(groupIndex+1).padStart(2,'0')} · {group.modules.length} application{group.modules.length>1?'s':''}</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {group.modules.map(({id,name,description,href,icon:Icon})=><Link href={href} key={id} className="group rounded-2xl border border-border bg-background p-4 text-left transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg"><div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent"><Icon size={19}/></div><h4 className="font-bold">{name}</h4><p className="mt-1 min-h-10 text-sm leading-5 text-muted-foreground">{description}</p><span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent">Ouvrir <ArrowRight size={13}/></span></Link>)}
+            </div>
+          </section>)}
         </div>
       </section>
     </main>
