@@ -63,7 +63,7 @@ export default function ConcepteurStudioPage() {
     };
     void loadGlobal();
   },[supabase,setTheme]);
-  const updateDesign=(patch:Partial<DesignPrefs>)=>setDesign(current=>({...current,...patch}));
+  const updateDesign=(patch:Partial<DesignPrefs>)=>{setDesign(current=>({...current,...patch}));setSaved(false);};
   const apply=async()=>{
     setTheme(draft);
     try { localStorage.setItem('jdv-design-v1',JSON.stringify(design)); } catch { setNotice('Le thème est appliqué, mais certains médias sont trop volumineux pour être conservés sur cet appareil.'); }
@@ -77,10 +77,15 @@ export default function ConcepteurStudioPage() {
       setNotice('Réglages locaux appliqués. Connectez-vous en Super Admin pour publier les réglages à toute la plateforme.');
     }
   };
-  const resetAll=()=>{
+  const resetAll=async()=>{
     reset();setDraft(DEFAULT_THEME);setDesign(defaultDesign);
     try{localStorage.removeItem('jdv-design-v1');}catch{}
-    applyDesign(defaultDesign);setSaved(false);setNotice('Réglages du Studio réinitialisés.');
+    applyDesign(defaultDesign);setSaved(false);setNotice('Réglages locaux du Studio réinitialisés.');
+    if(user){
+      const {error}=await supabase.from('jdv_studio_settings').upsert({scope_key:'global',config:{theme:DEFAULT_THEME,design:defaultDesign},updated_by:user.id},{onConflict:'scope_key'});
+      if(error)setNotice('Réglages locaux réinitialisés ; la réinitialisation globale a échoué : '+error.message);
+      else setNotice('Réglages globaux et locaux réinitialisés.');
+    }
   };
   const change=(key:'primary'|'accent',value:string)=>{if(isHex(value)){setDraft(current=>({...current,[key]:value}));setSaved(false);}};
   const handleMedia=async(kind:'imageData'|'videoData',event:ChangeEvent<HTMLInputElement>)=>{
