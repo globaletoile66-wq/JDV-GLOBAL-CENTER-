@@ -144,7 +144,7 @@ begin
   return result_row;
 end;
 $$;
-revoke all on function public.health_touch_provider_presence(uuid,uuid,text,boolean,boolean) from public;
+revoke all on function public.health_touch_provider_presence(uuid,uuid,text,boolean,boolean) from public, anon;
 grant execute on function public.health_touch_provider_presence(uuid,uuid,text,boolean,boolean) to authenticated;
 
 create or replace function public.health_record_search(
@@ -170,7 +170,7 @@ begin
   return result_row;
 end;
 $$;
-revoke all on function public.health_record_search(text,text,text,text) from public;
+revoke all on function public.health_record_search(text,text,text,text) from public, anon;
 grant execute on function public.health_record_search(text,text,text,text) to authenticated;
 
 notify pgrst, 'reload schema';
