@@ -69,7 +69,7 @@ export default function ImmoConceptionPage() {
       { id: baseId + 3, name: 'Douche / WC', x: 7.9, y: 0.3, w: 1.8, h: 2.0, color: colors[4] },
       { id: baseId + 4, name: 'Cuisine', x: 0.3, y: 4.0, w: 2.5, h: 2.4, color: colors[1] },
     ];
-    setRooms((current) => [...current, ...rentalRooms]);
+    setRooms(rentalRooms);
     const terraceId = Math.max(0, ...siteObjects.map((item) => item.id)) + 1;
     setSiteObjects((current) => [...current, { id: terraceId, kind: 'Terrasse', x: Math.max(0, parcelWidth - 3.5), y: Math.max(0, parcelDepth - 2.5), w: 3.0, h: 2.0, label: 'Terrasse du logement' }]);
     setSelectedId(baseId + 1);
