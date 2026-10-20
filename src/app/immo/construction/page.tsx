@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Download, Home, Printer, Ruler, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Download, Home, Printer, Ruler, ShieldCheck, Sparkles, Save } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 type Level = 'plain-pied' | 'R+1' | 'R+2';
 type Room = { name: string; color: string; area: number };
@@ -11,6 +13,12 @@ const levels: Record<Level, number> = { 'plain-pied': 1, 'R+1': 2, 'R+2': 3 };
 const field = 'w-full rounded-xl border border-border bg-background px-3 py-3 text-sm text-foreground outline-none focus:border-accent';
 
 export default function ImmoConstructionPage() {
+  const { user } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [savedBriefs, setSavedBriefs] = useState<Array<{id:string;title:string;brief_status:string;created_at:string}>>([]);
   const [parcelArea, setParcelArea] = useState('300');
   const [parcelWidth, setParcelWidth] = useState('12');
   const [parcelDepth, setParcelDepth] = useState('25');
@@ -32,6 +40,44 @@ export default function ImmoConstructionPage() {
     if (Number(parking) > 0) list.push({ name: 'Parking', color: '#e5e7eb', area: 15 });
     return list;
   }, [bedrooms, bathrooms, parking]);
+
+  const loadBriefs = useCallback(async () => {
+    if (!user) return;
+    const result = await supabase.from('immo_construction_briefs').select('id,title,brief_status,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
+    if (!result.error) setSavedBriefs((result.data ?? []) as Array<{id:string;title:string;brief_status:string;created_at:string}>);
+  }, [supabase, user]);
+  useEffect(() => { void loadBriefs(); }, [loadBriefs]);
+
+  const saveBrief = async () => {
+    if (!user) { setSaveError('Connectez-vous pour enregistrer durablement votre avant-projet.'); return; }
+    setSaving(true); setSaveError(''); setSaveMessage('');
+    const payload = {
+      user_id: user.id,
+      title: buildingType + ' · ' + levelsValue + ' · ' + safeParcelArea + ' m²',
+      parcel_area: safeParcelArea,
+      brief_status: 'draft',
+      brief: {
+        buildingType, levels: levelsValue, parcelArea: safeParcelArea, parcelWidth: safeWidth, parcelDepth: safeDepth,
+        bedrooms: Number(bedrooms) || 0, bathrooms: Number(bathrooms) || 0, livingRooms: Number(livingRooms) || 0,
+        kitchens: Number(kitchens) || 0, parking: Number(parking) || 0, style, notes,
+        estimatedFootprint: footprint, estimatedFloorArea, roomCount,
+        generatedAt: new Date().toISOString(),
+        disclaimer: 'Esquisse conceptuelle uniquement; plans exécutifs et conformité à valider par des professionnels habilités.',
+      },
+    };
+    const result = await supabase.from('immo_construction_briefs').insert(payload);
+    if (result.error) setSaveError('Enregistrement impossible : ' + result.error.message);
+    else { setSaveMessage('Avant-projet enregistré dans votre espace JDV Immo.'); await loadBriefs(); }
+    setSaving(false);
+  };
+
+  const submitBrief = async (id:string) => {
+    if (!user) return;
+    setSaveError(''); setSaveMessage('');
+    const result = await supabase.rpc('submit_immo_construction_brief', { p_brief_id: id });
+    if (result.error) setSaveError('Soumission impossible : ' + result.error.message);
+    else { setSaveMessage('Avant-projet transmis pour revue par un concepteur.'); await loadBriefs(); }
+  };
 
   const safeParcelArea = Math.max(0, Number(parcelArea) || 0);
   const safeWidth = Math.max(0, Number(parcelWidth) || 0);
@@ -85,7 +131,7 @@ export default function ImmoConstructionPage() {
               <label className="text-sm font-medium">Places de parking<input className={field + ' mt-2'} type="number" min="0" max="10" value={parking} onChange={e=>setParking(e.target.value)}/></label>
               <label className="text-sm font-medium sm:col-span-2">Contraintes et souhaits<textarea className={field + ' mt-2'} rows={3} maxLength={1500} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Orientation, accès, cour, ventilation, personnes à mobilité réduite, budget indicatif…"/></label>
             </div>
-            <div className="mt-6 flex flex-wrap gap-3"><button type="button" onClick={()=>setGenerated(true)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 font-bold text-white"><Sparkles size={17}/> Générer l’esquisse indicative</button><button type="button" onClick={exportBrief} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold"><Download size={16}/> Exporter le brief</button><button type="button" onClick={()=>window.print()} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold"><Printer size={16}/> Imprimer</button></div>
+            <div className="mt-6 flex flex-wrap gap-3"><button type="button" onClick={()=>setGenerated(true)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 font-bold text-white"><Sparkles size={17}/> Générer l’esquisse indicative</button><button type="button" onClick={()=>void saveBrief()} disabled={saving||!user} className="inline-flex items-center gap-2 rounded-xl border border-accent/40 px-4 py-3 text-sm font-semibold disabled:opacity-50"><Save size={16}/> {saving?'Enregistrement…':'Enregistrer dans mon espace'}</button><button type="button" onClick={exportBrief} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold"><Download size={16}/> Exporter le brief</button><button type="button" onClick={()=>window.print()} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold"><Printer size={16}/> Imprimer</button></div>
           </section>
           <section className="space-y-5">
             <div className="rounded-3xl border border-border bg-card p-5 sm:p-7">
@@ -113,6 +159,8 @@ export default function ImmoConstructionPage() {
             <div className="rounded-3xl border border-border bg-card p-5"><h3 className="font-bold">Volume 3D conceptuel</h3><p className="mt-1 text-sm text-muted-foreground">Représentation volumétrique simplifiée du nombre de niveaux, pas un modèle BIM ni un rendu photoréaliste.</p><svg viewBox="0 0 420 190" className="mt-3 h-auto w-full" role="img" aria-label="Volume 3D conceptuel du bâtiment"><polygon points="80,85 210,25 350,80 220,140" fill="#cbd5e1" stroke="#475569"/><polygon points="80,85 220,140 220,170 80,115" fill="#94a3b8" stroke="#475569"/><polygon points="220,140 350,80 350,110 220,170" fill="#64748b" stroke="#475569"/>{Array.from({length: levels[levelsValue]},(_,i)=><g key={i} transform={'translate(0,' + (-i*35) + ')'}><polygon points="95,78 210,25 335,75 220,128" fill="#dbeafe" stroke="#2563eb"/><polygon points="95,78 220,128 220,148 95,98" fill="#93c5fd" stroke="#2563eb"/><polygon points="220,128 335,75 335,95 220,148" fill="#60a5fa" stroke="#2563eb"/></g>)}<text x="210" y="185" textAnchor="middle" fontSize="11" fill="currentColor">{levelsValue} · Volume indicatif</text></svg></div>
           </section>
         </div>
+        {(saveMessage||saveError)&&<div role={saveError?'alert':'status'} className={'mt-5 rounded-xl border p-3 text-sm '+(saveError?'border-red-500/30 text-red-600':'border-emerald-500/30 text-emerald-700')}>{saveError||saveMessage}</div>}
+        {user&&<section className="mt-6 rounded-2xl border border-border bg-card p-5"><h2 className="font-bold">Mes avant-projets enregistrés</h2><div className="mt-3 grid gap-2 md:grid-cols-2">{savedBriefs.map(item=><article key={item.id} className="rounded-xl border border-border p-3"><p className="text-sm font-semibold">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.brief_status} · {new Date(item.created_at).toLocaleDateString('fr-FR')}</p>{item.brief_status==='draft'&&<button type="button" onClick={()=>void submitBrief(item.id)} className="mt-3 rounded-lg border border-accent/40 px-3 py-2 text-xs font-bold">Soumettre au concepteur</button>}</article>)}{!savedBriefs.length&&<p className="text-sm text-muted-foreground">Aucun avant-projet enregistré sur ce compte.</p>}</div></section>}
         <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"><ShieldCheck size={20} className="mt-0.5 shrink-0 text-amber-600"/><p><strong>Limite professionnelle :</strong> cet outil produit une esquisse et un cahier de besoins. Il ne remplace pas les plans architecturaux exécutifs, les études de sol et de structure, les plans électriques/plomberie, ni les permis. La conformité doit être contrôlée par des professionnels habilités selon le pays et la commune.</p></div>
       </div>
     </main>
