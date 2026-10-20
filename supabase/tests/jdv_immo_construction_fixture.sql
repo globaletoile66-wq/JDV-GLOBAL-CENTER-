@@ -9,6 +9,8 @@ as $$
 $$;
 create role anon nologin;
 create role authenticated nologin;
+grant usage on schema auth to anon, authenticated;
+grant execute on function auth.uid() to anon, authenticated;
 insert into auth.users (id) values
   ('00000000-0000-4000-8000-000000000001'),
   ('00000000-0000-4000-8000-000000000002'),
