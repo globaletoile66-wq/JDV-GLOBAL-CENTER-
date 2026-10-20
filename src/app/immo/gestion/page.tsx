@@ -148,7 +148,7 @@ export default function ImmoManagementPage() {
 
   return <main className="min-h-screen bg-[#0B1B3D] p-5 text-white sm:p-8">
     <div className="mx-auto max-w-7xl">
-      <div className="flex items-center justify-between gap-3"><Link href="/immo" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Retour à JDV Immo</Link><button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
+      <div className="flex items-center justify-between gap-3"><Link href="/immo" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Retour à JDV Immo</Link><Link href="/immo/locataires" className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70 hover:text-white">Suivi locataires</Link><button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
       <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p>
         <h1 className="mt-2 text-3xl font-black">Espace de gestion JDV IMMO</h1>
