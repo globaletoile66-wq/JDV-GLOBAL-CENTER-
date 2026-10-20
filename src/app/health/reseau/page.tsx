@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Navigation, Search, Stethoscope, Pill, FlaskConical, Building2, LocateFixed, RefreshCw, CircleCheck, Circle, Clock3, MessageCircle, Video, History, X } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Search, Stethoscope, Pill, FlaskConical, Building2, LocateFixed, RefreshCw, CircleCheck, Circle, MessageCircle, Video, History, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
@@ -129,6 +129,14 @@ export default function HealthNetworkPage() {
     }, 900);
     return () => window.clearTimeout(timer);
   }, [query, category, city, district, rememberSearches, user, supabase]);
+
+  useEffect(() => {
+    if (!user) return;
+    const timer = window.setTimeout(() => {
+      void supabase.from('health_search_preferences').upsert({ user_id: user.id, remember_searches: rememberSearches, preferred_city: city.trim() || null, preferred_district: district.trim() || null, updated_at: new Date().toISOString() });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [user, supabase, city, district, rememberSearches]);
 
   const clearHistory = async () => {
     if (user) await supabase.from('health_search_history').delete().eq('user_id', user.id);
