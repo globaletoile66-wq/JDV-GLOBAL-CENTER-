@@ -148,7 +148,7 @@ export default function ImmoManagementPage() {
 
   return <main className="min-h-screen bg-[#0B1B3D] p-5 text-white sm:p-8">
     <div className="mx-auto max-w-7xl">
-      <div className="flex items-center justify-between gap-3"><Link href="/immo" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Retour à JDV Immo</Link><button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
+      <div className="flex items-center justify-between gap-3"><Link href="/immo" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16} /> Retour à JDV Immo</Link><Link href="/immo/locataires" className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70 hover:text-white">Suivi locataires</Link><button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Actualiser</button></div>
       <section className="mt-7 rounded-3xl border border-white/10 bg-white/[.06] p-6 sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER</p>
         <h1 className="mt-2 text-3xl font-black">Espace de gestion JDV IMMO</h1>
@@ -195,11 +195,7 @@ export default function ImmoManagementPage() {
         {tab === 'leases' && <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <form onSubmit={submitLeaseEvent} className="rounded-2xl border border-white/10 p-5"><h2 className="text-lg font-bold">Ajouter un événement au bail</h2>
             <label className={labelClass} htmlFor="event-lease">Bail *</label><select id="event-lease" className={inputClass} value={leaseId} onChange={(e) => setLeaseId(e.target.value)} required><option value="">Choisir un bail</option>{leases.map((l) => <option key={l.id} value={l.id}>Bail {l.id.slice(0,8)} · {l.lease_status}</option>)}</select>
- integration/jdv-immo-buildcheck-2026-10-18
             <label className={labelClass} htmlFor="event-type">Événement *</label><select id="event-type" className={inputClass} value={eventType} onChange={(e) => setEventType(e.target.value)}><option value="note">Note de suivi</option><option value="renewal_requested">Renouvellement demandé</option><option value="termination_requested">Résiliation demandée</option><option value="document_added">Document ajouté</option><option value="inspection_completed">État des lieux terminé</option></select>
-=======
-            <label className={labelClass} htmlFor="event-type">Événement *</label><select id="event-type" className={inputClass} value={eventType} onChange={(e) => setEventType(e.target.value)}><option value="note">Note de suivi</option><option value="renewal_requested">Renouvellement demandé</option><option value="termination_requested">Résiliation demandée</option><option value="document_added">Document ajouté</option></select>
- supabase-sync-2026-09-24
             <label className={labelClass} htmlFor="event-details">Détails</label><textarea id="event-details" className={inputClass} value={eventDetails} onChange={(e) => setEventDetails(e.target.value)} maxLength={4000} rows={4} />
             <button disabled={saving || !leases.length} className="mt-4 w-full rounded-xl bg-[#F28C28] px-4 py-3 font-bold text-[#0B1B3D] disabled:opacity-50">{saving ? 'Enregistrement…' : 'Ajouter à l’historique'}</button>
           </form>
