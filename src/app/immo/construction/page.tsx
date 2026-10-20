@@ -71,6 +71,14 @@ export default function ImmoConstructionPage() {
     setSaving(false);
   };
 
+  const submitBrief = async (id:string) => {
+    if (!user) return;
+    setSaveError(''); setSaveMessage('');
+    const result = await supabase.rpc('submit_immo_construction_brief', { p_brief_id: id });
+    if (result.error) setSaveError('Soumission impossible : ' + result.error.message);
+    else { setSaveMessage('Avant-projet transmis pour revue par un concepteur.'); await loadBriefs(); }
+  };
+
   const safeParcelArea = Math.max(0, Number(parcelArea) || 0);
   const safeWidth = Math.max(0, Number(parcelWidth) || 0);
   const safeDepth = Math.max(0, Number(parcelDepth) || 0);
@@ -152,7 +160,7 @@ export default function ImmoConstructionPage() {
           </section>
         </div>
         {(saveMessage||saveError)&&<div role={saveError?'alert':'status'} className={'mt-5 rounded-xl border p-3 text-sm '+(saveError?'border-red-500/30 text-red-600':'border-emerald-500/30 text-emerald-700')}>{saveError||saveMessage}</div>}
-        {user&&<section className="mt-6 rounded-2xl border border-border bg-card p-5"><h2 className="font-bold">Mes avant-projets enregistrés</h2><div className="mt-3 grid gap-2 md:grid-cols-2">{savedBriefs.map(item=><article key={item.id} className="rounded-xl border border-border p-3"><p className="text-sm font-semibold">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.brief_status} · {new Date(item.created_at).toLocaleDateString('fr-FR')}</p></article>)}{!savedBriefs.length&&<p className="text-sm text-muted-foreground">Aucun avant-projet enregistré sur ce compte.</p>}</div></section>}
+        {user&&<section className="mt-6 rounded-2xl border border-border bg-card p-5"><h2 className="font-bold">Mes avant-projets enregistrés</h2><div className="mt-3 grid gap-2 md:grid-cols-2">{savedBriefs.map(item=><article key={item.id} className="rounded-xl border border-border p-3"><p className="text-sm font-semibold">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.brief_status} · {new Date(item.created_at).toLocaleDateString('fr-FR')}</p>{item.brief_status==='draft'&&<button type="button" onClick={()=>void submitBrief(item.id)} className="mt-3 rounded-lg border border-accent/40 px-3 py-2 text-xs font-bold">Soumettre au concepteur</button>}</article>)}{!savedBriefs.length&&<p className="text-sm text-muted-foreground">Aucun avant-projet enregistré sur ce compte.</p>}</div></section>}
         <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"><ShieldCheck size={20} className="mt-0.5 shrink-0 text-amber-600"/><p><strong>Limite professionnelle :</strong> cet outil produit une esquisse et un cahier de besoins. Il ne remplace pas les plans architecturaux exécutifs, les études de sol et de structure, les plans électriques/plomberie, ni les permis. La conformité doit être contrôlée par des professionnels habilités selon le pays et la commune.</p></div>
       </div>
     </main>
