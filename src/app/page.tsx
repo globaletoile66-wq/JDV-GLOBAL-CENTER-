@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { ArrowRight, Building2, ShoppingBag, Sparkles, BriefcaseBusiness, Settings2, GitMerge } from 'lucide-react';
+import { ArrowRight, Building2, ShoppingBag, Sparkles, BriefcaseBusiness, Settings2, GitMerge, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { getGroupedJDVModules } from '@/lib/jdv/application-registry';
@@ -31,6 +31,7 @@ export default function HomePage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-3"><AppLogo size={40}/><div><div className="font-extrabold">JDV</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Global Center</div></div></Link>
           <div className="flex items-center gap-2">
+            {!loading && user && isSuperAdmin && <><Link href="/super-admin" className="hidden xl:inline-flex btn-secondary"><ShieldCheck size={16}/>Super Admin</Link><Link href="/hidden-concepteur-gate/dashboard/studio" className="hidden xl:inline-flex btn-secondary"><SlidersHorizontal size={16}/>Studio Concepteur</Link></>}
             <Link href="/branches" className="hidden sm:inline-flex btn-secondary"><Sparkles size={16}/>Explorer les 9 branches</Link><Link href="/architecture/branches" className="hidden lg:inline-flex btn-secondary"><GitMerge size={16}/>Mode analytique</Link><Link href="/parametres/branches" className="hidden md:inline-flex btn-secondary"><Settings2 size={16}/>Paramétrage</Link><Link href="/marketplace" className="hidden sm:inline-flex btn-secondary"><ShoppingBag size={16}/>Explorer Marketplace</Link><Link href="/business/create" className="hidden lg:inline-flex btn-secondary"><BriefcaseBusiness size={16}/>Enregistrer mon entreprise</Link>
             {!loading && <Link href={user?'/dashboard':'/auth/login'} className="btn-primary">{user?'Mon espace':'Connexion'}<ArrowRight size={16}/></Link>}
           </div>
