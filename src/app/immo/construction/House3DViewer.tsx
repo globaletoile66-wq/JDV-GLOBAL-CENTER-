@@ -8,7 +8,7 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 
 type RoomLayout = { id: number; name: string; x: number; y: number; w: number; h: number; color?: string };
 type OpeningLayout = { id: number; kind: 'Porte' | 'Fenêtre'; roomId: number; wall: 'nord' | 'sud' | 'est' | 'ouest'; offset: number; width: number };
-type House3DViewerProps = {
+type SiteObjectLayout = { id: number; kind: string; x: number; y: number; w: number; h: number; label?: string };\ntype House3DViewerProps = {
   levels: number;
   facadeColor: string;
   roofColor: string;
@@ -32,7 +32,7 @@ function disposeObject(root: THREE.Object3D) {
   });
 }
 
-export default function House3DViewer({ levels, facadeColor, roofColor, showFurniture, rooms, openings = [], parcelWidth, parcelDepth, showRoof = true, parking }: House3DViewerProps) {
+export default function House3DViewer({ levels, facadeColor, roofColor, showFurniture, rooms, openings = [], parcelWidth, parcelDepth, showRoof = true, parking, siteObjects = [] }: House3DViewerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [walkthrough, setWalkthrough] = useState(false);
   const layoutRooms = rooms.filter((room): room is RoomLayout => typeof room !== 'string');
@@ -255,7 +255,38 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
     if (walkthrough && layoutRooms.length) {
       pointerControls = new PointerLockControls(camera, renderer.domElement);
       scene.add(pointerControls.getObject());
-      const firstRoom = layoutRooms[0];
+      // Exterior elements share the same coordinates as the 2D parcel editor.
+    const parcelW = Math.max(parcelWidth || width, width);
+    const parcelD = Math.max(parcelDepth || depth, depth);
+    const siteOriginX = parcelW / 2;
+    const siteOriginZ = parcelD / 2;
+    for (const item of siteObjects) {
+      const cx = item.x + item.w / 2 - siteOriginX;
+      const cz = item.y + item.h / 2 - siteOriginZ;
+      if (item.kind === 'Piscine') {
+        addBox(scene, item.w, 0.12, item.h, new THREE.MeshStandardMaterial({ color: '#38bdf8', roughness: 0.2, metalness: 0.1 }), cx, -0.02, cz);
+        addBox(scene, item.w + 0.18, 0.18, item.h + 0.18, new THREE.MeshStandardMaterial({ color: '#d1d5db' }), cx, -0.08, cz, false);
+      } else if (item.kind === 'Gazon' || item.kind === 'Jardin' || item.kind === 'Allée' || item.kind === 'Terrasse' || item.kind === 'Parking') {
+        const color = item.kind === 'Gazon' ? '#82b86b' : item.kind === 'Jardin' ? '#4d9b50' : item.kind === 'Allée' ? '#d6d3d1' : item.kind === 'Terrasse' ? '#c4a484' : '#9ca3af';
+        addBox(scene, item.w, 0.06, item.h, new THREE.MeshStandardMaterial({ color, roughness: 0.9 }), cx, -0.04, cz, false);
+        if (item.kind === 'Parking') {
+          const carMaterial = new THREE.MeshStandardMaterial({ color: '#2563eb', roughness: 0.55 });
+          addBox(scene, Math.min(1.8, item.w * 0.35), 0.65, Math.min(3.5, item.h * 0.72), carMaterial, cx, 0.32, cz);
+        }
+      } else if (item.kind === 'Arbre') {
+        addBox(scene, 0.22, 1.4, 0.22, new THREE.MeshStandardMaterial({ color: '#8b5e3c' }), cx, 0.65, cz);
+        const canopy = new THREE.Mesh(new THREE.SphereGeometry(Math.max(0.7, Math.min(item.w, item.h) * 0.45), 12, 10), new THREE.MeshStandardMaterial({ color: '#3f8b50', roughness: 0.9 }));
+        canopy.position.set(cx, 1.8, cz); canopy.castShadow = true; scene.add(canopy);
+      } else if (item.kind === 'Clôture') {
+        const fenceMat = new THREE.MeshStandardMaterial({ color: '#64748b' });
+        addBox(scene, item.w, 1.2, 0.08, fenceMat, cx, 0.55, item.y - siteOriginZ);
+        addBox(scene, item.w, 1.2, 0.08, fenceMat, cx, 0.55, item.y + item.h - siteOriginZ);
+        addBox(scene, 0.08, 1.2, item.h, fenceMat, item.x - siteOriginX, 0.55, cz);
+        addBox(scene, 0.08, 1.2, item.h, fenceMat, item.x + item.w - siteOriginX, 0.55, cz);
+      }
+    }
+
+    const firstRoom = layoutRooms[0];
       camera.position.set(firstRoom.x + firstRoom.w / 2 - originX, 1.6, firstRoom.y + firstRoom.h / 2 - originZ);
       const onCanvasClick = () => pointerControls?.lock();
       const onKeyDown = (event: KeyboardEvent) => pressed.add(event.key.toLowerCase());
@@ -337,7 +368,7 @@ export default function House3DViewer({ levels, facadeColor, roofColor, showFurn
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [levels, facadeColor, roofColor, showFurniture, rooms, openings, parcelWidth, parcelDepth, showRoof, parking, walkthrough]);
+  }, [levels, facadeColor, roofColor, showFurniture, rooms, openings, parcelWidth, parcelDepth, showRoof, parking, siteObjects, walkthrough]);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-slate-100 text-slate-700">
