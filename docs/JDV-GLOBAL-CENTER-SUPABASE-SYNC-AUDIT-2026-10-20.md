@@ -13,7 +13,7 @@ La base Supabase est active et contient un schéma large, mais la synchronisatio
 
 Requêtes en lecture seule exécutées le 20 octobre 2026 :
 
-- 363 tables dans \`public\`
+- 364 tables dans \`public\`
 - 3 vues dans \`public\`
 - 3 986 colonnes sur les tables publiques
 - 948 clés étrangères
