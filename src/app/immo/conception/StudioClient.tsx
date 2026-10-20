@@ -84,6 +84,7 @@ export default function ImmoConceptionPage() {
         <header className="flex flex-wrap items-center justify-between gap-3">
           <Link href="/immo/construction" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"><ArrowLeft size={16}/> Retour au studio de construction</Link>
           <span className="rounded-full border border-[#F28C28]/40 px-3 py-1.5 text-xs font-bold text-[#F28C28]">JDV IMMO · STUDIO PREMIUM</span>
+          <Link href="/immo/conception/amenagement" className="rounded-xl bg-[#F28C28] px-4 py-2 text-sm font-bold text-[#0B1B3D]">Terrain, jardin, piscine et parking</Link>
         </header>
         <section className="mt-6 rounded-3xl border border-white/10 bg-white/[.05] p-5 sm:p-7">
           <p className="text-xs font-bold uppercase tracking-[.22em] text-[#F28C28]">Conception architecturale personnalisée</p>
