@@ -49,7 +49,7 @@ export const JDV_MODULES: JDVModule[] = [
   { id: 'procurement', name: 'JDV PROCUREMENT', description: 'Achats et validations fournisseurs', href: '/procurement', icon: ClipboardList, protected: false },
   { id: 'inventory', name: 'JDV INVENTORY', description: 'Stocks et traçabilité des articles', href: '/inventory', icon: Package, protected: false },
   { id: 'entertainment', name: 'JDV GLOBAL DIVERTISSEMENT', description: 'Contenus, événements et expériences culturelles', href: '/entertainment', icon: Sparkles, branchId: 'jdv_entertainment', protected: false },
-  { id: 'admin', name: 'JDV ADMIN', description: 'Gouvernance, accès et configuration', href: '/admin', icon: ShieldCheck, branchId: 'jdv_admin', protected: false },
+  { id: 'admin', name: 'JDV ADMIN', description: 'Gouvernance, accès et configuration', href: '/admin', icon: ShieldCheck, branchId: 'jdv_admin', protected: true },
 ];
 
 export const getJDVModuleById = (id: string) => JDV_MODULES.find((module) => module.id === id);
