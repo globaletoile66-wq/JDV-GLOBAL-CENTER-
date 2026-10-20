@@ -8,7 +8,8 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 
 type RoomLayout = { id: number; name: string; x: number; y: number; w: number; h: number; color?: string };
 type OpeningLayout = { id: number; kind: 'Porte' | 'Fenêtre'; roomId: number; wall: 'nord' | 'sud' | 'est' | 'ouest'; offset: number; width: number };
-type SiteObjectLayout = { id: number; kind: string; x: number; y: number; w: number; h: number; label?: string };\ntype House3DViewerProps = {
+type SiteObjectLayout = { id: number; kind: string; x: number; y: number; w: number; h: number; label?: string };
+type House3DViewerProps = {
   levels: number;
   facadeColor: string;
   roofColor: string;
@@ -19,6 +20,7 @@ type SiteObjectLayout = { id: number; kind: string; x: number; y: number; w: num
   parcelDepth?: number;
   showRoof?: boolean;
   parking: number;
+  siteObjects?: SiteObjectLayout[];
 };
 
 function disposeObject(root: THREE.Object3D) {
