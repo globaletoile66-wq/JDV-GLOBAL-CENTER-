@@ -154,8 +154,11 @@
 | `/hidden-concepteur-gate/dashboard/controle-plateforme` | `src/app/hidden-concepteur-gate/dashboard/controle-plateforme/page.tsx` | Accès concepteur — vérifier exposition et contrôle d'accès | À vérifier | À vérifier |
 | `/hidden-concepteur-gate/dashboard` | `src/app/hidden-concepteur-gate/dashboard/page.tsx` | Accès concepteur — vérifier exposition et contrôle d'accès | À vérifier | À vérifier |
 | `/hidden-concepteur-gate/dashboard/portefeuille-clients` | `src/app/hidden-concepteur-gate/dashboard/portefeuille-clients/page.tsx` | Accès concepteur — vérifier exposition et contrôle d'accès | À vérifier | À vérifier |
+| `/hidden-concepteur-gate/dashboard/studio` | `src/app/hidden-concepteur-gate/dashboard/studio/page.tsx` | Studio global de thème et de langue — derrière le contrôle super-admin | À vérifier en prévisualisation | Traductions progressives |
 | `/hidden-concepteur-gate/login` | `src/app/hidden-concepteur-gate/login/page.tsx` | Accès concepteur — vérifier exposition et contrôle d'accès | À vérifier | À vérifier |
 | `/hr` | `src/app/hr/page.tsx` | Gestion opérationnelle | À vérifier | À vérifier |
+| `/immo/construction` | `src/app/immo/construction/page.tsx` | Construction, esquisse 2D et volumétrie conceptuelle | Prévisualisation requise | À valider par professionnel |
+| `/immo/partenaires` | `src/app/immo/partenaires/page.tsx` | Propriétaires, agents, huissiers et simulation économique | Hypothèses uniquement | Aucun encaissement |
 | `/immo/gestion` | `src/app/immo/gestion/page.tsx` | Habitat & patrimoine | À vérifier | À vérifier |
 | `/immo` | `src/app/immo/page.tsx` | Habitat & patrimoine | À vérifier | À vérifier |
 | `/insurance/echeances` | `src/app/insurance/echeances/page.tsx` | Assurance | À vérifier | À vérifier |
