@@ -144,14 +144,14 @@ export default function ImmoConstructionPage() {
       <header className="border-b border-border bg-card/80 print:hidden">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link href="/immo" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft size={16}/> Retour à JDV Immo</Link>
-          <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold"><Ruler size={14}/> Studio de conception</span>
+          <Link href="/immo/conception" className="inline-flex items-center gap-2 rounded-full border border-accent/50 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/10"><Sparkles size={14}/> Studio Premium — plan personnalisable</Link>
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-8 max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[.2em] text-accent">JDV IMMO · CONSTRUCTION</p>
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">Décrivez votre projet. Préparez votre avant-projet.</h1>
-          <p className="mt-3 text-muted-foreground">Décrivez les pièces et les dimensions souhaitées. JDV génère un plan d’agencement préliminaire et un schéma de fondation de principe, que vous pourrez enregistrer et transmettre à un architecte et à un ingénieur structure.</p>
+          <p className="mt-3 text-muted-foreground">Décrivez les pièces et les dimensions souhaitées, puis ouvrez le Studio Premium pour déplacer les pièces, ajuster les mesures et placer les portes et fenêtres. Le plan généré reste un avant-projet à faire valider par des professionnels.</p>
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,.95fr)] print:grid-cols-1">
           <section className="rounded-3xl border border-border bg-card p-5 sm:p-7 print:hidden">
