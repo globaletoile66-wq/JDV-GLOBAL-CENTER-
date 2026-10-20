@@ -64,6 +64,13 @@ export function themeToCssVars(t: JdvTheme): Record<string, string> {
     '--jdv-accent': t.accent,
     '--jdv-on-accent': readableOn(t.accent),
     '--jdv-accent-soft': tint(t.accent, 0.12),
+    // Connecter le thème configurable aux variables utilisées par les classes Tailwind globales.
+    '--primary': t.primary,
+    '--primary-foreground': readableOn(t.primary),
+    '--accent': t.accent,
+    '--accent-foreground': readableOn(t.accent),
+    '--ring': t.accent,
+    '--border': tint(t.primary, 0.22),
   };
 }
 
