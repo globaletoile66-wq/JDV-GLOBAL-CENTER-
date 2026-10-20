@@ -21,14 +21,21 @@ begin
   ]);
   if found_indexes <> 18 then raise exception 'Expected 18 workflow indexes, found %', found_indexes; end if;
 
-  if exists (select 1 from pg_policies where schemaname='public' and tablename='jdv_studio_settings'
-      and cmd='SELECT' and (roles::text like '%anon%' or roles::text like '%public%')) then
-    raise exception 'Generic Studio settings must not be readable by anon/public';
-  end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='jdv_studio_settings'
-      and policyname='Super admins read global Studio settings' and cmd='SELECT'
-      and roles::text like '%authenticated%' and qual like '%super_admins%') then
-    raise exception 'Studio settings must be readable by active Super Admins only';
+      and policyname='Public read safe global Studio settings' and cmd='SELECT'
+      and roles::text like '%anon%' and roles::text like '%authenticated%') then
+    raise exception 'Safe Studio settings must be readable by app users';
+  end if;
+  if not has_column_privilege('anon','public.jdv_studio_settings','config','SELECT')
+    or not has_column_privilege('anon','public.jdv_studio_settings','scope_key','SELECT')
+    or has_column_privilege('anon','public.jdv_studio_settings','updated_by','SELECT')
+    or has_column_privilege('anon','public.jdv_studio_settings','updated_at','SELECT')
+    or has_table_privilege('anon','public.jdv_studio_settings','INSERT')
+    or has_table_privilege('anon','public.jdv_studio_settings','UPDATE') then
+    raise exception 'Anonymous Studio settings privileges are not restricted to safe read columns';
+  end if;
+  if not exists (select 1 from pg_constraint where conname='jdv_studio_settings_public_config_check') then
+    raise exception 'Public Studio settings allowlist constraint is missing';
   end if;
 
   select with_check into brief_insert_check from pg_policies
