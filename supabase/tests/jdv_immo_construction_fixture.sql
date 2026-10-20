@@ -11,7 +11,8 @@ create role anon nologin;
 create role authenticated nologin;
 insert into auth.users (id) values
   ('00000000-0000-4000-8000-000000000001'),
-  ('00000000-0000-4000-8000-000000000002');
+  ('00000000-0000-4000-8000-000000000002'),
+  ('00000000-0000-4000-8000-000000000003');
 
 
 create table public.organizations (id uuid primary key);
@@ -47,3 +48,5 @@ insert into public.notification_preferences (id, user_id)
 values ('70000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001');
 insert into public.user_settings (id, user_id)
 values ('80000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001');
+
+create table public.business_profiles (id uuid primary key);
