@@ -52,6 +52,53 @@ export const JDV_MODULES: JDVModule[] = [
   { id: 'admin', name: 'JDV ADMIN', description: 'Gouvernance, accès et configuration', href: '/admin', icon: ShieldCheck, branchId: 'jdv_admin', protected: true },
 ];
 
+
+export type JDVModuleGroup = {
+  id: string;
+  title: string;
+  description: string;
+  accent: string;
+  moduleIds: string[];
+};
+
+/**
+ * Regroupement visible des applications dans l'interface globale.
+ * Les modules et leurs routes restent séparés : seuls leur classement et leur
+ * découverte sont unifiés ici.
+ */
+export const JDV_MODULE_GROUPS: JDVModuleGroup[] = [
+  { id: 'commerce', title: 'Commerce & services', description: 'Vitrine, catalogue, relation clientèle et prestations.', accent: '#34D399', moduleIds: ['marketplace', 'services', 'business', 'crm'] },
+  { id: 'mobility', title: 'Mobilité & logistique', description: 'Voyages, transport et opérations de transit.', accent: '#60A5FA', moduleIds: ['travel', 'transport', 'transit'] },
+  { id: 'habitat', title: 'Habitat & patrimoine', description: 'Recherche immobilière, biens et visites.', accent: '#FBBF24', moduleIds: ['immo'] },
+  { id: 'finance', title: 'Finance communautaire & protection', description: 'Paiements partagés, épargne collective et assurance.', accent: '#2DD4BF', moduleIds: ['pay', 'tontine', 'insurance'] },
+  { id: 'health-learning', title: 'Santé & apprentissage', description: 'Deux domaines spécialisés qui conservent leurs parcours propres.', accent: '#F472B6', moduleIds: ['health', 'academy'] },
+  { id: 'content', title: 'Contenus & communauté', description: 'Réseaux, médias, campagnes, événements et expériences culturelles.', accent: '#FB7185', moduleIds: ['social', 'media', 'entertainment', 'pub', 'community', 'events'] },
+  { id: 'resources', title: 'Ressources & production', description: 'Agriculture et énergie.', accent: '#C4B5FD', moduleIds: ['agriculture', 'energy'] },
+  { id: 'professional', title: 'Outils professionnels & opérations', description: 'Emploi, comptabilité, équipe, achats, stocks et assistance IA.', accent: '#A5B4FC', moduleIds: ['jobs', 'accounting', 'hr', 'procurement', 'inventory', 'ai'] },
+  { id: 'governance', title: 'Légal & gouvernance', description: 'Services juridiques et administration globale.', accent: '#CBD5E1', moduleIds: ['legal', 'admin'] },
+];
+
+export const getGroupedJDVModules = () => {
+  const assigned = new Set(JDV_MODULE_GROUPS.flatMap((group) => group.moduleIds));
+  return [
+    ...JDV_MODULE_GROUPS.map((group) => ({
+      ...group,
+      modules: group.moduleIds
+        .map((id) => JDV_MODULES.find((module) => module.id === id))
+        .filter((module): module is JDVModule => Boolean(module)),
+    })),
+    {
+      id: 'other',
+      title: 'Autres applications',
+      description: 'Applications en attente de classement explicite.',
+      accent: '#94A3B8',
+      moduleIds: JDV_MODULES.filter((module) => !assigned.has(module.id)).map((module) => module.id),
+      modules: JDV_MODULES.filter((module) => !assigned.has(module.id)),
+    },
+  ].filter((group) => group.modules.length > 0);
+};
+
+
 export const getJDVModuleById = (id: string) => JDV_MODULES.find((module) => module.id === id);
 
 export const getJDVModulesForBranch = (branchId: string) =>
