@@ -208,7 +208,20 @@ create table if not exists public.jdv_studio_settings (
       not (config ? 'theme') or (
         jsonb_typeof(config->'theme') = 'object'
         and (config->'theme' - array['primary','accent']) = '{}'::jsonb
-        and coalesce(config->'theme'->>'primary','') ~ '^#[0-9A-Fa-f]{6}
+        and coalesce(config->'theme'->>'primary','') ~ '^#[0-9A-Fa-f]{6}$'
+        and coalesce(config->'theme'->>'accent','') ~ '^#[0-9A-Fa-f]{6}$'
+      )
+    )
+    and (
+      not (config ? 'design') or (
+        jsonb_typeof(config->'design') = 'object'
+        and (config->'design' - array['font','radius','density','cardStyle','showMedia','showHighlights','showAnimations','imageUrl','videoUrl','imageData','videoData']) = '{}'::jsonb
+        and coalesce(config->'design'->>'imageData','') = ''
+        and coalesce(config->'design'->>'videoData','') = ''
+      )
+    )
+  )
+);
 create index if not exists jdv_studio_settings_updated_by_idx on public.jdv_studio_settings(updated_by);
 insert into public.jdv_studio_settings (scope_key, config) values ('global', '{}'::jsonb) on conflict (scope_key) do nothing;
 alter table public.jdv_studio_settings enable row level security;
