@@ -21,6 +21,7 @@ const defaultDesign: DesignPrefs = { font: 'Inter, ui-sans-serif, system-ui, san
 
 export default function StudioQuickControls() {
   const [open, setOpen] = useState(false);
+  const [appearance, setAppearance] = useState('light');
   const [mediaOpen, setMediaOpen] = useState(false);
   const [media, setMedia] = useState<{showMedia:boolean;imageUrl:string;videoUrl:string}>({showMedia:false,imageUrl:'',videoUrl:''});
   const { activeLanguage, setActiveLanguage } = useJDV();
@@ -28,6 +29,12 @@ export default function StudioQuickControls() {
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem('jdv-appearance-v1');
+      const mode = saved && ['light','dark','system','blue','contrast'].includes(saved) ? saved : 'light';
+      setAppearance(mode);
+      document.documentElement.dataset.jdvMode = mode;
+    } catch { document.documentElement.dataset.jdvMode = 'light'; }
     const applyDesign = (prefs: DesignPrefs) => {
       const root = document.documentElement;
       root.style.setProperty('--font-sans', prefs.font);
@@ -77,7 +84,13 @@ export default function StudioQuickControls() {
             {PRESETS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}<option value="custom">Couleurs personnalisées (Studio)</option>
           </select>
         </label>
-        <Link href="/hidden-concepteur-gate/dashboard/studio" className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white"><SlidersHorizontal size={16}/> Ouvrir le Studio complet</Link>
+        <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-muted-foreground"><span className="mb-1 block">Apparence de la plateforme</span>
+          <select value={appearance} onChange={e => { const mode=e.target.value; setAppearance(mode); document.documentElement.dataset.jdvMode=mode; try { localStorage.setItem('jdv-appearance-v1',mode); } catch { /* Préférence active pour la session. */ } }} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal">
+            <option value="light">Clair / blanc</option><option value="dark">Sombre</option><option value="system">Selon le système</option><option value="blue">Bleu professionnel</option><option value="contrast">Contraste élevé</option>
+          </select>
+        </label>
+        <Link href="/admin" className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-bold">Ouvrir l’administration</Link>
+        <Link href="/hidden-concepteur-gate/dashboard/studio" className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white"><SlidersHorizontal size={16}/> Ouvrir le Studio complet</Link>
       </section>}
       <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="flex items-center gap-2 rounded-full border border-white/20 bg-slate-950 px-4 py-3 text-sm font-bold text-white shadow-xl transition hover:scale-[1.02]">
         <Palette size={17}/><span>Thème & langue</span>
