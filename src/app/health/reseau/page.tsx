@@ -36,8 +36,8 @@ const categories = [
 
 function isReusableServiceSearch(value: string) {
   const normalized = value.trim().toLocaleLowerCase('fr');
-  const serviceTerm = /^(pharmacie|pharmacies|médecin|médecins|medecin|medecins|docteur|cardiologue|pédiatre|pediatre|dermatologue|gynécologue|gynecologue|ophtalmologue|dentiste|infirmier|infirmière|sage-femme|laboratoire|analyses?|clinique|hôpital|hopital|centre de santé|imagerie|radiologie|échographie|echographie|scanner|urgences|kinésithérapeute|kinesitherapeute)(\\b|\\s)/i;
-  const sensitiveTerm = /\\b(douleur|mal de|sympt[oô]me|fi[eè]vre|toux|traitement|ordonnance|diagnostic|saignement|vomissement|diarrh[eé]e|vertige|blessure|infection|grossesse|résultat|resultat|analyse de mon|mon ordonnance|mes sympt[oô]mes)\\b/i;
+  const serviceTerm = /^(pharmacie|pharmacies|médecin|médecins|medecin|medecins|docteur|cardiologue|pédiatre|pediatre|dermatologue|gynécologue|gynecologue|ophtalmologue|dentiste|infirmier|infirmière|sage-femme|laboratoire|analyses?|clinique|hôpital|hopital|centre de santé|imagerie|radiologie|échographie|echographie|scanner|urgences|kinésithérapeute|kinesitherapeute)(\b|\s)/i;
+  const sensitiveTerm = /\b(douleur|mal de|sympt[oô]me|fi[eè]vre|toux|traitement|ordonnance|diagnostic|saignement|vomissement|diarrh[eé]e|vertige|blessure|infection|grossesse|résultat|resultat|analyse de mon|mon ordonnance|mes sympt[oô]mes)\b/i;
   return normalized.length >= 3 && serviceTerm.test(normalized) && !sensitiveTerm.test(normalized);
 }
 
