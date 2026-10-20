@@ -7,3 +7,26 @@
 }
 /* Le fond blanc s'applique à l'accueil JDV GLOBAL ; les portails (CRM, entrepôt...) gardent leur style tant que la classe n'y est pas ajoutée. */
 .jdv-home { background: var(--jdv-bg); color: var(--jdv-fg); }
+
+
+/* Global Studio settings: these attributes are changed by StudioQuickControls. */
+html { font-family: var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif); }
+html[data-jdv-shape="custom"] .rounded,
+html[data-jdv-shape="custom"] .rounded-lg,
+html[data-jdv-shape="custom"] .rounded-xl,
+html[data-jdv-shape="custom"] .rounded-2xl,
+html[data-jdv-shape="custom"] .rounded-3xl {
+  border-radius: var(--jdv-radius, 16px) !important;
+}
+html[data-jdv-card-style="flat"] .jdv-card { box-shadow: none !important; }
+html[data-jdv-card-style="flat"] .jdv-card { border-radius: 0 !important; }
+html[data-jdv-card-style="outlined"] .jdv-card { border-width: 2px !important; box-shadow: none !important; }
+html[data-jdv-density="compact"] .jdv-card { padding: .75rem !important; }
+html[data-jdv-density="spacious"] .jdv-card { padding: 2rem !important; }
+html[data-jdv-animations="false"] *, html[data-jdv-animations="false"] *::before, html[data-jdv-animations="false"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+html[data-jdv-highlights="false"] [class*="text-accent"],
+html[data-jdv-highlights="false"] [class*="bg-accent"] { filter: saturate(.25); }
