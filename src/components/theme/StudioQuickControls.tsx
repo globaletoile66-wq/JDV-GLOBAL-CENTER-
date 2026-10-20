@@ -34,6 +34,8 @@ export default function StudioQuickControls() {
       root.dataset.jdvShape = 'custom';
       root.dataset.jdvDensity = prefs.density;
       root.dataset.jdvCardStyle = prefs.cardStyle;
+      root.dataset.jdvHighlights = String(prefs.showHighlights ?? true);
+      root.dataset.jdvAnimations = String(prefs.showAnimations ?? true);
     } catch { /* Les préférences restent facultatives si le stockage est indisponible. */ }
   }, []);
 
