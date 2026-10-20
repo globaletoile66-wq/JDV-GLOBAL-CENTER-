@@ -4,13 +4,13 @@ OWNER="00000000-0000-4000-8000-000000000001"
 OTHER="00000000-0000-4000-8000-000000000002"
 psql -v ON_ERROR_STOP=1 <<SQL
 set role authenticated;
-set request.jwt.claim.sub = '\${OWNER}';
+set request.jwt.claim.sub = '${OWNER}';
 insert into public.immo_construction_briefs (user_id, title, parcel_area)
-values ('\${OWNER}', 'Brouillon propriétaire', 216);
+values ('${OWNER}', 'Brouillon propriétaire', 216);
 SQL
 VISIBLE=$(psql -v ON_ERROR_STOP=1 -tA <<SQL
 set role authenticated;
-set request.jwt.claim.sub = '\${OTHER}';
+set request.jwt.claim.sub = '${OTHER}';
 select count(*) from public.immo_construction_briefs;
 SQL
 )
@@ -20,9 +20,9 @@ if [[ "$VISIBLE" != "0" ]]; then
 fi
 if psql -v ON_ERROR_STOP=1 <<SQL
 set role authenticated;
-set request.jwt.claim.sub = '\${OWNER}';
+set request.jwt.claim.sub = '${OWNER}';
 insert into public.immo_construction_briefs (user_id, title, parcel_area)
-values ('\${OTHER}', 'Brouillon interdit', 100);
+values ('${OTHER}', 'Brouillon interdit', 100);
 SQL
 then
   echo "RLS failure: a user inserted a brief for another user"
