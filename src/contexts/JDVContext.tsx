@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 interface JDVContextType {
   activeOrganizationId: string | null;
@@ -27,10 +27,31 @@ export const useJDV = () => {
 export const JDVProvider = ({ children }: { children: React.ReactNode }) => {
   const [activeOrganizationId, setActiveOrgId] = useState<string | null>(null);
   const [activeOrganizationName, setActiveOrgName] = useState<string | null>(null);
-  const [activeLanguage, setActiveLanguage] = useState('fr');
+  const [activeLanguage, setActiveLanguageState] = useState('fr');
   const [activeCurrency, setActiveCurrency] = useState('XOF');
   const [activeCountry, setActiveCountry] = useState('BJ');
   const [activeModule, setActiveModule] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('jdv-language-v1');
+      if (stored && ['fr', 'en', 'pt', 'es', 'ar'].includes(stored)) setActiveLanguageState(stored);
+    } catch { /* Le stockage local peut être indisponible. */ }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = activeLanguage;
+      document.documentElement.dir = activeLanguage === 'ar' ? 'rtl' : 'ltr';
+    }
+  }, [activeLanguage]);
+
+  const setActiveLanguage = useCallback((lang: string) => {
+    const allowed = ['fr', 'en', 'pt', 'es', 'ar'];
+    if (!allowed.includes(lang)) return;
+    setActiveLanguageState(lang);
+    try { window.localStorage.setItem('jdv-language-v1', lang); } catch { /* Préférence non persistée si stockage indisponible. */ }
+  }, []);
 
   const setActiveOrganization = useCallback((id: string | null, name: string | null) => {
     setActiveOrgId(id);

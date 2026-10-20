@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, Building2, Grid3X3, Shield, LogOut, ChevronRight, BarChart3, BriefcaseBusiness } from 'lucide-react';
+import { Users, Building2, Grid3X3, Shield, LogOut, ChevronRight, BarChart3, BriefcaseBusiness, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { toast } from 'sonner';
@@ -85,6 +85,7 @@ export default function SuperAdminDashboard({ stats, recentUsers, recentOrgs, ad
             </button>
           ))}
           <div className="mt-4 pt-4 border-t border-border flex flex-col gap-1">
+            <Link href="/hidden-concepteur-gate/dashboard/studio" className="nav-item"><SlidersHorizontal size={17} className="flex-shrink-0 text-accent" /><span className="text-sm">Studio Concepteur</span></Link>
             <Link href="/hidden-concepteur-gate/dashboard/portefeuille-clients" className="nav-item">
               <BriefcaseBusiness size={17} className="flex-shrink-0 text-accent" />
               <span className="text-sm">Mon portefeuille clients</span>
@@ -115,6 +116,7 @@ export default function SuperAdminDashboard({ stats, recentUsers, recentOrgs, ad
             </h1>
           </div>
           <div className="flex-1" />
+          <Link href="/hidden-concepteur-gate/dashboard/studio" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:border-accent"><SlidersHorizontal size={15}/>Studio Concepteur</Link>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-danger/10 border border-danger/20">
             <div className="w-2 h-2 rounded-full bg-danger animate-pulse" />
             <span className="text-xs font-bold text-danger">MODE ADMIN</span>
