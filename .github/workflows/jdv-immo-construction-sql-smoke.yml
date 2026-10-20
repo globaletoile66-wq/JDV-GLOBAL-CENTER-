@@ -43,8 +43,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020084707_jdv_immo_construction_editor.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020085706_jdv_immo_construction_assignee_index.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020090809_jdv_global_user_and_organization_foreign_keys.sql
-          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261019191000_jdv_services_marketplace.sql
-          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020100000_jdv_services_workflow_hardening.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020091544_jdv_services_marketplace_v1.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020092130_jdv_services_workflow_hardening_v1.sql
       - name: Assert schema, grants and RLS
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_immo_construction_assertions.sql
       - name: Assert cross-module foreign keys and preserve legacy CRM code
