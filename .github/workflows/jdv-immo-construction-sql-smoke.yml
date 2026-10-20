@@ -1,5 +1,6 @@
 name: JDV Immo construction schema smoke test
 # Re-run after aligning all migration filenames with the active Supabase history
+# Include persistent Immo workflow and safe public Studio configuration checks
 
 on:
   pull_request:
