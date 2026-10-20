@@ -252,6 +252,14 @@
 | `/travel` | `src/app/travel/page.tsx` | Mobilité — Voyage | À vérifier | À vérifier |
 | `/user-dashboard` | `src/app/user-dashboard/page.tsx` | Pilotage utilisateur | À vérifier | À vérifier |
 
+## Routes ajoutées — lot JDV Immo / Studio (20 octobre 2026)
+
+| `/immo/construction` | `src/app/immo/construction/page.tsx` | JDV Immo — avant-projet construction | À vérifier | À vérifier |
+| `/immo/partenaires` | `src/app/immo/partenaires/page.tsx` | JDV Immo — candidatures, mandats, commissions, litiges | À vérifier | À vérifier |
+| `/immo/locataires` | `src/app/immo/locataires/page.tsx` | JDV Immo — suivi locataires et baux | À vérifier | À vérifier |
+| `/super-admin/immo-workflows` | `src/app/super-admin/immo-workflows/page.tsx` | Administration JDV Immo — qualification et validation | À vérifier | À vérifier |
+| `/hidden-concepteur-gate/dashboard/studio` | `src/app/hidden-concepteur-gate/dashboard/studio/page.tsx` | Studio global — thème, typographie et médias | À vérifier | À vérifier |
+
 ## Gestionnaires API détectés
 
 | Fichier | Domaine pressenti | Authentification, appels et usages |
