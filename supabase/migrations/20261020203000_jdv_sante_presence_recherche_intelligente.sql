@@ -74,6 +74,12 @@ create table if not exists public.health_search_history (
   created_at timestamptz not null default now(),
   constraint health_search_history_deduplicate unique (user_id, search_text, category, city, district)
 );
+alter table public.health_search_history alter column city set default '';
+alter table public.health_search_history alter column district set default '';
+update public.health_search_history set city = '' where city is null;
+update public.health_search_history set district = '' where district is null;
+alter table public.health_search_history alter column city set not null;
+alter table public.health_search_history alter column district set not null;
 create index if not exists health_search_history_user_recent_idx on public.health_search_history (user_id, last_used_at desc);
 alter table public.health_search_history enable row level security;
 drop policy if exists health_search_history_owner_select on public.health_search_history;
