@@ -37,6 +37,9 @@ begin
   if not exists (select 1 from pg_constraint where conname='jdv_studio_settings_public_config_check') then
     raise exception 'Public Studio settings allowlist constraint is missing';
   end if;
+  if not exists (select 1 from pg_trigger where tgname='jdv_studio_settings_guard_config' and not tgisinternal) then
+    raise exception 'Public Studio settings allowlist trigger is missing';
+  end if;
 
   select with_check into brief_insert_check from pg_policies
   where schemaname='public' and tablename='immo_construction_briefs'
