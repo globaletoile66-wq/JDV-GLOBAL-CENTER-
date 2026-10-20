@@ -39,6 +39,7 @@ SQL
 [[ "$ANON_SETTINGS" == "1" ]] || { echo "Anonymous clients cannot read the safe visual settings"; exit 1; }
 
 if psql -v ON_ERROR_STOP=1 <<'SQL'
+set role anon;
 select updated_by from public.jdv_studio_settings;
 SQL
 then
