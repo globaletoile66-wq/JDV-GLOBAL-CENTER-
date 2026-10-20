@@ -197,3 +197,32 @@ create policy "Super admins assign construction professionals" on public.immo_co
 
 drop policy if exists "Super admins review tenant followups" on public.immo_tenant_followups;
 create policy "Super admins review tenant followups" on public.immo_tenant_followups for select to authenticated using (exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
+
+
+-- Global Studio preferences and public brand media. Only active Super Admins can publish global settings/assets.
+create table if not exists public.jdv_studio_settings (
+  scope_key text primary key check (scope_key = 'global'),
+  config jsonb not null default '{}'::jsonb,
+  updated_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+insert into public.jdv_studio_settings (scope_key, config) values ('global', '{}'::jsonb) on conflict (scope_key) do nothing;
+alter table public.jdv_studio_settings enable row level security;
+drop policy if exists "Super admins read global Studio settings" on public.jdv_studio_settings;
+create policy "Super admins read global Studio settings" on public.jdv_studio_settings for select to authenticated using (exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
+drop policy if exists "Super admins create global Studio settings" on public.jdv_studio_settings;
+create policy "Super admins create global Studio settings" on public.jdv_studio_settings for insert to authenticated with check (exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
+drop policy if exists "Super admins update global Studio settings" on public.jdv_studio_settings;
+create policy "Super admins update global Studio settings" on public.jdv_studio_settings for update to authenticated using (exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active')) with check (exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('jdv-studio-media', 'jdv-studio-media', true, 10485760, array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime'])
+on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "Public read JDV Studio brand media" on storage.objects;
+create policy "Public read JDV Studio brand media" on storage.objects for select to public using (bucket_id = 'jdv-studio-media');
+drop policy if exists "Super admins upload JDV Studio brand media" on storage.objects;
+create policy "Super admins upload JDV Studio brand media" on storage.objects for insert to authenticated with check (bucket_id = 'jdv-studio-media' and exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
+drop policy if exists "Super admins update JDV Studio brand media" on storage.objects;
+create policy "Super admins update JDV Studio brand media" on storage.objects for update to authenticated using (bucket_id = 'jdv-studio-media' and exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active')) with check (bucket_id = 'jdv-studio-media' and exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
+drop policy if exists "Super admins delete JDV Studio brand media" on storage.objects;
+create policy "Super admins delete JDV Studio brand media" on storage.objects for delete to authenticated using (bucket_id = 'jdv-studio-media' and exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
