@@ -352,3 +352,29 @@ end;
 $$;
 revoke all on function public.review_immo_agent_application(uuid, text, text) from public;
 grant execute on function public.review_immo_agent_application(uuid, text, text) to authenticated;
+
+
+create or replace function public.submit_immo_construction_brief(p_brief_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  submitted_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+  update public.immo_construction_briefs
+  set brief_status = 'submitted', updated_at = now()
+  where id = p_brief_id and user_id = auth.uid() and brief_status = 'draft'
+  returning id into submitted_id;
+  if submitted_id is null then
+    raise exception 'Draft not found or not owned by current user';
+  end if;
+  return submitted_id;
+end;
+$$;
+revoke all on function public.submit_immo_construction_brief(uuid) from public;
+grant execute on function public.submit_immo_construction_brief(uuid) to authenticated;
