@@ -1,0 +1,48 @@
+name: JDV Immo construction schema smoke test
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/jdv_immo_construction_*"
+      - ".github/workflows/jdv-immo-construction-sql-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  immo-construction-postgres-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jdv_immo_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jdv_immo_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: jdv_immo_test
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare disposable auth fixture
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_immo_construction_fixture.sql
+      - name: Apply the exact versioned migrations
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020084707_jdv_immo_construction_editor.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020085706_jdv_immo_construction_assignee_index.sql
+      - name: Assert schema, grants and RLS
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_immo_construction_assertions.sql
+      - name: Exercise owner isolation
+        run: bash supabase/tests/jdv_immo_construction_rls_behavior.sh
