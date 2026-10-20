@@ -34,6 +34,13 @@ const categories = [
   { value: 'other', label: 'Autres services', icon: Building2 },
 ];
 
+function isReusableServiceSearch(value: string) {
+  const normalized = value.trim().toLocaleLowerCase('fr');
+  const serviceTerm = /^(pharmacie|pharmacies|médecin|médecins|medecin|medecins|docteur|cardiologue|pédiatre|pediatre|dermatologue|gynécologue|gynecologue|ophtalmologue|dentiste|infirmier|infirmière|sage-femme|laboratoire|analyses?|clinique|hôpital|hopital|centre de santé|imagerie|radiologie|échographie|echographie|scanner|urgences|kinésithérapeute|kinesitherapeute)(\\b|\\s)/i;
+  const sensitiveTerm = /\\b(douleur|mal de|sympt[oô]me|fi[eè]vre|toux|traitement|ordonnance|diagnostic|saignement|vomissement|diarrh[eé]e|vertige|blessure|infection|grossesse|résultat|resultat|analyse de mon|mon ordonnance|mes sympt[oô]mes)\\b/i;
+  return normalized.length >= 3 && serviceTerm.test(normalized) && !sensitiveTerm.test(normalized);
+}
+
 function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
   const radians = (n: number) => n * Math.PI / 180;
   const dLat = radians(bLat - aLat), dLng = radians(bLng - aLng);
@@ -114,7 +121,7 @@ export default function HealthNetworkPage() {
 
   useEffect(() => {
     const value = query.trim();
-    if (value.length < 2 || !rememberSearches) return;
+    if (!rememberSearches || !isReusableServiceSearch(value)) return;
     const timer = window.setTimeout(async () => {
       const entry: SearchMemory = { search_text: value.slice(0,120), category, city: city.trim() || null, district: district.trim() || null, last_used_at: new Date().toISOString() };
       if (user) {
