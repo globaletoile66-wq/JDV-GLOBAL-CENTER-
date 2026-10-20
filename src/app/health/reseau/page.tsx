@@ -193,7 +193,7 @@ export default function HealthNetworkPage() {
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
         <Link href="/health" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"><ArrowLeft size={17}/> Retour à JDV Santé</Link>
-        <button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''}/> Actualiser</button>
+        <div className="flex items-center gap-2"><Link href="/health/presence" className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">Espace professionnel</Link><button onClick={() => void load()} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold disabled:opacity-50"><RefreshCw size={15} className={busy ? 'animate-spin' : ''}/> Actualiser</button></div>
       </div>
     </header>
     <section className="bg-gradient-to-br from-[#0b1b3d] to-[#17436a] text-white">
