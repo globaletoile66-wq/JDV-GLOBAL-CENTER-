@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Navigation, Search, Stethoscope, Pill, FlaskConical, Building2, LocateFixed, RefreshCw, CircleCheck, Circle, MessageCircle, Video, History, X } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Search, Stethoscope, Pill, FlaskConical, Building2, LocateFixed, RefreshCw, CircleCheck, Circle, MessageCircle, Video, History, X, Hospital, ScanLine, Baby } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
@@ -27,6 +27,11 @@ const categories = [
   { value: 'pharmacy', label: 'Pharmacies', icon: Pill },
   { value: 'laboratory', label: 'Laboratoires', icon: FlaskConical },
   { value: 'clinic', label: 'Centres de santé', icon: Building2 },
+  { value: 'hospital', label: 'Hôpitaux', icon: Hospital },
+  { value: 'imaging', label: 'Imagerie médicale', icon: ScanLine },
+  { value: 'nurse', label: 'Infirmiers', icon: Stethoscope },
+  { value: 'midwife', label: 'Sages-femmes', icon: Baby },
+  { value: 'other', label: 'Autres services', icon: Building2 },
 ];
 
 function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
@@ -165,10 +170,17 @@ export default function HealthNetworkPage() {
       const professional = professionals.find((p) => p.business_id === business.id);
       const serviceList = services.filter((s) => s.business_id === business.id);
       const haystack = [business.name, business.trade_name, business.description, business.city, business.region, business.address, ...serviceList.map((s) => s.name + ' ' + s.service_type), professional?.sub_specialty, professional?.bio].filter(Boolean).join(' ').toLocaleLowerCase('fr');
+      const classificationText = [business.name, business.trade_name, business.description, professional?.sub_specialty, professional?.bio, ...serviceList.map((s) => s.name + ' ' + s.service_type + ' ' + (s.description || ''))].filter(Boolean).join(' ').toLocaleLowerCase('fr');
       let kind = 'clinic';
-      if (professional) kind = 'doctor';
-      else if (serviceList.some((s) => /pharm|médicament|medicament/i.test(s.service_type + ' ' + s.name + ' ' + business.name))) kind = 'pharmacy';
-      else if (serviceList.some((s) => /laboratoire|analyse|biologie/i.test(s.service_type + ' ' + s.name + ' ' + business.name))) kind = 'laboratory';
+      if (/pharm|médicament|medicament/.test(classificationText)) kind = 'pharmacy';
+      else if (/laboratoire|analyse biologique|biologie médicale/.test(classificationText)) kind = 'laboratory';
+      else if (/radiologie|imagerie médicale|scanner|échographie|irm/.test(classificationText)) kind = 'imaging';
+      else if (/hôpital|hopital|hospital/.test(classificationText)) kind = 'hospital';
+      else if (/sage-femme|maïeutique|maieutique/.test(classificationText)) kind = 'midwife';
+      else if (/infirmier|infirmière|soins infirmiers/.test(classificationText)) kind = 'nurse';
+      else if (professional) kind = 'doctor';
+      else if (/centre de santé|clinique|cabinet médical/.test(classificationText)) kind = 'clinic';
+      else kind = 'other';
       const distance = position && business.latitude != null && business.longitude != null
         ? distanceKm(position.latitude, position.longitude, Number(business.latitude), Number(business.longitude)) : null;
       const onlinePresence = presence.find((p) => p.business_id === business.id || (!!professional && p.professional_id === professional.id));
@@ -220,7 +232,7 @@ export default function HealthNetworkPage() {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-extrabold">Annuaire de santé</h2><p className="mt-1 text-sm text-slate-500">{busy ? 'Chargement des données…' : results.length + ' établissement(s) correspondant(s)'}</p></div><div className="flex flex-wrap gap-3 text-xs text-slate-600"><span className="inline-flex items-center gap-1"><CircleCheck size={14} className="text-emerald-600"/> Garde confirmée</span><span className="inline-flex items-center gap-1"><Circle size={10} className="fill-emerald-500 text-emerald-500"/> En ligne</span></div></div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {results.map(({ business, professional, serviceList, kind, distance, onlinePresence, onCall }) => <article key={business.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3"><div className="flex items-start gap-3"><div className="rounded-xl bg-blue-50 p-3 text-blue-800">{kind === 'doctor' ? <Stethoscope size={21}/> : kind === 'pharmacy' ? <Pill size={21}/> : kind === 'laboratory' ? <FlaskConical size={21}/> : <Building2 size={21}/>}</div><div><h3 className="font-bold">{business.trade_name || business.name}</h3><p className="mt-1 text-xs font-semibold uppercase tracking-wide text-blue-700">{categories.find((c) => c.value === kind)?.label || 'Centre de santé'}</p></div></div><div className="flex flex-col items-end gap-1">{onCall && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800"><CircleCheck size={13}/> Garde confirmée</span>}{onlinePresence && <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-800"><Circle size={9} className="fill-green-500 text-green-500"/>{onlinePresence.presence_status === 'busy' ? 'Occupé' : 'En ligne'}</span>}{!onCall && !onlinePresence && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">Annuaire</span>}</div></div>
+          <div className="flex items-start justify-between gap-3"><div className="flex items-start gap-3"><div className="rounded-xl bg-blue-50 p-3 text-blue-800">{kind === 'doctor' || kind === 'nurse' || kind === 'midwife' ? <Stethoscope size={21}/> : kind === 'pharmacy' ? <Pill size={21}/> : kind === 'laboratory' ? <FlaskConical size={21}/> : kind === 'hospital' ? <Hospital size={21}/> : kind === 'imaging' ? <ScanLine size={21}/> : <Building2 size={21}/>}</div><div><h3 className="font-bold">{business.trade_name || business.name}</h3><p className="mt-1 text-xs font-semibold uppercase tracking-wide text-blue-700">{categories.find((c) => c.value === kind)?.label || 'Centre de santé'}</p></div></div><div className="flex flex-col items-end gap-1">{onCall && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800"><CircleCheck size={13}/> Garde confirmée</span>}{onlinePresence && <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-800"><Circle size={9} className="fill-green-500 text-green-500"/>{onlinePresence.presence_status === 'busy' ? 'Occupé' : 'En ligne'}</span>}{!onCall && !onlinePresence && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">Annuaire</span>}</div></div>
           {professional?.sub_specialty && <p className="mt-3 text-sm font-medium text-slate-700">{professional.sub_specialty}</p>}
           {(business.description || professional?.bio) && <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{business.description || professional?.bio}</p>}
           <div className="mt-4 space-y-2 text-sm text-slate-600"><p className="flex items-start gap-2"><MapPin size={16} className="mt-0.5 shrink-0"/>{[business.address, business.city, business.region].filter(Boolean).join(', ') || 'Adresse à renseigner'}</p>{distance != null && <p className="text-xs font-semibold text-emerald-700">{distance.toFixed(1)} km de votre position (à vol d’oiseau)</p>}{business.phone && <p>Téléphone : <a className="font-semibold text-blue-700 hover:underline" href={'tel:' + business.phone}>{business.phone}</a></p>}</div>
