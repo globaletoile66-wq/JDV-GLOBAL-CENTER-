@@ -87,7 +87,7 @@ Les contrôles de sécurité et de performance ont également signalé des élé
 - 12 fonctions \`SECURITY DEFINER\` exécutables par \`anon\` ;
 - 124 fonctions \`SECURITY DEFINER\` exécutables par \`authenticated\` ;
 - protection des mots de passe compromis désactivée ;
-- 533 clés étrangères sans index couvrant détecté ;
+- 532 clés étrangères sans index couvrant détecté ;
 - 284 politiques RLS susceptibles de réévaluer inutilement les fonctions \`auth\` par ligne ;
 - 60 cas de politiques permissives multiples ;
 - 12 groupes d'index en double et 408 index signalés inutilisés.
