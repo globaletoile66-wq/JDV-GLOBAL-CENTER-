@@ -47,8 +47,11 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020091544_jdv_services_marketplace_v1.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020092130_jdv_services_workflow_hardening_v1.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020092622_jdv_cross_module_relationships_v1.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020093200_jdv_immo_persistent_workflows_v1.sql
       - name: Assert schema, grants and RLS
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_immo_construction_assertions.sql
+      - name: Assert persistent JDV Immo workflows and preserve strict construction policy
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_immo_persistent_workflows_assertions.sql
       - name: Assert cross-module foreign keys and preserve legacy CRM code
         run: |
           psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_global_relationships_assertions.sql
@@ -59,3 +62,5 @@ jobs:
         run: bash supabase/tests/jdv_services_rls_behavior.sh
       - name: Exercise owner isolation
         run: bash supabase/tests/jdv_immo_construction_rls_behavior.sh
+      - name: Exercise persistent JDV Immo workflows and role isolation
+        run: bash supabase/tests/jdv_immo_persistent_workflows_rls_behavior.sh
