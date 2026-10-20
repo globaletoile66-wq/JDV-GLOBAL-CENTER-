@@ -45,10 +45,12 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020090809_jdv_global_user_and_organization_foreign_keys.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020091544_jdv_services_marketplace_v1.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020092130_jdv_services_workflow_hardening_v1.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261020093000_jdv_cross_module_relationships_v1.sql
       - name: Assert schema, grants and RLS
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_immo_construction_assertions.sql
       - name: Assert cross-module foreign keys and preserve legacy CRM code
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_global_relationships_assertions.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_cross_module_relationships_assertions.sql
       - name: Assert JDV Services schema, grants and workflow triggers
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/jdv_services_assertions.sql
       - name: Exercise JDV Services participant workflow
