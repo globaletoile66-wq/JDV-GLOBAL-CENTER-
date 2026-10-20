@@ -341,3 +341,43 @@
   animation: shimmer 1.5s infinite;
   border-radius: 0.5rem;
 }
+
+/* Global appearance modes selected in the persistent JDV quick settings. */
+html[data-jdv-mode="light"] {
+  color-scheme: light;
+  --background: #ffffff; --foreground: #111827; --card: #ffffff; --card-foreground: #111827;
+  --popover: #ffffff; --popover-foreground: #111827; --muted: #f3f4f6; --muted-foreground: #4b5563;
+  --border: #d1d5db; --input: #d1d5db; --primary: #003366; --primary-foreground: #ffffff;
+  --secondary: #eef2f7; --secondary-foreground: #172033; --accent: #ff6b35; --accent-foreground: #111827;
+}
+html[data-jdv-mode="dark"] {
+  color-scheme: dark;
+  --background: #111318; --foreground: #f3f4f6; --card: #1b1e25; --card-foreground: #f3f4f6;
+  --popover: #1b1e25; --popover-foreground: #f3f4f6; --muted: #292d36; --muted-foreground: #c0c6d2;
+  --border: #414754; --input: #414754; --primary: #7ab6ff; --primary-foreground: #101827;
+  --secondary: #292d36; --secondary-foreground: #f3f4f6; --accent: #ff9a70; --accent-foreground: #111318;
+}
+html[data-jdv-mode="blue"] {
+  color-scheme: light;
+  --background: #edf4ff; --foreground: #10284a; --card: #ffffff; --card-foreground: #10284a;
+  --popover: #ffffff; --popover-foreground: #10284a; --muted: #dce9fc; --muted-foreground: #355273;
+  --border: #b7cbe8; --input: #b7cbe8; --primary: #174a8b; --primary-foreground: #ffffff;
+  --secondary: #dce9fc; --secondary-foreground: #10284a; --accent: #f0783c; --accent-foreground: #111827;
+}
+html[data-jdv-mode="contrast"] {
+  color-scheme: light;
+  --background: #ffffff; --foreground: #000000; --card: #ffffff; --card-foreground: #000000;
+  --popover: #ffffff; --popover-foreground: #000000; --muted: #eeeeee; --muted-foreground: #222222;
+  --border: #000000; --input: #000000; --primary: #000000; --primary-foreground: #ffffff;
+  --secondary: #eeeeee; --secondary-foreground: #000000; --accent: #9a2500; --accent-foreground: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-jdv-mode="system"] {
+    color-scheme: dark;
+    --background: #111318; --foreground: #f3f4f6; --card: #1b1e25; --card-foreground: #f3f4f6;
+    --popover: #1b1e25; --popover-foreground: #f3f4f6; --muted: #292d36; --muted-foreground: #c0c6d2;
+    --border: #414754; --input: #414754; --primary: #7ab6ff; --primary-foreground: #101827;
+    --secondary: #292d36; --secondary-foreground: #f3f4f6; --accent: #ff9a70; --accent-foreground: #111318;
+  }
+}
+html[data-jdv-mode="system"] { color-scheme: light; }
