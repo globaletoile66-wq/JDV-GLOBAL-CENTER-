@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Globe2, Palette, SlidersHorizontal, X } from 'lucide-react';
 import { useJDV } from '@/contexts/JDVContext';
 import { useJdvTheme } from '@/components/theme/ThemeProvider';
-import { PRESETS } from '@/lib/theme/palettes';
+import { PRESETS, isHex, type JdvTheme } from '@/lib/theme/palettes';
+import { createClient } from '@/lib/supabase/client';
 
 const languages = [
   { code: 'fr', name: 'Français' },
@@ -15,18 +16,17 @@ const languages = [
   { code: 'ar', name: 'العربية' },
 ];
 
-type DesignPrefs = { font: string; radius: string; density: string; cardStyle: string };
-const defaultDesign: DesignPrefs = { font: 'Inter, ui-sans-serif, system-ui, sans-serif', radius: '16px', density: 'comfortable', cardStyle: 'soft' };
+type DesignPrefs = { font: string; radius: string; density: string; cardStyle: string; showHighlights: boolean; showAnimations: boolean; showMedia?: boolean; imageUrl?: string; videoUrl?: string };
+const defaultDesign: DesignPrefs = { font: 'Inter, ui-sans-serif, system-ui, sans-serif', radius: '16px', density: 'comfortable', cardStyle: 'soft', showHighlights: true, showAnimations: true, showMedia: true };
 
 export default function StudioQuickControls() {
   const [open, setOpen] = useState(false);
   const { activeLanguage, setActiveLanguage } = useJDV();
   const { theme, setTheme } = useJdvTheme();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('jdv-design-v1');
-      const prefs = raw ? { ...defaultDesign, ...JSON.parse(raw) } as DesignPrefs : defaultDesign;
+    const applyDesign = (prefs: DesignPrefs) => {
       const root = document.documentElement;
       root.style.setProperty('--font-sans', prefs.font);
       root.style.setProperty('--radius', prefs.radius);
@@ -34,10 +34,31 @@ export default function StudioQuickControls() {
       root.dataset.jdvShape = 'custom';
       root.dataset.jdvDensity = prefs.density;
       root.dataset.jdvCardStyle = prefs.cardStyle;
-      root.dataset.jdvHighlights = String(prefs.showHighlights ?? true);
-      root.dataset.jdvAnimations = String(prefs.showAnimations ?? true);
-    } catch { /* Les préférences restent facultatives si le stockage est indisponible. */ }
-  }, []);
+      root.dataset.jdvHighlights = String(prefs.showHighlights);
+      root.dataset.jdvAnimations = String(prefs.showAnimations);
+    };
+    const load = async () => {
+      let prefs = defaultDesign;
+      try {
+        const raw = localStorage.getItem('jdv-design-v1');
+        if (raw) prefs = { ...defaultDesign, ...JSON.parse(raw) } as DesignPrefs;
+      } catch { /* Le stockage local peut être indisponible. */ }
+      applyDesign(prefs);
+      try {
+        const { data, error } = await supabase.from('jdv_studio_settings').select('config').eq('scope_key', 'global').maybeSingle();
+        const config = data?.config as { theme?: JdvTheme; design?: Partial<DesignPrefs> } | null;
+        if (!error && config) {
+          if (config.theme && isHex(config.theme.primary) && isHex(config.theme.accent)) setTheme(config.theme);
+          if (config.design) {
+            prefs = { ...prefs, ...config.design };
+            applyDesign(prefs);
+            try { localStorage.setItem('jdv-design-v1', JSON.stringify(prefs)); } catch { /* Réglage actif en mémoire. */ }
+          }
+        }
+      } catch { /* Le Studio local fonctionne même si la table globale n'est pas encore déployée. */ }
+    };
+    void load();
+  }, [supabase, setTheme]);
 
   return (
     <div className="fixed bottom-4 right-4 z-[100] print:hidden">
