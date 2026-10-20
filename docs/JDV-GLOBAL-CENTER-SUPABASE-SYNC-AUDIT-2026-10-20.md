@@ -20,7 +20,7 @@ Requêtes en lecture seule exécutées le 20 octobre 2026 :
 - RLS activé sur les 364 tables publiques (aucune table publique sans RLS)
 - 905 politiques RLS
 - 246 fonctions dans le schéma \`public\`
-- 237 migrations enregistrées après activation du workflow JDV Services
+- 238 migrations enregistrées après activation du workflow JDV Services
 
 La base est donc loin d'être vide et les relations de clés étrangères sont nombreuses. Cela ne garantit toutefois pas que chaque écran applicatif utilise les bons noms de tables, les bonnes colonnes ou les bonnes autorisations.
 
