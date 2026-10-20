@@ -46,7 +46,7 @@ export default function ImmoConstructionPage() {
       { name: 'Séjour', color: '#dbeafe', area: 28 },
       { name: 'Cuisine', color: '#fef3c7', area: 12 },
       ...Array.from({ length: Math.min(12, Math.max(0, Number(bedrooms) || 0)) }, (_, i) => ({ name: 'Chambre ' + (i + 1), color: '#dcfce7', area: i === 0 ? 14 : 12 })),
-      ...Array.from({ length: Math.min(8, Math.max(0, Number(bathrooms) || 0)) }, (_, i) => ({ name: 'Salle d’eau ' + (i + 1), color: '#f3e8ff', area: 4 }),
+      ...Array.from({ length: Math.min(8, Math.max(0, Number(bathrooms) || 0)) }, (_, i) => ({ name: 'Salle d’eau ' + (i + 1), color: '#f3e8ff', area: 4 })),
       ...Array.from({ length: Math.max(0, Math.min(4, (Number(livingRooms) || 0) - 1)) }, (_, i) => ({ name: 'Salon ' + (i + 2), color: '#dbeafe', area: 16 })),
       ...Array.from({ length: Math.max(0, Math.min(4, (Number(kitchens) || 0) - 1)) }, (_, i) => ({ name: 'Cuisine ' + (i + 2), color: '#fef3c7', area: 8 })),
     ];
@@ -54,7 +54,7 @@ export default function ImmoConstructionPage() {
   }, [bedrooms, bathrooms, livingRooms, kitchens]);
 
   const planRoomRects = useMemo(() => {
-    const x = 58, y = 48, width = 324, rowHeight = 52;
+    const x = 58, y = 48, width = 324, rowHeight = 34;
     const rects: Array<Room & { x:number; y:number; width:number; height:number }> = [];
     const roomsToDraw = architecturalRooms;
     if (!roomsToDraw.length) return rects;
@@ -165,13 +165,13 @@ export default function ImmoConstructionPage() {
             <div className="rounded-3xl border border-border bg-card p-5 sm:p-7">
               <div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Aperçu de l’avant-projet</h2><p className="mt-1 text-sm text-muted-foreground">Plan de pièces et schéma de fondation générés à partir de vos choix · préliminaires</p></div><Home className="text-accent" size={24}/></div>
               <div className="mt-5 rounded-2xl bg-slate-50 p-3 text-slate-900">
-                <svg viewBox="0 0 440 360" role="img" aria-label="Plan architectural conceptuel avec pièces, murs et dimensions indicatives" className="h-auto w-full">
-                  <rect x="8" y="8" width="424" height="344" rx="8" fill="#fff" stroke="#94a3b8" strokeDasharray="5 4"/>
+                <svg viewBox="0 0 440 450" role="img" aria-label="Plan architectural conceptuel avec pièces, murs et dimensions indicatives" className="h-auto w-full">
+                  <rect x="8" y="8" width="424" height="434" rx="8" fill="#fff" stroke="#94a3b8" strokeDasharray="5 4"/>
                   <text x="20" y="27" fontSize="10" fill="#64748b">PLAN RDC · PARCELLE {safeWidth} × {safeDepth} m</text>
                   <line x1="58" y1="38" x2="382" y2="38" stroke="#334155" strokeWidth="1"/>
                   <line x1="58" y1="34" x2="58" y2="42" stroke="#334155"/><line x1="382" y1="34" x2="382" y2="42" stroke="#334155"/>
                   <text x="220" y="34" fontSize="10" textAnchor="middle" fill="#334155">{Math.max(1, safeWidth * 0.7).toFixed(1)} m · largeur bâtie indicative</text>
-                  <rect x="58" y="48" width="324" height={Math.min(260, Math.max(156, planRoomRects.reduce((max, r) => Math.max(max, r.y + r.height - 48), 0)))} fill="#fff" stroke="#0f172a" strokeWidth="5"/>
+                  <rect x="58" y="48" width="324" height={Math.min(360, Math.max(136, planRoomRects.reduce((max, r) => Math.max(max, r.y + r.height - 48), 0)))} fill="#fff" stroke="#0f172a" strokeWidth="5"/>
                   {planRoomRects.map((room, i) => <g key={room.name + i}>
                     <rect x={room.x} y={room.y} width={room.width} height={room.height} fill={room.color} stroke="#334155" strokeWidth="1.7"/>
                     <text x={room.x + room.width/2} y={room.y + room.height/2 - 4} textAnchor="middle" dominantBaseline="middle" fontSize={room.width < 100 ? 7 : 9} fill="#0f172a">{room.name}</text>
