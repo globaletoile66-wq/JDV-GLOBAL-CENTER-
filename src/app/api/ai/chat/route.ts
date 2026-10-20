@@ -11,11 +11,19 @@ function isAIConfigured() {
   return Boolean(process.env.OPENAI_API_KEY?.trim());
 }
 
+function getModel() {
+  return process.env.JDV_AI_MODEL?.trim()
+    || process.env.JDV_ASSISTANT_MODEL?.trim()
+    || process.env.JDV_ACADEMY_TUTOR_MODEL?.trim()
+    || 'gpt-5-mini';
+}
+
 export async function GET() {
   const configured = isAIConfigured();
   return NextResponse.json({
     configured,
-    model: configured ? getModel() : null,\n    customEndpoint: configured && Boolean(process.env.OPENAI_BASE_URL?.trim()),
+    model: configured ? getModel() : null,
+    customEndpoint: configured && Boolean(process.env.OPENAI_BASE_URL?.trim()),
   }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
