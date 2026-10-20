@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Building2, CreditCard, Home, ShoppingBag, Plane, Truck, HeartPulse, ShieldCheck, GraduationCap, Sparkles, Store, UserRound, BriefcaseBusiness, Users, Wrench, CalendarDays, Scale, Calculator, UserRoundCog, ClipboardList, Package, BarChart3, Settings2 } from 'lucide-react';
+import { ArrowRight, Building2, CreditCard, Home, ShoppingBag, Plane, Truck, HeartPulse, ShieldCheck, GraduationCap, Sparkles, Store, UserRound, BriefcaseBusiness, Users, Wrench, CalendarDays, Scale, Calculator, UserRoundCog, ClipboardList, Package, BarChart3, Settings2, GitMerge } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 
@@ -43,7 +43,7 @@ export default function HomePage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-3"><AppLogo size={40}/><div><div className="font-extrabold">JDV</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Global Center</div></div></Link>
           <div className="flex items-center gap-2">
-            <Link href="/branches" className="hidden sm:inline-flex btn-secondary"><Sparkles size={16}/>Explorer les 9 branches</Link><Link href="/parametres/branches" className="hidden md:inline-flex btn-secondary"><Settings2 size={16}/>Paramétrage</Link><Link href="/marketplace" className="hidden sm:inline-flex btn-secondary"><ShoppingBag size={16}/>Explorer Marketplace</Link><Link href="/business/create" className="hidden lg:inline-flex btn-secondary"><BriefcaseBusiness size={16}/>Enregistrer mon entreprise</Link>
+            <Link href="/branches" className="hidden sm:inline-flex btn-secondary"><Sparkles size={16}/>Explorer les 9 branches</Link><Link href="/architecture/branches" className="hidden lg:inline-flex btn-secondary"><GitMerge size={16}/>Mode analytique</Link><Link href="/parametres/branches" className="hidden md:inline-flex btn-secondary"><Settings2 size={16}/>Paramétrage</Link><Link href="/marketplace" className="hidden sm:inline-flex btn-secondary"><ShoppingBag size={16}/>Explorer Marketplace</Link><Link href="/business/create" className="hidden lg:inline-flex btn-secondary"><BriefcaseBusiness size={16}/>Enregistrer mon entreprise</Link>
             {!loading && <Link href={user?'/dashboard':'/auth/login'} className="btn-primary">{user?'Mon espace':'Connexion'}<ArrowRight size={16}/></Link>}
           </div>
         </div>
