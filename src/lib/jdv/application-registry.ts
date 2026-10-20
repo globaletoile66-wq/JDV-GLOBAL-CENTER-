@@ -53,3 +53,27 @@ export const JDV_MODULES: JDVModule[] = [
 ];
 
 export const getJDVModuleById = (id: string) => JDV_MODULES.find((module) => module.id === id);
+
+export const getJDVModulesForBranch = (branchId: string) =>
+  JDV_MODULES.filter((module) => module.branchId === branchId);
+
+export const getUnassignedJDVModules = () =>
+  JDV_MODULES.filter((module) => !module.branchId);
+
+export const getJDVRegistryIssues = (knownBranchIds: string[]) => {
+  const issues: string[] = [];
+  const moduleIds = new Set<string>();
+  const moduleHrefs = new Set<string>();
+
+  for (const module of JDV_MODULES) {
+    if (moduleIds.has(module.id)) issues.push(`Identifiant de module dupliqué : ${module.id}`);
+    if (moduleHrefs.has(module.href)) issues.push(`Route de module dupliquée : ${module.href}`);
+    if (module.branchId && !knownBranchIds.includes(module.branchId)) {
+      issues.push(`Branche inconnue ${module.branchId} pour le module ${module.id}`);
+    }
+    moduleIds.add(module.id);
+    moduleHrefs.add(module.href);
+  }
+
+  return issues;
+};
