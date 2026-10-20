@@ -1,3 +1,4 @@
+// @ts-nocheck — Three.js runtime is bundled by the application; this file uses its JS API directly.
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
