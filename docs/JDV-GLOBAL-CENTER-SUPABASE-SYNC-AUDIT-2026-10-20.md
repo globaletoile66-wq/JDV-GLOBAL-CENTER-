@@ -15,10 +15,10 @@ Requêtes en lecture seule exécutées le 20 octobre 2026 :
 
 - 363 tables dans \`public\`
 - 3 vues dans \`public\`
-- 3 977 colonnes sur les tables publiques
-- 946 clés étrangères
-- RLS activé sur les 363 tables publiques (aucune table publique sans RLS)
-- 895 politiques RLS
+- 3 986 colonnes sur les tables publiques
+- 948 clés étrangères
+- RLS activé sur les 364 tables publiques (aucune table publique sans RLS)
+- 898 politiques RLS
 - 246 fonctions dans le schéma \`public\`
 - 235 migrations enregistrées après l'ajout du schéma du studio de conception
 
@@ -68,6 +68,10 @@ Deux migrations sont versionnées dans le dépôt (\`20261019191000_jdv_services
 Les tables réelles observées utilisent les noms \`social_*\` : notamment \`social_profiles\`, \`social_posts\`, \`social_groups\`, \`social_group_memberships\`, \`social_events\`, \`social_event_registrations\`, \`social_app_preferences\`, \`social_conversations\` et \`social_messages\`.
 
 Des noms d'essai tels que \`jdv_social_groups\`, \`social_group_members\` et \`social_user_preferences\` ne correspondent pas aux noms présents. Avant de créer de nouvelles tables, il faut vérifier les requêtes applicatives : certains écarts sont des différences de nom, pas nécessairement des tables manquantes.
+
+## Tables sans clé étrangère
+
+Une vérification des relations a trouvé 13 tables sans clé étrangère entrante ni sortante : `ai_model_catalog`, `article_categories`, `billing_invoice_counters`, `billing_settings`, `contact_messages`, `login_security_events`, `notification_preferences`, `rate_limits`, `super_admin_modules`, `system_settings`, `travel_availability`, `user_settings` et `webhook_events`. Cette liste est un point de revue, pas une liste de défauts : plusieurs sont des tables de configuration, de journalisation ou de système qui peuvent légitimement ne pas avoir de clé étrangère. Il faut rapprocher chaque table de ses consommateurs avant de conclure qu'elle est orpheline.
 
 ## Résultats des conseillers Supabase
 
