@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Building2, CreditCard, Home, ShoppingBag, Plane, Truck, HeartPulse, ShieldCheck, GraduationCap, Sparkles, Store, UserRound, BriefcaseBusiness, Users, Wrench, CalendarDays, Scale, Calculator, UserRoundCog, ClipboardList, Package, BarChart3, Settings2, GitMerge } from 'lucide-react';
+import { ArrowRight, Building2, ShoppingBag, Sparkles, BriefcaseBusiness, Settings2, GitMerge } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { JDV_MODULES } from '@/lib/jdv/application-registry';
