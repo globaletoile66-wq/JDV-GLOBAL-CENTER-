@@ -13,14 +13,14 @@ La base Supabase est active et contient un schéma large, mais la synchronisatio
 
 Requêtes en lecture seule exécutées le 20 octobre 2026 :
 
-- 364 tables dans \`public\`
+- 366 tables dans \`public\`
 - 3 vues dans \`public\`
-- 3 986 colonnes sur les tables publiques
-- 953 clés étrangères
+- 4 059 colonnes sur les tables publiques
+- 957 clés étrangères
 - RLS activé sur les 364 tables publiques (aucune table publique sans RLS)
-- 898 politiques RLS
+- 905 politiques RLS
 - 246 fonctions dans le schéma \`public\`
-- 236 migrations enregistrées après l'ajout du schéma du studio de conception
+- 237 migrations enregistrées après activation du workflow JDV Services
 
 La base est donc loin d'être vide et les relations de clés étrangères sont nombreuses. Cela ne garantit toutefois pas que chaque écran applicatif utilise les bons noms de tables, les bonnes colonnes ou les bonnes autorisations.
 
@@ -62,12 +62,9 @@ Le fichier \`20261020070000_jdv_immo_persistent_workflows.sql\` contient aussi d
 
 ### JDV Services
 
-Les tables suivantes ne sont pas présentes dans le schéma public connecté :
+Les tables jdv_service_offerings et jdv_service_requests sont présentes dans le schéma public, avec RLS activé, 7 politiques combinées et des clés étrangères vers les utilisateurs, les prestataires et les demandes. Les tests PostgreSQL/RLS en base jetable ont réussi.
 
-- \`jdv_service_offerings\`
-- \`jdv_service_requests\`
-
-Deux migrations sont versionnées dans le dépôt (\`20261019191000_jdv_services_marketplace.sql\` et \`20261020100000_jdv_services_workflow_hardening.sql\`). Elles restent à valider en environnement isolé, notamment les politiques RLS et les transitions d'état, avant application à la base active. Les écrans qui les utilisent ne doivent pas être considérés prêts pour la production.
+Les migrations sont alignées sur l'historique Supabase : 20261020091544_jdv_services_marketplace_v1.sql et 20261020092130_jdv_services_workflow_hardening_v1.sql. La seconde migration a été appliquée et vérifiée sur la base active : elle encadre les transitions client/prestataire au moyen d'un trigger SECURITY INVOKER et d'une politique d'UPDATE. Le dernier lancement CI après réconciliation des noms de migration est en cours.
 
 ### JDV Social
 
@@ -79,6 +76,10 @@ Des noms d'essai tels que \`jdv_social_groups\`, \`social_group_members\` et \`s
 
 Une vérification des relations a trouvé 8 tables sans clé étrangère entrante ni sortante : `ai_model_catalog`, `billing_invoice_counters`, `billing_settings`, `contact_messages`, `rate_limits`, `system_settings`, `travel_availability` et `webhook_events`. Cette liste est un point de revue, pas une liste de défauts : plusieurs sont des tables de configuration, de journalisation ou de système qui peuvent légitimement ne pas avoir de clé étrangère. Il faut rapprocher chaque table de ses consommateurs avant de conclure qu'elle est orpheline.
 
+## Colonnes candidates à une relation
+
+Un scan complémentaire a identifié 39 colonnes de type UUID/entier se terminant par _id sans contrainte FK. Cette liste mélange des références polymorphes (entity_id, target_id, resource_id, related_id, reference_id), des champs du CRM historique hors périmètre, et des candidats de relation directe à valider (utilisateurs, entreprises, devises, documents, transactions). Aucune FK n'est ajoutée sur la seule base du nom du champ : la source doit être confirmée et l'absence de lignes orphelines vérifiée avant migration.
+
 ## Résultats des conseillers Supabase
 
 Les contrôles de sécurité et de performance ont également signalé des éléments à traiter, sans modification automatique :
@@ -87,7 +88,7 @@ Les contrôles de sécurité et de performance ont également signalé des élé
 - 12 fonctions \`SECURITY DEFINER\` exécutables par \`anon\` ;
 - 124 fonctions \`SECURITY DEFINER\` exécutables par \`authenticated\` ;
 - protection des mots de passe compromis désactivée ;
-- 532 clés étrangères sans index couvrant détecté ;
+- 533 clés étrangères sans index couvrant détecté ;
 - 284 politiques RLS susceptibles de réévaluer inutilement les fonctions \`auth\` par ligne ;
 - 60 cas de politiques permissives multiples ;
 - 12 groupes d'index en double et 408 index signalés inutilisés.
@@ -116,7 +117,7 @@ Le snapshot TypeScript généré depuis la base active est versionné dans `supa
 
 - Migration ciblée du studio JDV Immo : appliquée et vérifiée.
 - Synchronisation historique complète : en cours, non déclarée terminée.
-- Migrations JDV Services : non appliquées.
+- Migrations JDV Services : appliquées et vérifiées; l'historique est aligné dans la PR #171.
 - Autres tables du workflow Immo : non appliquées.
-- Vérification finale du build/Netlify pour la branche de travail : en attente.
+- Vérification finale du build/Netlify pour le dernier commit : en cours; quatre previews étaient vertes sur le commit précédent et le site jdv-global-center signalait une erreur sans message exploitable dans les métadonnées disponibles.
 - Aucun déploiement Netlify de production effectué.
