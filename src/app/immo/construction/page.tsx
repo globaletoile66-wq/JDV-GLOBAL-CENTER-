@@ -141,7 +141,7 @@ export default function ImmoConstructionPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card/80">
+      <header className="border-b border-border bg-card/80 print:hidden">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link href="/immo" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft size={16}/> Retour à JDV Immo</Link>
           <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold"><Ruler size={14}/> Studio de conception</span>
@@ -153,7 +153,7 @@ export default function ImmoConstructionPage() {
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">Décrivez votre projet. Préparez votre avant-projet.</h1>
           <p className="mt-3 text-muted-foreground">Décrivez les pièces et les dimensions souhaitées. JDV génère un plan d’agencement préliminaire et un schéma de fondation de principe, que vous pourrez enregistrer et transmettre à un architecte et à un ingénieur structure.</p>
         </div>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,.95fr)]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,.95fr)] print:grid-cols-1">
           <section className="rounded-3xl border border-border bg-card p-5 sm:p-7">
             <h2 className="text-xl font-bold">Caractéristiques du projet</h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -172,7 +172,15 @@ export default function ImmoConstructionPage() {
             </div>
             <div className="mt-6 flex flex-wrap gap-3"><button type="button" onClick={()=>setGenerated(true)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 font-bold text-white"><Sparkles size={17}/> Générer l’esquisse indicative</button><button type="button" onClick={()=>void saveBrief()} disabled={saving||!user} className="inline-flex items-center gap-2 rounded-xl border border-accent/40 px-4 py-3 text-sm font-semibold disabled:opacity-50"><Save size={16}/> {saving?'Enregistrement…':'Enregistrer dans mon espace'}</button><button type="button" onClick={exportBrief} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold"><Download size={16}/> Exporter le brief</button><button type="button" onClick={()=>window.print()} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold"><Printer size={16}/> Imprimer</button></div>
           </section>
-          <section className="space-y-5">
+          <section className="space-y-5 print:col-span-1">
+            <div className="hidden print:block">
+              <p className="text-xs font-bold uppercase tracking-[.2em]">JDV IMMO · DOSSIER DE CONCEPTION</p>
+              <h2 className="mt-2 text-2xl font-black">Avant-projet — {buildingType}</h2>
+              <p className="mt-2 text-sm">Style : {style} · Niveaux : {levelsValue} · Parcelle : {safeParcelArea} m² ({safeWidth} × {safeDepth} m)</p>
+              <p className="mt-1 text-sm">Pièces demandées : {architecturalRooms.map((room) => room.name).join(', ')}</p>
+              <p className="mt-1 text-sm">Surface de plancher estimative : {estimatedFloorArea} m² · Emprise indicative : {footprint} m²</p>
+              {notes && <p className="mt-1 text-sm">Souhaits et contraintes : {notes}</p>}
+            </div>
             <div className="rounded-3xl border border-border bg-card p-5 sm:p-7">
               <div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Aperçu de l’avant-projet</h2><p className="mt-1 text-sm text-muted-foreground">Plan de pièces et schéma de fondation générés à partir de vos choix · préliminaires</p></div><Home className="text-accent" size={24}/></div>
               <div className="mt-5 rounded-2xl bg-slate-50 p-3 text-slate-900">
@@ -267,7 +275,7 @@ export default function ImmoConstructionPage() {
           </section>
         </div>
         {(saveMessage||saveError)&&<div role={saveError?'alert':'status'} className={'mt-5 rounded-xl border p-3 text-sm '+(saveError?'border-red-500/30 text-red-600':'border-emerald-500/30 text-emerald-700')}>{saveError||saveMessage}</div>}
-        {user&&<section className="mt-6 rounded-2xl border border-border bg-card p-5"><h2 className="font-bold">Mes avant-projets enregistrés</h2><div className="mt-3 grid gap-2 md:grid-cols-2">{savedBriefs.map(item=><article key={item.id} className="rounded-xl border border-border p-3"><p className="text-sm font-semibold">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.brief_status} · {new Date(item.created_at).toLocaleDateString('fr-FR')}</p>{item.brief_status==='draft'&&<button type="button" onClick={()=>void submitBrief(item.id)} className="mt-3 rounded-lg border border-accent/40 px-3 py-2 text-xs font-bold">Soumettre au concepteur</button>}</article>)}{!savedBriefs.length&&<p className="text-sm text-muted-foreground">Aucun avant-projet enregistré sur ce compte.</p>}</div></section>}
+        {user&&<section className="mt-6 rounded-2xl border border-border bg-card p-5 print:hidden"><h2 className="font-bold">Mes avant-projets enregistrés</h2><div className="mt-3 grid gap-2 md:grid-cols-2">{savedBriefs.map(item=><article key={item.id} className="rounded-xl border border-border p-3"><p className="text-sm font-semibold">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.brief_status} · {new Date(item.created_at).toLocaleDateString('fr-FR')}</p>{item.brief_status==='draft'&&<button type="button" onClick={()=>void submitBrief(item.id)} className="mt-3 rounded-lg border border-accent/40 px-3 py-2 text-xs font-bold">Soumettre au concepteur</button>}</article>)}{!savedBriefs.length&&<p className="text-sm text-muted-foreground">Aucun avant-projet enregistré sur ce compte.</p>}</div></section>}
         <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"><ShieldCheck size={20} className="mt-0.5 shrink-0 text-amber-600"/><p><strong>Limite professionnelle :</strong> cet outil produit une esquisse et un cahier de besoins. Il ne remplace pas les plans architecturaux exécutifs, les études de sol et de structure, les plans électriques/plomberie, ni les permis. La conformité doit être contrôlée par des professionnels habilités selon le pays et la commune.</p></div>
       </div>
     </main>
