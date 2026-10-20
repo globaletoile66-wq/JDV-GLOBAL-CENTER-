@@ -308,7 +308,7 @@ create or replace function public.review_immo_agent_application(
 returns uuid
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 declare
   v_application public.immo_agent_applications%rowtype;
@@ -387,7 +387,7 @@ create or replace function public.submit_immo_construction_brief(p_brief_id uuid
 returns uuid
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 declare
   submitted_id uuid;
