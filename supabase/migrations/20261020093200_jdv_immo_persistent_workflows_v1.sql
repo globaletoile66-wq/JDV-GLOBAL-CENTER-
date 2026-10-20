@@ -234,7 +234,7 @@ returns uuid
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   submitted_id uuid;
 begin
@@ -250,7 +250,7 @@ begin
   end if;
   return submitted_id;
 end;
-$;
+$$;
 revoke all on function public.submit_immo_mandate(uuid) from public;
 grant execute on function public.submit_immo_mandate(uuid) to authenticated;
 
