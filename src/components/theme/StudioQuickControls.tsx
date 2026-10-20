@@ -21,6 +21,8 @@ const defaultDesign: DesignPrefs = { font: 'Inter, ui-sans-serif, system-ui, san
 
 export default function StudioQuickControls() {
   const [open, setOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const [media, setMedia] = useState<{showMedia:boolean;imageUrl:string;videoUrl:string}>({showMedia:false,imageUrl:'',videoUrl:''});
   const { activeLanguage, setActiveLanguage } = useJDV();
   const { theme, setTheme } = useJdvTheme();
   const supabase = useMemo(() => createClient(), []);
@@ -51,6 +53,7 @@ export default function StudioQuickControls() {
           if (config.theme && isHex(config.theme.primary) && isHex(config.theme.accent)) setTheme(config.theme);
           if (config.design) {
             prefs = { ...prefs, ...config.design };
+            setMedia({showMedia:config.design.showMedia ?? true,imageUrl:config.design.imageUrl ?? '',videoUrl:config.design.videoUrl ?? ''});
             applyDesign(prefs);
             try { localStorage.setItem('jdv-design-v1', JSON.stringify(prefs)); } catch { /* Réglage actif en mémoire. */ }
           }
@@ -61,6 +64,8 @@ export default function StudioQuickControls() {
   }, [supabase, setTheme]);
 
   return (
+    <>
+    {media.showMedia&&(media.imageUrl||media.videoUrl)&&<div className="fixed bottom-4 left-4 z-[99] print:hidden"><button type="button" onClick={()=>setMediaOpen(v=>!v)} className="rounded-full border border-border bg-card px-4 py-3 text-sm font-bold text-card-foreground shadow-xl">Médias JDV</button>{mediaOpen&&<section className="mb-3 mt-2 w-[min(92vw,360px)] rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-2xl">{media.imageUrl&&<img src={media.imageUrl} alt="Média de marque JDV" className="max-h-48 w-full rounded-xl object-cover"/>}{media.videoUrl&&<video src={media.videoUrl} controls className="mt-3 max-h-48 w-full rounded-xl bg-black"/>}<button type="button" onClick={()=>setMediaOpen(false)} className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm">Fermer</button></section>}</div>}
     <div className="fixed bottom-4 right-4 z-[100] print:hidden">
       {open && <section aria-label="Réglages rapides" className="mb-3 w-[min(92vw,360px)] rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-2xl">
         <div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-sm font-extrabold">Réglages JDV</p><p className="text-xs text-muted-foreground">Langue et thème accessibles partout</p></div><button type="button" aria-label="Fermer les réglages" onClick={() => setOpen(false)} className="rounded-lg border border-border p-2"><X size={16}/></button></div>
@@ -78,5 +83,6 @@ export default function StudioQuickControls() {
         <Palette size={17}/><span>Thème & langue</span>
       </button>
     </div>
+    </>
   );
 }
