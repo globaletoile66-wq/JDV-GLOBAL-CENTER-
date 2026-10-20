@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Download, Home, Printer, Ruler, ShieldCheck, Sparkles, Save } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import House3DViewer from './House3DViewer';
 
 type Level = 'plain-pied' | 'R+1' | 'R+2';
 type Room = { name: string; color: string; area: number };
@@ -57,6 +58,8 @@ export default function ImmoConstructionPage() {
     ];
     return requested.slice(0, 18);
   }, [bedrooms, bathrooms, livingRooms, kitchens]);
+
+  const simulationRoomNames = useMemo(() => architecturalRooms.map((room) => room.name), [architecturalRooms]);
 
   const planRoomRects = useMemo(() => {
     const x = 58, y = 48, width = 324, rowHeight = 34;
@@ -225,22 +228,7 @@ export default function ImmoConstructionPage() {
                 <button type="button" onClick={()=>setSimulationMode('facade')} aria-pressed={simulationMode==='facade'} className={'rounded-xl px-3 py-2 text-sm font-semibold '+(simulationMode==='facade'?'bg-accent text-white':'border border-border')}>Façade avant</button>
               </div>
               <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-slate-100 p-2 text-slate-900 sm:p-4">
-                {simulationMode==='exterieur'&&<svg viewBox="0 0 440 270" role="img" aria-label="Maquette 3D conceptuelle de la maison, vue extérieure" className="h-auto w-full">
-                  <g transform={'rotate('+simulationAngle+' 220 135)'}>
-                    <polygon points="54,100 211,30 386,95 229,166" fill={roofColor} stroke="#334155" strokeWidth="2"/>
-                    <polygon points="54,100 229,166 229,244 54,178" fill={facadeColor} stroke="#475569" strokeWidth="2"/>
-                    <polygon points="229,166 386,95 386,173 229,244" fill="#d6d3d1" stroke="#475569" strokeWidth="2"/>
-                    {Array.from({length:levels[levelsValue]},(_,i)=><g key={i} transform={'translate(0,'+(-i*34)+')'}>
-                      <rect x="84" y="117" width="36" height="29" fill="#93c5fd" stroke="#334155" strokeWidth="2"/>
-                      <rect x="151" y="143" width="36" height="29" fill="#93c5fd" stroke="#334155" strokeWidth="2"/>
-                      <rect x="263" y="154" width="34" height="29" fill="#93c5fd" stroke="#334155" strokeWidth="2"/>
-                      <rect x="319" y="130" width="34" height="29" fill="#93c5fd" stroke="#334155" strokeWidth="2"/>
-                    </g>)}
-                    <rect x="195" y="180" width="24" height="64" fill="#8b5e3c" stroke="#475569" strokeWidth="2"/>
-                    <polygon points="48,101 211,25 394,93 386,103 211,37 57,108" fill={roofColor} stroke="#334155" strokeWidth="2"/>
-                  </g>
-                  <text x="220" y="262" textAnchor="middle" fontSize="11" fill="#334155">{buildingType} · {levelsValue} · style {style}</text>
-                </svg>}
+                {simulationMode==='exterieur'&&<House3DViewer levels={levels[levelsValue]} facadeColor={facadeColor} roofColor={roofColor} showFurniture={showFurniture} rooms={simulationRoomNames} parking={Number(parking)||0}/>}
                 {simulationMode==='interieur'&&<svg viewBox="0 0 440 270" role="img" aria-label="Vue intérieure schématique avec pièces" className="h-auto w-full">
                   <rect x="35" y="28" width="370" height="210" fill="#fff" stroke="#334155" strokeWidth="5"/>
                   {planRoomRects.slice(0,10).map((room,i)=>{const cols=3;const w=370/cols;const h=210/Math.max(2,Math.ceil(Math.min(10,planRoomRects.length)/cols));const x=35+(i%cols)*w;const y=28+Math.floor(i/cols)*h;return <g key={room.name+i}><rect x={x} y={y} width={w} height={h} fill={room.color} stroke="#475569" strokeWidth="2"/><text x={x+w/2} y={y+h/2} textAnchor="middle" dominantBaseline="middle" fontSize="10" fill="#0f172a">{room.name}</text>{showFurniture&&i===0&&<><rect x={x+w*.25} y={y+h*.3} width={w*.5} height={h*.35} rx="4" fill="#64748b"/><circle cx={x+w*.5} cy={y+h*.72} r="5" fill="#a16207"/></>}</g>})}
