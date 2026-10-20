@@ -42,11 +42,16 @@ export default function HealthPresencePage() {
     if (!user) { setTargets([]); setLoadingTargets(false); return; }
     setLoadingTargets(true);
     setError('');
-    const [professionalResult, providerResult, presenceResult] = await Promise.all([
+    const [professionalResult, businessResult, presenceResult] = await Promise.all([
       supabase.from('health_professionals').select('id,business_id,sub_specialty,verification_status,is_active').eq('user_id', user.id).eq('is_active', true),
-      supabase.from('health_provider_profiles').select('business_id,provider_type,verification_status,is_public'),
+      supabase.from('business_profiles').select('id,name,trade_name').eq('owner_user_id', user.id),
       supabase.from('health_provider_presence').select('id,professional_id,business_id,presence_status,accepts_messages,accepts_teleconsultation,last_seen_at').eq('user_id', user.id),
     ]);
+    const ownBusinessIds = (businessResult.data || []).map((item) => item.id);
+    const providerResult = ownBusinessIds.length
+      ? await supabase.from('health_provider_profiles').select('business_id,provider_type,verification_status,is_public').in('business_id', ownBusinessIds)
+      : { data: [], error: null };
+    const businessNames = new Map((businessResult.data || []).map((item) => [item.id, item.trade_name || item.name]));
     const nextTargets: Target[] = [];
     for (const item of professionalResult.data || []) {
       nextTargets.push({
@@ -63,7 +68,7 @@ export default function HealthPresencePage() {
           key: 'business:' + item.business_id,
           professional_id: null,
           business_id: item.business_id,
-          label: String(item.provider_type || 'Établissement de santé').replaceAll('_', ' '),
+          label: String(businessNames.get(item.business_id) || item.provider_type || 'Établissement de santé').replaceAll('_', ' '),
           verification_status: item.verification_status,
         });
       }
@@ -80,7 +85,7 @@ export default function HealthPresencePage() {
     } else if (nextTargets.length) {
       setSelectedKey((old) => old || nextTargets[0].key);
     }
-    if (professionalResult.error && providerResult.error) setError('Impossible de charger vos profils de santé : ' + professionalResult.error.message);
+    if (professionalResult.error && businessResult.error) setError('Impossible de charger vos profils de santé : ' + professionalResult.error.message);
     setLoadingTargets(false);
   }, [supabase, user]);
 
