@@ -41,6 +41,34 @@ export default function ImmoConstructionPage() {
     return list;
   }, [bedrooms, bathrooms, parking]);
 
+  const architecturalRooms = useMemo(() => {
+    const requested: Room[] = [
+      { name: 'Séjour', color: '#dbeafe', area: 28 },
+      { name: 'Cuisine', color: '#fef3c7', area: 12 },
+      ...Array.from({ length: Math.min(12, Math.max(0, Number(bedrooms) || 0)) }, (_, i) => ({ name: 'Chambre ' + (i + 1), color: '#dcfce7', area: i === 0 ? 14 : 12 })),
+      ...Array.from({ length: Math.min(8, Math.max(0, Number(bathrooms) || 0)) }, (_, i) => ({ name: 'Salle d’eau ' + (i + 1), color: '#f3e8ff', area: 4 }),
+      ...Array.from({ length: Math.max(0, Math.min(4, (Number(livingRooms) || 0) - 1)) }, (_, i) => ({ name: 'Salon ' + (i + 2), color: '#dbeafe', area: 16 })),
+      ...Array.from({ length: Math.max(0, Math.min(4, (Number(kitchens) || 0) - 1)) }, (_, i) => ({ name: 'Cuisine ' + (i + 2), color: '#fef3c7', area: 8 })),
+    ];
+    return requested.slice(0, 18);
+  }, [bedrooms, bathrooms, livingRooms, kitchens]);
+
+  const planRoomRects = useMemo(() => {
+    const x = 58, y = 48, width = 324, rowHeight = 52;
+    const rects: Array<Room & { x:number; y:number; width:number; height:number }> = [];
+    const roomsToDraw = architecturalRooms;
+    if (!roomsToDraw.length) return rects;
+    rects.push({ ...roomsToDraw[0], x, y, width, height: rowHeight });
+    if (roomsToDraw[1]) rects.push({ ...roomsToDraw[1], x: x + width / 2, y: y + rowHeight, width: width / 2, height: rowHeight });
+    if (roomsToDraw[2]) rects.push({ ...roomsToDraw[2], x, y: y + rowHeight, width: width / 2, height: rowHeight });
+    roomsToDraw.slice(3).forEach((room, index) => {
+      const row = 2 + Math.floor(index / 2);
+      const col = index % 2;
+      rects.push({ ...room, x: x + col * (width / 2), y: y + row * rowHeight, width: width / 2, height: rowHeight });
+    });
+    return rects;
+  }, [architecturalRooms]);
+
   const loadBriefs = useCallback(async () => {
     if (!user) return;
     const result = await supabase.from('immo_construction_briefs').select('id,title,brief_status,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
@@ -112,7 +140,7 @@ export default function ImmoConstructionPage() {
         <div className="mb-8 max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[.2em] text-accent">JDV IMMO · CONSTRUCTION</p>
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">Décrivez votre projet. Préparez votre avant-projet.</h1>
-          <p className="mt-3 text-muted-foreground">Renseignez la parcelle, le nombre de niveaux et les pièces souhaitées. JDV prépare un brief structuré et une esquisse indicative pour lancer le travail avec un architecte ou un bureau d’études.</p>
+          <p className="mt-3 text-muted-foreground">Décrivez les pièces et les dimensions souhaitées. JDV génère un plan d’agencement préliminaire et un schéma de fondation de principe, que vous pourrez enregistrer et transmettre à un architecte et à un ingénieur structure.</p>
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,.95fr)]">
           <section className="rounded-3xl border border-border bg-card p-5 sm:p-7">
@@ -135,18 +163,42 @@ export default function ImmoConstructionPage() {
           </section>
           <section className="space-y-5">
             <div className="rounded-3xl border border-border bg-card p-5 sm:p-7">
-              <div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Aperçu de l’avant-projet</h2><p className="mt-1 text-sm text-muted-foreground">Schéma génératif de cadrage · non contractuel</p></div><Home className="text-accent" size={24}/></div>
+              <div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Aperçu de l’avant-projet</h2><p className="mt-1 text-sm text-muted-foreground">Plan de pièces et schéma de fondation générés à partir de vos choix · préliminaires</p></div><Home className="text-accent" size={24}/></div>
               <div className="mt-5 rounded-2xl bg-slate-50 p-3 text-slate-900">
-                <svg viewBox="0 0 420 300" role="img" aria-label="Esquisse conceptuelle du plan" className="h-auto w-full">
-                  <rect x="8" y="8" width="404" height="284" rx="8" fill="#fff" stroke="#94a3b8" strokeDasharray="5 4"/>
-                  <text x="20" y="27" fontSize="10" fill="#64748b">PARCELLE · {safeParcelArea} m²</text>
-                  <rect x="42" y="42" width="336" height="220" fill="#f8fafc" stroke="#334155" strokeWidth="2"/>
-                  {rooms.slice(0, 12).map((room, i) => {
-                    const cols = 3; const rows = 4; const w = 336 / cols; const h = 220 / rows;
-                    return <g key={room.name}><rect x={42 + (i % cols) * w} y={42 + Math.floor(i / cols) * h} width={w} height={h} fill={room.color} stroke="#64748b" strokeWidth="1.5"/><text x={42 + (i % cols) * w + w / 2} y={42 + Math.floor(i / cols) * h + h / 2} textAnchor="middle" dominantBaseline="middle" fontSize="10" fill="#0f172a">{room.name}</text></g>;
-                  })}
-                  <text x="210" y="280" textAnchor="middle" fontSize="10" fill="#64748b">Schéma de pièces — implantation à valider</text>
+                <svg viewBox="0 0 440 360" role="img" aria-label="Plan architectural conceptuel avec pièces, murs et dimensions indicatives" className="h-auto w-full">
+                  <rect x="8" y="8" width="424" height="344" rx="8" fill="#fff" stroke="#94a3b8" strokeDasharray="5 4"/>
+                  <text x="20" y="27" fontSize="10" fill="#64748b">PLAN RDC · PARCELLE {safeWidth} × {safeDepth} m</text>
+                  <line x1="58" y1="38" x2="382" y2="38" stroke="#334155" strokeWidth="1"/>
+                  <line x1="58" y1="34" x2="58" y2="42" stroke="#334155"/><line x1="382" y1="34" x2="382" y2="42" stroke="#334155"/>
+                  <text x="220" y="34" fontSize="10" textAnchor="middle" fill="#334155">{Math.max(1, safeWidth * 0.7).toFixed(1)} m · largeur bâtie indicative</text>
+                  <rect x="58" y="48" width="324" height={Math.min(260, Math.max(156, planRoomRects.reduce((max, r) => Math.max(max, r.y + r.height - 48), 0)))} fill="#fff" stroke="#0f172a" strokeWidth="5"/>
+                  {planRoomRects.map((room, i) => <g key={room.name + i}>
+                    <rect x={room.x} y={room.y} width={room.width} height={room.height} fill={room.color} stroke="#334155" strokeWidth="1.7"/>
+                    <text x={room.x + room.width/2} y={room.y + room.height/2 - 4} textAnchor="middle" dominantBaseline="middle" fontSize={room.width < 100 ? 7 : 9} fill="#0f172a">{room.name}</text>
+                    <text x={room.x + room.width/2} y={room.y + room.height/2 + 9} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#475569">≈ {room.area} m²</text>
+                    {i % 2 === 0 && <line x1={room.x + room.width * .35} y1={room.y} x2={room.x + room.width * .62} y2={room.y} stroke="#fff" strokeWidth="4"/>}
+                  </g>)}
+                  <path d="M 205 308 L 235 308" stroke="#0f172a" strokeWidth="3"/><path d="M 205 308 A 30 30 0 0 1 235 278" fill="none" stroke="#64748b" strokeWidth="1"/>
+                  <text x="220" y="328" textAnchor="middle" fontSize="10" fill="#64748b">Entrée indicative · distribution à ajuster</text>
+                  <text x="220" y="342" textAnchor="middle" fontSize="9" fill="#b45309">Schéma de conception — non coté pour exécution</text>
                 </svg>
+              </div>
+              <div className="mt-4 rounded-2xl border border-border p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-bold">Plan de fondation — schéma de principe</h3><p className="mt-1 text-xs text-muted-foreground">Trame indicative des axes et appuis, non dimensionnée pour construire.</p></div><span className="rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-700">À valider par ingénieur</span></div>
+                <div className="mt-3 rounded-xl bg-white p-2">
+                  <svg viewBox="0 0 440 290" role="img" aria-label="Schéma conceptuel de fondation avec semelles, axes et longrines" className="h-auto w-full">
+                    <rect x="10" y="10" width="420" height="270" fill="#fff" stroke="#cbd5e1"/>
+                    <text x="22" y="28" fontSize="10" fill="#475569">FONDATIONS · TRAME DE PRINCIPE</text>
+                    <rect x="66" y="48" width="308" height="194" fill="#f8fafc" stroke="#b45309" strokeWidth="4"/>
+                    {[0,1,2,3].map(i=><line key={'v'+i} x1={66+i*102.7} y1="48" x2={66+i*102.7} y2="242" stroke="#c08457" strokeWidth="2.5" strokeDasharray="6 3"/>)}
+                    {[0,1,2].map(i=><line key={'h'+i} x1="66" y1={48+i*97} x2="374" y2={48+i*97} stroke="#c08457" strokeWidth="2.5" strokeDasharray="6 3"/>)}
+                    {[0,1,2,3].flatMap(col=>[0,1,2].map(row=><g key={col+'-'+row}><rect x={57+col*102.7} y={39+row*97} width="18" height="18" fill="#fde68a" stroke="#92400e" strokeWidth="1.5"/><rect x={61+col*102.7} y={43+row*97} width="10" height="10" fill="#fef3c7" stroke="#92400e" strokeWidth="1"/></g>))}
+                    {[0,1,2,3].map(i=><text key={'axis'+i} x={66+i*102.7} y="39" textAnchor="middle" fontSize="9" fill="#334155">{String.fromCharCode(65+i)}</text>)}
+                    {[0,1,2].map(i=><text key={'row'+i} x="52" y={52+i*97} textAnchor="end" fontSize="9" fill="#334155">{i+1}</text>)}
+                    <text x="220" y="260" textAnchor="middle" fontSize="10" fill="#475569">Carrés : appuis/semelles indicatifs · pointillés : axes</text>
+                    <text x="220" y="273" textAnchor="middle" fontSize="9" fill="#b45309">Aucune section ni profondeur structurelle n’est calculée</text>
+                  </svg>
+                </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-muted/30 p-3"><p className="text-xs text-muted-foreground">Emprise indicative</p><p className="mt-1 text-xl font-bold">{footprint} m²</p></div>
