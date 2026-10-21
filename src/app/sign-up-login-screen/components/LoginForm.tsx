@@ -65,7 +65,7 @@ export default function LoginForm({ onSwitchToRegister, appKey, redirectTo }: Pr
       }
 
       toast.success('Connexion réussie.');
-      router.push(redirectTo ?? (!appKey || appKey === 'global_center' ? '/user-dashboard' : getJDVApplicationHome(appKey)));
+      router.push(redirectTo ?? (!appKey || appKey === 'global_center' ? '/user-dashboard' : `/applications/${appKey}/subscription`));
     } catch {
       setError('root', {
         message: 'Connexion impossible. Vérifiez votre adresse email, votre mot de passe et votre inscription à cette application, puis réessayez.',
