@@ -28,10 +28,11 @@ export default function InsurancePage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'insurance') : false;
     const [productResult, currencyResult, customerResult] = await Promise.all([
       supabase.from('insurance_products').select('id,code,name,description,insurance_type,currency_id,premium_frequency,base_premium,is_active').eq('is_active', true).order('name').limit(100),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
-      user ? supabase.from('insurance_customers').select('id').eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      hasMembership && user ? supabase.from('insurance_customers').select('id').eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     ]);
     if (productResult.error) setError(productResult.error.message);
     else setProducts((productResult.data ?? []) as Product[]);
