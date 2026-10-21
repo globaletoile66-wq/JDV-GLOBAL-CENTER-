@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, CalendarDays, Compass, Hotel, RefreshCw, Search, Send, Heart, BriefcaseBusiness, ShieldCheck, MapPinned, Plane, Utensils } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Destination = { id: string; name: string; city: string | null; short_description: string | null; description: string | null; image_url: string | null; is_active: boolean; country_id: string | null };
 type TravelCountry = { id: string; name: string; iso_code: string };
@@ -20,6 +22,7 @@ const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide t
 
 export default function TravelPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [countries, setCountries] = useState<TravelCountry[]>([]);
@@ -85,7 +88,7 @@ export default function TravelPage() {
   useEffect(() => { if (!loading) void load(); }, [loading, load]);
 
   const toggleFavorite = async (destinationIdToToggle: string) => {
-    if (!user) { setError('Connectez-vous pour enregistrer vos destinations favorites.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'travel')) { router.push('/inscription/travel'); return; }
     setFavoriteBusyId(destinationIdToToggle); setError('');
     const isFavorite = favoriteIds.includes(destinationIdToToggle);
     const result = isFavorite
@@ -114,7 +117,7 @@ export default function TravelPage() {
 
   const submitRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour envoyer une demande de voyage.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'travel')) { router.push('/inscription/travel'); return; }
     const count = Number(travelersCount);
     if (!Number.isInteger(count) || count < 1 || count > 100) { setError('Le nombre de voyageurs doit être compris entre 1 et 100.'); return; }
     if (startDate && endDate && endDate < startDate) { setError('La date de fin doit être égale ou postérieure à la date de départ.'); return; }
