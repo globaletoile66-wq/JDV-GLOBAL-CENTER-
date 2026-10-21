@@ -199,10 +199,10 @@ export default function StudioVisualEditorPage() {
       const node = doc.createElement(block.kind === 'button' ? 'button' : block.kind === 'section' || block.kind === 'card' ? 'section' : 'p');
       node.dataset.jdvStudioBlock = block.id;
       node.textContent = block.text;
-      const blockRule = rules.find(rule => rule.blockId === block.id);
-      if (blockRule) { for (const [key, value] of Object.entries(blockRule.styles)) (node as HTMLElement).style.setProperty(key, value); }
       const style = node as HTMLElement;
       style.style.cssText = block.kind === 'button' ? 'display:inline-block;padding:12px 18px;margin:10px;background:#4f46e5;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer' : block.kind === 'card' ? 'display:block;padding:24px;margin:16px 0;background:#fff;color:#172033;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 8px 24px #0f172a12' : block.kind === 'section' ? 'display:block;min-height:100px;padding:28px;margin:16px 0;background:#f1f5f9;color:#172033;border-radius:16px' : 'padding:8px;margin:8px 0;font-size:18px;color:#172033';
+      const blockRule = rules.find(rule => rule.blockId === block.id);
+      if (blockRule) { for (const [key, value] of Object.entries(blockRule.styles)) style.style.setProperty(key, value); }
       (doc.querySelector('main') ?? doc.body).appendChild(node);
     }
   }, [blocks, loaded]);
@@ -229,10 +229,10 @@ export default function StudioVisualEditorPage() {
     setBlocks(current => [...current, block]);
     const node = doc.createElement(kind === 'button' ? 'button' : kind === 'section' || kind === 'card' ? 'section' : 'p');
     node.dataset.jdvStudioBlock = block.id; node.textContent = block.text;
-    const blockRule = rulesRef.current.find(rule => rule.blockId === block.id);
-    if (blockRule) for (const [key, value] of Object.entries(blockRule.styles)) (node as HTMLElement).style.setProperty(key, value);
     const style = node as HTMLElement;
     style.style.cssText = kind === 'button' ? 'display:inline-block;padding:12px 18px;margin:10px;background:#4f46e5;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer' : kind === 'card' ? 'display:block;padding:24px;margin:16px 0;background:#fff;color:#172033;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 8px 24px #0f172a12' : kind === 'section' ? 'display:block;min-height:100px;padding:28px;margin:16px 0;background:#f1f5f9;color:#172033;border-radius:16px' : 'padding:8px;margin:8px 0;font-size:18px;color:#172033';
+    const blockRule = rulesRef.current.find(rule => rule.blockId === block.id);
+    if (blockRule) for (const [key, value] of Object.entries(blockRule.styles)) style.style.setProperty(key, value);
     (doc.querySelector('[data-jdv-editor-selected]')?.parentElement ?? doc.querySelector('main') ?? doc.body).appendChild(node);
     setNotice('Composant ajouté à la page. Sélectionnez-le pour modifier son texte et ses styles, puis enregistrez.');
   };
