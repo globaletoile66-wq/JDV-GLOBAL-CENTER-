@@ -156,6 +156,85 @@ $jdv_join$;
 revoke all on function public.jdv_join_application(text) from public;
 grant execute on function public.jdv_join_application(text) to authenticated;
 
+-- Marketplace actions require explicit Marketplace membership. Public listing reads
+-- remain public; the restrictive policies below gate authenticated mutations and
+-- private commerce records without replacing existing ownership policies.
+do $jdv_marketplace_rls$
+declare
+  v_table text;
+begin
+  foreach v_table in array array[
+    'marketplace_carts',
+    'marketplace_cart_items',
+    'marketplace_addresses',
+    'marketplace_favorites',
+    'marketplace_orders',
+    'marketplace_order_items',
+    'marketplace_returns',
+    'marketplace_messages'
+  ] loop
+    if to_regclass('public.' || v_table) is not null then
+      execute format('drop policy if exists jdv_marketplace_membership_required on public.%I', v_table);
+      execute format(
+        'create policy jdv_marketplace_membership_required on public.%I as restrictive for all to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = ''marketplace'' and m.status = ''active'')) with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = ''marketplace'' and m.status = ''active''))',
+        v_table
+      );
+    end if;
+  end loop;
+
+  foreach v_table in array array[
+    'marketplace_sellers',
+    'marketplace_listings',
+    'marketplace_product_variants'
+  ] loop
+    if to_regclass('public.' || v_table) is not null then
+      execute format('drop policy if exists jdv_marketplace_membership_insert on public.%I', v_table);
+      execute format('drop policy if exists jdv_marketplace_membership_update on public.%I', v_table);
+      execute format('drop policy if exists jdv_marketplace_membership_delete on public.%I', v_table);
+      execute format(
+        'create policy jdv_marketplace_membership_insert on public.%I as restrictive for insert to authenticated with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = ''marketplace'' and m.status = ''active''))',
+        v_table
+      );
+      execute format(
+        'create policy jdv_marketplace_membership_update on public.%I as restrictive for update to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = ''marketplace'' and m.status = ''active'')) with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = ''marketplace'' and m.status = ''active''))',
+        v_table
+      );
+      execute format(
+        'create policy jdv_marketplace_membership_delete on public.%I as restrictive for delete to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = ''marketplace'' and m.status = ''active''))',
+        v_table
+      );
+    end if;
+  end loop;
+end;
+$jdv_marketplace_rls$;
+
+create or replace function public.jdv_require_marketplace_membership_for_order()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $jdv_order_membership$
+begin
+  if auth.role() = 'service_role' then
+    return new;
+  end if;
+  if auth.uid() is null or not exists (
+    select 1 from public.app_memberships m
+    where m.user_id = auth.uid()
+      and m.app_key = 'marketplace'
+      and m.status = 'active'
+  ) then
+    raise exception 'JDV_MARKETPLACE_MEMBERSHIP_REQUIRED';
+  end if;
+  return new;
+end;
+$jdv_order_membership$;
+
+drop trigger if exists jdv_marketplace_order_membership_required on public.marketplace_orders;
+create trigger jdv_marketplace_order_membership_required
+  before insert on public.marketplace_orders
+  for each row execute function public.jdv_require_marketplace_membership_for_order();
+
 -- Public read-only catalog: exposes only available agricultural offers, never farm ownership data.
 create or replace function public.jdv_agriculture_public_catalog()
 returns table (
