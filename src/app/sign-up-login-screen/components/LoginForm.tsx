@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
-import { getJDVApplication, getJDVApplicationHome } from '@/lib/apps/registry';
+import { getJDVApplication } from '@/lib/apps/registry';
 
 interface LoginFormData {
   email: string;
