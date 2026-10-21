@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Bell, CalendarDays, ExternalLink, Heart, MessageCircle, RefreshCw, Search, Send, Settings, Share2, UserCheck, UserPlus, UserRound, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type SocialProfile = { id?: string; user_id: string; username: string; display_name: string | null; bio?: string | null; avatar_url?: string | null; profile_status?: string };
 type SocialPost = { id: string; author_user_id: string; body: string | null; media_url: string | null; visibility: string; status: string; created_at: string };
@@ -20,6 +22,7 @@ function validHttpUrl(value: string) {
 
 export default function SocialPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<SocialProfile | null>(null);
   const [profilesByUser, setProfilesByUser] = useState<Record<string, SocialProfile>>({});
@@ -115,7 +118,7 @@ export default function SocialPage() {
 
   const createProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
     const normalized = username.trim().toLowerCase();
     if (!/^[a-z0-9_]{3,30}$/.test(normalized)) { setError('Le nom d’utilisateur doit contenir 3 à 30 caractères : lettres, chiffres ou _ .'); return; }
     setSavingProfile(true); setError(''); setMessage('');
@@ -127,7 +130,7 @@ export default function SocialPage() {
 
   const publishPost = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour publier.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
     if (!profile) { setError('Créez d’abord votre profil communautaire.'); return; }
     if (!postBody.trim() && !mediaUrl.trim()) { setError('Ajoutez un texte ou un lien média.'); return; }
     if (mediaUrl.trim() && !validHttpUrl(mediaUrl.trim())) { setError('Le lien média doit être une URL HTTP ou HTTPS valide.'); return; }
@@ -139,7 +142,7 @@ export default function SocialPage() {
   };
 
   const toggleLike = async (post: SocialPost) => {
-    if (!user) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
     setActingOn(post.id); setError(''); setMessage('');
     const existing = reactions.find((item) => item.post_id === post.id && item.user_id === user.id && item.reaction_type === 'like');
     if (existing) {
@@ -155,7 +158,8 @@ export default function SocialPage() {
   };
 
   const toggleFollow = async (authorUserId: string) => {
-    if (!user || authorUserId === user.id) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
+    if (authorUserId === user.id) return;
     setActingOn(authorUserId); setError(''); setMessage('');
     const existing = follows.find((item) => item.following_user_id === authorUserId && item.follower_user_id === user.id);
     if (existing?.status === 'active') {
@@ -176,7 +180,7 @@ export default function SocialPage() {
 
   const addComment = async (event: FormEvent<HTMLFormElement>, post: SocialPost) => {
     event.preventDefault();
-    if (!user) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
     const body = (commentDrafts[post.id] || '').trim();
     if (!body) return;
     setActingOn(post.id); setError(''); setMessage('');
