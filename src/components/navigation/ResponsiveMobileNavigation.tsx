@@ -24,12 +24,6 @@ const travelDesktopItems: NavItem[] = [
   { href: '/travel/partenaires', label: 'Partenaires', icon: Handshake },
 ];
 
-const defaultItems: NavItem[] = [
-  { href: '/', label: 'Accueil', icon: Home },
-  { href: '/branches', label: 'Explorer', icon: Compass },
-  { href: '/marketplace', label: 'Services', icon: Store },
-  { href: '/dashboard', label: 'Compte', icon: UserRound },
-];
 
 export default function ResponsiveMobileNavigation() {
   const pathname = usePathname() || '/';
