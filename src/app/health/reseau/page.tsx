@@ -6,6 +6,7 @@ import { ArrowLeft, MapPin, Navigation, Search, Stethoscope, Pill, FlaskConical,
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
+type CountryOption = { id: string; iso_code: string; name: string; flag_emoji: string | null; phone_code: string | null };
 type Business = {
   id: string; country_id: string | null; name: string; trade_name: string | null; description: string | null;
   phone: string | null; address: string | null; city: string | null; region: string | null;
@@ -52,6 +53,9 @@ export default function HealthNetworkPage() {
   const supabase = useMemo(() => createClient(), []);
   const { user, profile } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [countries, setCountries] = useState<CountryOption[]>([]);
+  const [countryId, setCountryId] = useState('');
+  const [countryManuallySelected, setCountryManuallySelected] = useState(false);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [presence, setPresence] = useState<Presence[]>([]);
@@ -68,14 +72,31 @@ export default function HealthNetworkPage() {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    let active = true;
+    void supabase.from('countries').select('id,iso_code,name,flag_emoji,phone_code').eq('is_active', true).order('name').then(({ data, error: countryError }) => {
+      if (!active) return;
+      if (!countryError) {
+        const rows = (data ?? []) as CountryOption[];
+        setCountries(rows);
+        setCountryId((current) => current || profile?.country_id || rows.find((item) => item.iso_code === 'BJ')?.id || rows[0]?.id || '');
+      }
+    });
+    return () => { active = false; };
+  }, [supabase, profile?.country_id]);
+
+  useEffect(() => {
+    if (profile?.country_id && !countryManuallySelected) setCountryId(profile.country_id);
+  }, [profile?.country_id, countryManuallySelected]);
+
   const load = useCallback(async () => {
     setBusy(true); setError('');
     const now = new Date().toISOString();
     const businessQuery = supabase.from('business_profiles')
       .select('id,country_id,name,trade_name,description,phone,address,city,region,latitude,longitude,is_public')
       .eq('is_public', true);
-    // The saved profile country is the default search market.
-    if (profile?.country_id) businessQuery.eq('country_id', profile.country_id);
+    // The profile country is the default market; the user can temporarily search another country.
+    if (countryId) businessQuery.eq('country_id', countryId);
     const [businessResult, professionalResult, serviceResult, presenceResult, dutyResult] = await Promise.all([
       businessQuery.limit(300),
       supabase.from('health_professionals').select('id,business_id,specialty_id,sub_specialty,experience_years,bio,verification_status,is_active').eq('is_active', true).limit(300),
@@ -94,7 +115,7 @@ export default function HealthNetworkPage() {
     if (dutyResult.error && !dutyResult.error.message.includes('does not exist')) setError((current) => current || 'Gardes : ' + dutyResult.error!.message);
     else setDuties((dutyResult.data ?? []) as Duty[]);
     setBusy(false);
-  }, [supabase, profile?.country_id]);
+  }, [supabase, countryId]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -232,7 +253,7 @@ export default function HealthNetworkPage() {
           </div>
           <button onClick={locate} disabled={locating} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-400 px-5 py-3.5 text-sm font-bold text-slate-950 disabled:opacity-60"><LocateFixed size={18}/>{locating ? 'Localisation…' : position ? 'Position activée' : 'Autour de moi'}</button>
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-xs font-semibold text-white/70">Ville<input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ex. Cotonou" className="mt-1 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-orange-300" /></label><label className="text-xs font-semibold text-white/70">Quartier<input value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Ex. Fidjrossè" className="mt-1 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-orange-300" /></label></div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3"><label className="text-xs font-semibold text-white/70">Pays de recherche<select value={countryId} onChange={(e) => { setCountryManuallySelected(true); setCountryId(e.target.value); }} className="mt-1 w-full rounded-xl border border-white/15 bg-[#10294d] px-3 py-2.5 text-sm text-white outline-none focus:border-orange-300"><option value="">Tous les pays</option>{countries.map((item) => <option key={item.id} value={item.id}>{item.flag_emoji ? item.flag_emoji + ' ' : ''}{item.name}</option>)}</select></label><label className="text-xs font-semibold text-white/70">Ville<input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ex. Cotonou" className="mt-1 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-orange-300" /></label><label className="text-xs font-semibold text-white/70">Quartier<input value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Ex. Fidjrossè" className="mt-1 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-orange-300" /></label></div>
         <div className="mt-3 flex items-center gap-2 text-xs text-white/65"><input id="remember-health-searches" type="checkbox" checked={rememberSearches} onChange={(e) => void updateRememberSearches(e.target.checked)} className="accent-orange-400"/><label htmlFor="remember-health-searches">Mémoriser mes recherches habituelles</label><span className="ml-auto">{user ? 'Mémoire liée à votre compte' : 'Mémoire sur cet appareil'}</span></div>
         <div className="mt-4 flex flex-wrap gap-2">
           {categories.map((item) => { const Icon = item.icon; return <button key={item.value} onClick={() => setCategory(item.value)} className={'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ' + (category === item.value ? 'bg-white text-slate-900' : 'border border-white/20 text-white/80 hover:bg-white/10')}><Icon size={15}/>{item.label}</button>; })}
