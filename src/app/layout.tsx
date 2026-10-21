@@ -7,6 +7,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { JDVProvider } from '@/contexts/JDVContext';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import StudioQuickControls from '@/components/theme/StudioQuickControls';
+import StudioDesignRuntime from '@/components/theme/StudioDesignRuntime';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -30,7 +31,7 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthProvider>
           <JDVProvider>
-            <ThemeProvider>{children}<StudioQuickControls /></ThemeProvider>
+            <ThemeProvider>{children}<StudioDesignRuntime /><StudioQuickControls /></ThemeProvider>
             <Toaster
               position="bottom-right"
               toastOptions={{
