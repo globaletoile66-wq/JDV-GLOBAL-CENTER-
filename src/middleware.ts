@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected routes — require authentication
-  const protectedPaths = ['/dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain', '/abonnements', '/espace'];
+  const protectedPaths = ['/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain', '/abonnements', '/espace'];
   const isProtected = protectedPaths.some((p) => isPathOrChild(pathname, p));
 
   if (!user && isProtected) {
@@ -68,10 +68,15 @@ export async function middleware(request: NextRequest) {
     pathname === '/tontine/contrat' ||
     (pathname.startsWith('/tontine/categories/') && pathname.endsWith('/contrat')) ||
     isPathOrChild(pathname, '/tontine/join');
+  const globalCenterRoute = [
+    '/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications',
+    '/organizations', '/onboarding', '/terrain', '/abonnements', '/espace',
+  ].some((route) => isPathOrChild(pathname, route));
   const requiredAppKey =
     isPathOrChild(pathname, '/pay') ? 'pay' :
     isPathOrChild(pathname, '/business') ? 'business' :
-    tontineActionRoute ? 'tontine' : null;
+    tontineActionRoute ? 'tontine' :
+    globalCenterRoute ? 'global_center' : null;
 
   if (user && requiredAppKey) {
     const { data: appMembership, error: membershipError } = await supabase
