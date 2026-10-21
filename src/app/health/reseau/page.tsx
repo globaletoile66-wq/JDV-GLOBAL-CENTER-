@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
 type Business = {
-  id: string; name: string; trade_name: string | null; description: string | null;
+  id: string; country_id: string | null; name: string; trade_name: string | null; description: string | null;
   phone: string | null; address: string | null; city: string | null; region: string | null;
   latitude: number | null; longitude: number | null; is_public: boolean;
 };
@@ -50,7 +50,7 @@ function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number) {
 
 export default function HealthNetworkPage() {
   const supabase = useMemo(() => createClient(), []);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -71,8 +71,13 @@ export default function HealthNetworkPage() {
   const load = useCallback(async () => {
     setBusy(true); setError('');
     const now = new Date().toISOString();
+    const businessQuery = supabase.from('business_profiles')
+      .select('id,country_id,name,trade_name,description,phone,address,city,region,latitude,longitude,is_public')
+      .eq('is_public', true);
+    // The saved profile country is the default search market.
+    if (profile?.country_id) businessQuery.eq('country_id', profile.country_id);
     const [businessResult, professionalResult, serviceResult, presenceResult, dutyResult] = await Promise.all([
-      supabase.from('business_profiles').select('id,name,trade_name,description,phone,address,city,region,latitude,longitude,is_public').eq('is_public', true).limit(300),
+      businessQuery.limit(300),
       supabase.from('health_professionals').select('id,business_id,specialty_id,sub_specialty,experience_years,bio,verification_status,is_active').eq('is_active', true).limit(300),
       supabase.from('health_services').select('id,business_id,professional_id,name,service_type,description,price,duration_minutes,is_active').eq('is_active', true).limit(500),
       supabase.from('health_provider_presence').select('id,user_id,professional_id,business_id,presence_status,accepts_messages,accepts_teleconsultation,last_seen_at').in('presence_status', ['online','busy']).gt('last_seen_at', new Date(Date.now() - 180000).toISOString()).limit(500),
@@ -89,7 +94,7 @@ export default function HealthNetworkPage() {
     if (dutyResult.error && !dutyResult.error.message.includes('does not exist')) setError((current) => current || 'Gardes : ' + dutyResult.error!.message);
     else setDuties((dutyResult.data ?? []) as Duty[]);
     setBusy(false);
-  }, [supabase]);
+  }, [supabase, profile?.country_id]);
 
   useEffect(() => { void load(); }, [load]);
 

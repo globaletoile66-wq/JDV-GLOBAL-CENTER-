@@ -51,6 +51,9 @@ export default function OnboardingPage() {
     defaultValues: {
       first_name: profile?.first_name || '',
       last_name: profile?.last_name || '',
+      country_id: profile?.country_id || user?.user_metadata?.country_id || '',
+      language_id: profile?.preferred_language_id || '',
+      currency_id: profile?.preferred_currency_id || '',
     }
   });
 
@@ -70,6 +73,9 @@ export default function OnboardingPage() {
     if (profile) {
       setValue('first_name', profile.first_name || '');
       setValue('last_name', profile.last_name || '');
+      setValue('country_id', profile.country_id || user?.user_metadata?.country_id || '');
+      setValue('language_id', profile.preferred_language_id || '');
+      setValue('currency_id', profile.preferred_currency_id || '');
     }
   }, [profile, setValue]);
 
