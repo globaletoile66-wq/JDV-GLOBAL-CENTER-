@@ -84,6 +84,10 @@ export default function ApplicationSubscriptionPage() {
           : MODULE_CODES[app.key]
             ? <BranchSubscriptionSection moduleCode={MODULE_CODES[app.key]} branchName={app.name} />
             : <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Les offres d’abonnement de cette application ne sont pas encore configurées. Aucun tarif n’est inventé ni facturé.</p>}
+        <div className="mt-7 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+          <p className="max-w-2xl text-sm leading-6 text-slate-600">Tu as consulté les offres de {app.name}. Les fonctionnalités payantes ne doivent être activées qu’avec un abonnement confirmé ; aucun paiement n’est simulé ici.</p>
+          <Link href={app.homePath} className="inline-flex shrink-0 rounded-xl bg-[#F28C28] px-5 py-3 text-sm font-extrabold text-[#0B1B3D]">Continuer vers {app.name}</Link>
+        </div>
       </div>
     </main>
   );
