@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, CalendarClock, Heart, MapPin, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Property = { id: string; title: string; slug: string; description: string | null; country_id: string | null; city: string | null; district: string | null; hide_exact_address: boolean; address: string | null; surface: number | null; land_surface: number | null; bedrooms: number | null; bathrooms: number | null; parking_spaces: number | null; furnished: boolean; price: number; currency_id: string | null; transaction_type: string; property_status: string; property_type_id: string; owner_user_id: string | null; business_id: string | null; published_at: string | null };
 type PropertyType = { id: string; name: string; code: string };
@@ -18,6 +20,7 @@ const transactionLabels: Record<string, string> = { rent: 'Location', sale: 'Ven
 
 export default function ImmoPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [properties, setProperties] = useState<Property[]>([]);
   const [types, setTypes] = useState<PropertyType[]>([]);
@@ -103,7 +106,7 @@ export default function ImmoPage() {
   });
 
   const toggleFavorite = async (property: Property) => {
-    if (!user) { setError('Connectez-vous pour enregistrer un favori.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'immo')) { router.push('/inscription/immo'); return; }
     setError(''); setMessage('');
     const already = favorites.includes(property.id);
     const result = already
@@ -115,7 +118,8 @@ export default function ImmoPage() {
 
   const requestContact = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !contactProperty) { setError('Connectez-vous pour contacter au sujet de ce bien.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'immo')) { router.push('/inscription/immo'); return; }
+    if (!contactProperty) { setError('Sélectionnez un bien avant de poursuivre.'); return; }
     setSaving(true); setError(''); setMessage('');
     const { error: requestError } = await supabase.from('immo_requests').insert({
       requester_user_id: user.id,
@@ -130,7 +134,8 @@ export default function ImmoPage() {
 
   const requestAppointment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !appointmentProperty) { setError('Connectez-vous pour demander une visite.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'immo')) { router.push('/inscription/immo'); return; }
+    if (!appointmentProperty) { setError('Sélectionnez un bien avant de demander une visite.'); return; }
     const date = new Date(scheduledAt);
     if (!scheduledAt || Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) { setError('Choisissez une date et une heure futures.'); return; }
     setSaving(true); setError(''); setMessage('');
