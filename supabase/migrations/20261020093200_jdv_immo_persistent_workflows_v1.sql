@@ -315,7 +315,7 @@ begin
   return submitted_id;
 end;
 $$;
-revoke all on function public.submit_immo_mandate(uuid) from public;
+revoke all on function public.submit_immo_mandate(uuid) from public, anon;
 grant execute on function public.submit_immo_mandate(uuid) to authenticated;
 
 -- A participant can accept only their own side of a mandate; activation requires both acceptances.
@@ -359,7 +359,7 @@ begin
   return accepted_id;
 end;
 $$;
-revoke all on function public.accept_immo_mandate(uuid) from public;
+revoke all on function public.accept_immo_mandate(uuid) from public, anon;
 grant execute on function public.accept_immo_mandate(uuid) to authenticated;
 
 
@@ -443,7 +443,7 @@ begin
   return p_application_id;
 end;
 $$;
-revoke all on function public.review_immo_agent_application(uuid, text, text) from public;
+revoke all on function public.review_immo_agent_application(uuid, text, text) from public, anon;
 grant execute on function public.review_immo_agent_application(uuid, text, text) to authenticated;
 
 
@@ -469,5 +469,5 @@ begin
   return submitted_id;
 end;
 $$;
-revoke all on function public.submit_immo_construction_brief(uuid) from public;
+revoke all on function public.submit_immo_construction_brief(uuid) from public, anon;
 grant execute on function public.submit_immo_construction_brief(uuid) to authenticated;
