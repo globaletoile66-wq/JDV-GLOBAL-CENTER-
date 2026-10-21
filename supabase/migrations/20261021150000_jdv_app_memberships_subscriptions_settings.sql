@@ -125,7 +125,7 @@ begin
   if v_app_key not in (
     'global_center', 'marketplace', 'agriculture', 'immo', 'health', 'academy',
     'social', 'media', 'pub', 'pay', 'tontine', 'travel', 'transport',
-    'insurance', 'energy', 'ai', 'business', 'transit', 'services', 'procurement',
+    'insurance', 'legal', 'energy', 'ai', 'business', 'transit', 'services', 'procurement',
     'accounting', 'inventory', 'hr', 'jobs', 'entertainment'
   ) then
     raise exception 'Unsupported JDV application key';
@@ -163,7 +163,7 @@ begin
   if p_app_key not in (
     'global_center', 'marketplace', 'agriculture', 'immo', 'health', 'academy', 'social',
     'media', 'pub', 'pay', 'tontine', 'travel', 'transport', 'insurance',
-    'energy', 'ai', 'business', 'transit', 'services', 'procurement', 'accounting',
+    'energy', 'ai', 'business', 'transit', 'services', 'procurement', 'accounting', 'legal',
     'inventory', 'hr', 'jobs', 'entertainment'
   ) then
     raise exception 'Unsupported JDV application key';
