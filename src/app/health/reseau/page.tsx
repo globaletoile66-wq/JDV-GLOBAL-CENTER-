@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowLeft, MapPin, Navigation, Search, Stethoscope, Pill, FlaskConical, Building2, LocateFixed, RefreshCw, CircleCheck, Circle, MessageCircle, Video, History, X, Hospital, ScanLine, Baby } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
-import { createClient } from '@/lib/supabase/client';
 
 type Business = {
   id: string; name: string; trade_name: string | null; description: string | null;
