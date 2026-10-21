@@ -45,6 +45,7 @@ export default function ApplicationSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [subscriptionError, setSubscriptionError] = useState('');
   const [subscription, setSubscription] = useState<{ plan_code: string; plan_name: string; status: string; ends_at: string | null } | null>(null);
 
   const load = useCallback(async () => {
@@ -67,6 +68,7 @@ export default function ApplicationSettingsPage() {
     }
     const stored = (settingsResult.data?.settings ?? {}) as Partial<Preferences>;
     setPreferences({ ...DEFAULTS, ...stored, display_name: stored.display_name ?? user.user_metadata?.first_name ?? '' });
+    setSubscriptionError(subscriptionResult.error ? 'Le statut d’abonnement ne peut pas être vérifié pour le moment.' : '');
     const moduleCode = MODULE_CODES[app.key];
     const subscriptions = ((subscriptionResult.data ?? []) as { module_code: string; subject_type: string; plan_code: string; plan_name: string; status: string; expires_at: string | null }[])
       .filter((item) => item.module_code === moduleCode && item.subject_type === 'user');
@@ -150,7 +152,7 @@ export default function ApplicationSettingsPage() {
           </section>
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-lg font-extrabold"><ShieldCheck size={19}/> Abonnement de cette application</h2>
-            {subscription ? <div className="mt-3 text-sm text-slate-600"><p>Formule : <strong className="text-[#0B1B3D]">{subscription.plan_name} ({subscription.plan_code})</strong></p><p className="mt-1">Statut : <strong className="text-[#0B1B3D]">{subscription.status}</strong></p>{subscription.ends_at && <p className="mt-1">Échéance : {new Date(subscription.ends_at).toLocaleDateString('fr-FR')}</p>}</div> : <p className="mt-3 text-sm leading-6 text-slate-600">Aucun abonnement actif n’est affiché pour {app.name}. Aucun paiement n’a été effectué depuis cette page.</p>}
+            {subscriptionError ? <p className="mt-3 text-sm text-amber-800">{subscriptionError}</p> : subscription ? <div className="mt-3 text-sm text-slate-600"><p>Formule : <strong className="text-[#0B1B3D]">{subscription.plan_name} ({subscription.plan_code})</strong></p><p className="mt-1">Statut : <strong className="text-[#0B1B3D]">{subscription.status}</strong></p>{subscription.ends_at && <p className="mt-1">Échéance : {new Date(subscription.ends_at).toLocaleDateString('fr-FR')}</p>}</div> : <p className="mt-3 text-sm leading-6 text-slate-600">Aucun abonnement actif n’est affiché pour {app.name}. Aucun paiement n’a été effectué depuis cette page.</p>}
             <Link href={`/applications/${app.key}/subscription`} className="mt-4 inline-flex rounded-xl bg-[#0B1B3D] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#173967]">Voir les offres et gérer mon abonnement</Link>
           </section>
           <div className="flex justify-end"><button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#F28C28] px-6 py-3 font-extrabold text-white disabled:opacity-60">{saving && <Loader2 size={16} className="animate-spin"/>}{saving ? 'Enregistrement…' : 'Enregistrer mes paramètres'}</button></div>
