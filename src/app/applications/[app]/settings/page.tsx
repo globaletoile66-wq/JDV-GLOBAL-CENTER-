@@ -52,17 +52,19 @@ export default function ApplicationSettingsPage() {
     if (!app || !user) return;
     setLoading(true);
     setError('');
-    const [membershipResult, settingsResult, subscriptionResult] = await Promise.all([
+    const [adminResult, membershipResult, settingsResult, subscriptionResult] = await Promise.all([
+      supabase.rpc('is_super_admin'),
       supabase.from('app_memberships').select('id,status').eq('user_id', user.id).eq('app_key', app.key).maybeSingle(),
       supabase.from('app_user_settings').select('settings').eq('user_id', user.id).eq('app_key', app.key).maybeSingle(),
       supabase.rpc('billing_my_subscriptions'),
     ]);
-    if (membershipResult.error || settingsResult.error) {
+    const isSuperAdmin = !adminResult.error && adminResult.data === true;
+    if ((membershipResult.error && !isSuperAdmin) || settingsResult.error) {
       setError('Impossible de vérifier vos droits ou de charger vos paramètres. Réessayez lorsque le service sera disponible.');
       setLoading(false);
       return;
     }
-    if (!membershipResult.data || membershipResult.data.status !== 'active') {
+    if (!isSuperAdmin && (!membershipResult.data || membershipResult.data.status !== 'active')) {
       router.replace(`/inscription/${app.key}`);
       return;
     }
