@@ -287,6 +287,19 @@ begin
     'social_reactions','social_comments','social_follows','social_conversations',
     'social_messages','social_event_registrations','social_group_memberships','social_app_preferences',
     'media_content_metrics','media_channels',
+    'business_appointments','business_clients','business_documents','business_expenses','business_invoices',
+    'business_members','business_orders','business_products','business_sale_items','business_sales','business_suppliers',
+    'energy_assets','energy_billing_records','energy_meter_readings','energy_sites',
+    'insurance_claim_documents','insurance_claims','insurance_commissions','insurance_coverages',
+    'insurance_customers','insurance_payments','insurance_policies','insurance_premium_schedules',
+    'transit_customs_cases','transit_customs_declarations','transit_documents','transit_invoices',
+    'transit_operations','transit_payment_schedules','transit_quotes','transit_requests','transit_reports',
+    'transit_shipment_legs','transit_shipments','transit_storage_records','transit_tracking_events',
+    'transport_bookings','transport_commissions','transport_deliveries','transport_delivery_events',
+    'transport_delivery_proofs','transport_driver_documents','transport_parcels','transport_rentals',
+    'transport_requests','travel_bookings','travel_commissions','travel_documents','travel_favorites',
+    'travel_itineraries','travel_itinerary_items','travel_quotes','travel_reports','travel_requests','travelers',
+    'ai_access_log','ai_conversations','ai_messages','ai_org_policies','ai_provider_configs','ai_usage',
     'pub_advertisers','pub_campaigns','pub_campaign_placements','pub_creatives','pub_impressions','pub_partners',
     'tontine_members','tontine_contribution_schedules','tontine_contributions','tontine_cycles',
     'tontine_documents','tontine_financial_reconciliations','tontine_join_links',
@@ -301,6 +314,13 @@ begin
       elsif v_table like 'media_%' then v_app := 'media';
       elsif v_table like 'pub_%' then v_app := 'pub';
       elsif v_table like 'tontine_%' then v_app := 'tontine';
+      elsif v_table like 'business_%' then v_app := 'business';
+      elsif v_table like 'energy_%' then v_app := 'energy';
+      elsif v_table like 'insurance_%' then v_app := 'insurance';
+      elsif v_table like 'transit_%' then v_app := 'transit';
+      elsif v_table like 'transport_%' then v_app := 'transport';
+      elsif v_table like 'travel_%' then v_app := 'travel';
+      elsif v_table like 'ai_%' then v_app := 'ai';
       end if;
       execute format('drop policy if exists jdv_branch_membership_required on public.%I', v_table);
       execute format(
@@ -319,7 +339,15 @@ begin
     'social_profiles','social_posts','social_groups','social_events','social_external_links',
     'media_contents','media_categories','media_content_categories',
     'pub_placements','pub_pricing_rules',
-    'tontines','tontine_classes'
+    'tontines','tontine_classes',
+    'business_profiles','business_categories','business_product_categories',
+    'energy_providers','insurance_products','insurance_providers',
+    'transit_document_requirements','transit_goods','transit_locations','transit_partners','transit_warehouses',
+    'transport_driver_availability','transport_drivers','transport_pricing_rules','transport_routes','transport_schedules',
+    'transport_seats','transport_service_types','transport_stops','transport_vehicle_types','transport_vehicles',
+    'travel_accommodation_media','travel_accommodations','travel_activities','travel_activity_media',
+    'travel_agencies','travel_agents','travel_availability','travel_destinations','travel_guides',
+    'travel_rooms','travel_tour_stops','travel_tours','ai_model_catalog'
   ] loop
     if to_regclass('public.' || v_table) is not null then
       if v_table like 'immo_%' then v_app := 'immo';
@@ -329,6 +357,13 @@ begin
       elsif v_table like 'media_%' then v_app := 'media';
       elsif v_table like 'pub_%' then v_app := 'pub';
       elsif v_table like 'tontine_%' then v_app := 'tontine';
+      elsif v_table like 'business_%' then v_app := 'business';
+      elsif v_table like 'energy_%' then v_app := 'energy';
+      elsif v_table like 'insurance_%' then v_app := 'insurance';
+      elsif v_table like 'transit_%' then v_app := 'transit';
+      elsif v_table like 'transport_%' then v_app := 'transport';
+      elsif v_table like 'travel_%' then v_app := 'travel';
+      elsif v_table like 'ai_%' then v_app := 'ai';
       end if;
       execute format('drop policy if exists jdv_branch_membership_insert on public.%I', v_table);
         execute format('drop policy if exists jdv_branch_membership_update on public.%I', v_table);
