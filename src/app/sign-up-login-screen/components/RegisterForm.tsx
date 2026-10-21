@@ -6,7 +6,7 @@ import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getJDVApplication, getJDVApplicationHome } from '@/lib/apps/registry';
+import { getJDVApplication } from '@/lib/apps/registry';
 
 interface RegisterFormData {
   first_name: string;
