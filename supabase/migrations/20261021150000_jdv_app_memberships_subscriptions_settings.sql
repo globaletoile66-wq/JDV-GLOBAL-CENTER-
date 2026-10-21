@@ -28,6 +28,10 @@ create table if not exists public.app_user_settings (
 alter table public.app_memberships enable row level security;
 alter table public.app_user_settings enable row level security;
 
+-- Explicit Data API grants; RLS remains the row-level authorization boundary.
+grant select on public.app_memberships to authenticated;
+grant select, insert, update, delete on public.app_user_settings to authenticated;
+
 -- Restrictive RLS gates prevent authenticated users from using an unrelated
 -- JDV account to read/write private Agriculture operations. Public catalog RPC
 -- remains read-only and is granted separately below.
