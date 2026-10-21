@@ -70,9 +70,12 @@ export default function ConcepteurStudioPage() {
     applyDesign(design);setSaved(true);setNotice('Identité visuelle appliquée sur cet appareil.');
     if(user){
       const globalDesign={...design,imageData:'',videoData:''};
-      const {error}=await supabase.from('jdv_studio_settings').upsert({scope_key:'global',config:{theme:draft,design:globalDesign},updated_by:user.id},{onConflict:'scope_key'});
+      const {data:current,error:readError}=await supabase.from('jdv_studio_settings').select('config').eq('scope_key','global').maybeSingle();
+      if(readError){setNotice('Réglages locaux appliqués. Lecture des réglages globaux impossible : '+readError.message);return;}
+      const existing=(current?.config&&typeof current.config==='object')?current.config as Record<string,unknown>:{};
+      const {error}=await supabase.from('jdv_studio_settings').upsert({scope_key:'global',config:{...existing,theme:draft,design:globalDesign},updated_by:user.id},{onConflict:'scope_key'});
       if(error)setNotice('Réglages locaux appliqués. Publication globale non effectuée : '+error.message);
-      else setNotice('Réglages appliqués et publiés globalement pour les interfaces JDV.');
+      else setNotice('Réglages appliqués sans écraser les réglages de l’éditeur visuel.');
     }else{
       setNotice('Réglages locaux appliqués. Connectez-vous en Super Admin pour publier les réglages à toute la plateforme.');
     }
@@ -82,9 +85,12 @@ export default function ConcepteurStudioPage() {
     try{localStorage.removeItem('jdv-design-v1');}catch{}
     applyDesign(defaultDesign);setSaved(false);setNotice('Réglages locaux du Studio réinitialisés.');
     if(user){
-      const {error}=await supabase.from('jdv_studio_settings').upsert({scope_key:'global',config:{theme:DEFAULT_THEME,design:defaultDesign},updated_by:user.id},{onConflict:'scope_key'});
+      const {data:current,error:readError}=await supabase.from('jdv_studio_settings').select('config').eq('scope_key','global').maybeSingle();
+      if(readError){setNotice('Réglages locaux réinitialisés ; lecture globale impossible : '+readError.message);return;}
+      const existing=(current?.config&&typeof current.config==='object')?current.config as Record<string,unknown>:{};
+      const {error}=await supabase.from('jdv_studio_settings').upsert({scope_key:'global',config:{...existing,theme:DEFAULT_THEME,design:defaultDesign},updated_by:user.id},{onConflict:'scope_key'});
       if(error)setNotice('Réglages locaux réinitialisés ; la réinitialisation globale a échoué : '+error.message);
-      else setNotice('Réglages globaux et locaux réinitialisés.');
+      else setNotice('Thème et préférences réinitialisés sans effacer les compositions de l’éditeur visuel.');
     }
   };
   const change=(key:'primary'|'accent',value:string)=>{if(isHex(value)){setDraft(current=>({...current,[key]:value}));setSaved(false);}};
