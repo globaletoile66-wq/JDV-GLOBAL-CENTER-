@@ -41,9 +41,10 @@ export default function TransitPage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'transit') : false;
     const [countryResult, requestResult] = await Promise.all([
       supabase.from('countries').select('id,name,iso_code,flag_emoji').eq('is_active', true).order('name').limit(250),
-      user ? supabase.from('transit_requests').select('id,operation_type,origin_country_id,destination_country_id,description,request_status,created_at').eq('requester_user_id', user.id).order('created_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
+      hasMembership && user ? supabase.from('transit_requests').select('id,operation_type,origin_country_id,destination_country_id,description,request_status,created_at').eq('requester_user_id', user.id).order('created_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
     ]);
     if (countryResult.error) setError(countryResult.error.message);
     else setCountries((countryResult.data ?? []) as Country[]);
