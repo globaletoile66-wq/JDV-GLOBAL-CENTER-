@@ -15,7 +15,10 @@ type Professional = {
   sub_specialty: string | null; experience_years: number | null; bio: string | null;
   verification_status: string; is_active: boolean;
 };
-type Service = { id: string; business_id: string; professional_id: string | null; name: string; service_type: string; description: string | null; price: number | null; duration_minutes: number | null; is_active: boolean };\ntype Presence = { business_id: string | null; professional_id: string | null; presence_status: 'online' | 'busy' | 'offline'; accepts_messages: boolean; accepts_teleconsultation: boolean; last_seen_at: string };\ntype OnCall = { id: string; business_id: string | null; professional_id: string | null; service_type: string; starts_at: string; ends_at: string; status: string };\ntype SearchHistory = { id: string; search_text: string; category: string; city: string | null; district: string | null; use_count: number; last_used_at: string };
+type Service = { id: string; business_id: string; professional_id: string | null; name: string; service_type: string; description: string | null; price: number | null; duration_minutes: number | null; is_active: boolean };
+type Presence = { business_id: string | null; professional_id: string | null; presence_status: 'online' | 'busy' | 'offline'; accepts_messages: boolean; accepts_teleconsultation: boolean; last_seen_at: string };
+type OnCall = { id: string; business_id: string | null; professional_id: string | null; service_type: string; starts_at: string; ends_at: string; status: string };
+type SearchHistory = { id: string; search_text: string; category: string; city: string | null; district: string | null; use_count: number; last_used_at: string };
 
 const categories = [
   { value: 'all', label: 'Tous les services', icon: Building2 },
@@ -36,7 +39,15 @@ export default function HealthNetworkPage() {
   const supabase = useMemo(() => createClient(), []);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
-  const [services, setServices] = useState<Service[]>([]);\n  const [presence, setPresence] = useState<Presence[]>([]);\n  const [onCall, setOnCall] = useState<OnCall[]>([]);\n  const [history, setHistory] = useState<SearchHistory[]>([]);\n  const [rememberSearches, setRememberSearches] = useState(true);\n  const [city, setCity] = useState('');\n  const [district, setDistrict] = useState('');\n  const [showHistory, setShowHistory] = useState(false);\n  const [userId, setUserId] = useState<string | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [presence, setPresence] = useState<Presence[]>([]);
+  const [onCall, setOnCall] = useState<OnCall[]>([]);
+  const [history, setHistory] = useState<SearchHistory[]>([]);
+  const [rememberSearches, setRememberSearches] = useState(true);
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [position, setPosition] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -50,6 +61,8 @@ export default function HealthNetworkPage() {
       supabase.from('business_profiles').select('id,name,trade_name,description,phone,address,city,region,latitude,longitude,is_public').eq('is_public', true).limit(300),
       supabase.from('health_professionals').select('id,business_id,specialty_id,sub_specialty,experience_years,bio,verification_status,is_active').eq('is_active', true).limit(300),
       supabase.from('health_services').select('id,business_id,professional_id,name,service_type,description,price,duration_minutes,is_active').eq('is_active', true).limit(500),
+      supabase.from('health_provider_presence').select('business_id,professional_id,presence_status,accepts_messages,accepts_teleconsultation,last_seen_at').in('presence_status', ['online','busy']).gt('last_seen_at', new Date(Date.now() - 3 * 60 * 1000).toISOString()),
+      supabase.from('health_on_call_schedules').select('id,business_id,professional_id,service_type,starts_at,ends_at,status').eq('status','verified').lte('starts_at',new Date().toISOString()).gt('ends_at',new Date().toISOString()),
     ]);
     if (businessResult.error) setError('Annuaire indisponible : ' + businessResult.error.message);
     else setBusinesses((businessResult.data ?? []) as Business[]);
@@ -57,10 +70,48 @@ export default function HealthNetworkPage() {
     else setProfessionals((professionalResult.data ?? []) as Professional[]);
     if (serviceResult.error) setError((current) => current || 'Services médicaux : ' + serviceResult.error!.message);
     else setServices((serviceResult.data ?? []) as Service[]);
+    setPresence((presenceResult.data ?? []) as Presence[]);
+    setOnCall((onCallResult.data ?? []) as OnCall[]);
     setBusy(false);
   }, [supabase]);
 
-  useEffect(() => { void load(); }, [load]);\n\n  useEffect(() => {\n    let active = true;\n    void (async () => {\n      const { data } = await supabase.auth.getUser();\n      if (!active || !data.user) return;\n      setUserId(data.user.id);\n      const [pref, searches] = await Promise.all([\n        supabase.from('health_search_preferences').select('remember_searches,preferred_city,preferred_district').eq('user_id', data.user.id).maybeSingle(),\n        supabase.from('health_search_history').select('id,search_text,category,city,district,use_count,last_used_at').eq('user_id', data.user.id).order('last_used_at',{ascending:false}).limit(8),\n      ]);\n      if (!active) return;\n      if (pref.data) { setRememberSearches(pref.data.remember_searches); setCity(pref.data.preferred_city || ''); setDistrict(pref.data.preferred_district || ''); }\n      setHistory((searches.data ?? []) as SearchHistory[]);\n    })();\n    return () => { active = false; };\n  }, [supabase]);\n\n  const rememberSearch = async (text = query) => {\n    const value = text.trim();\n    if (!value || !userId || !rememberSearches) return;\n    const existing = history.find((item) => item.search_text.toLocaleLowerCase('fr') === value.toLocaleLowerCase('fr') && item.category === category && (item.city || '') === city.trim() && (item.district || '') === district.trim());\n    if (existing) {\n      const { error: updateError } = await supabase.from('health_search_history').update({ use_count: existing.use_count + 1, last_used_at: new Date().toISOString() }).eq('id', existing.id).eq('user_id', userId);\n      if (!updateError) setHistory((items) => [{ ...existing, use_count: existing.use_count + 1, last_used_at: new Date().toISOString() }, ...items.filter((item) => item.id !== existing.id)].slice(0,8));\n    } else {\n      const { data, error: insertError } = await supabase.from('health_search_history').insert({ user_id: userId, search_text: value, category, city: city.trim(), district: district.trim() }).select('id,search_text,category,city,district,use_count,last_used_at').single();\n      if (!insertError && data) setHistory((items) => [data as SearchHistory, ...items].slice(0,8));\n    }\n  };\n\n  const clearHistory = async () => {\n    if (!userId) return;\n    const { error: deleteError } = await supabase.from('health_search_history').delete().eq('user_id', userId);\n    if (!deleteError) setHistory([]);\n  };
+  useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!active || !data.user) return;
+      setUserId(data.user.id);
+      const [pref, searches] = await Promise.all([
+        supabase.from('health_search_preferences').select('remember_searches,preferred_city,preferred_district').eq('user_id', data.user.id).maybeSingle(),
+        supabase.from('health_search_history').select('id,search_text,category,city,district,use_count,last_used_at').eq('user_id', data.user.id).order('last_used_at',{ascending:false}).limit(8),
+      ]);
+      if (!active) return;
+      if (pref.data) { setRememberSearches(pref.data.remember_searches); setCity(pref.data.preferred_city || ''); setDistrict(pref.data.preferred_district || ''); }
+      setHistory((searches.data ?? []) as SearchHistory[]);
+    })();
+    return () => { active = false; };
+  }, [supabase]);
+
+  const rememberSearch = async (text = query) => {
+    const value = text.trim();
+    if (!value || !userId || !rememberSearches) return;
+    const existing = history.find((item) => item.search_text.toLocaleLowerCase('fr') === value.toLocaleLowerCase('fr') && item.category === category && (item.city || '') === city.trim() && (item.district || '') === district.trim());
+    if (existing) {
+      const { error: updateError } = await supabase.from('health_search_history').update({ use_count: existing.use_count + 1, last_used_at: new Date().toISOString() }).eq('id', existing.id).eq('user_id', userId);
+      if (!updateError) setHistory((items) => [{ ...existing, use_count: existing.use_count + 1, last_used_at: new Date().toISOString() }, ...items.filter((item) => item.id !== existing.id)].slice(0,8));
+    } else {
+      const { data, error: insertError } = await supabase.from('health_search_history').insert({ user_id: userId, search_text: value, category, city: city.trim(), district: district.trim() }).select('id,search_text,category,city,district,use_count,last_used_at').single();
+      if (!insertError && data) setHistory((items) => [data as SearchHistory, ...items].slice(0,8));
+    }
+  };
+
+  const clearHistory = async () => {
+    if (!userId) return;
+    const { error: deleteError } = await supabase.from('health_search_history').delete().eq('user_id', userId);
+    if (!deleteError) setHistory([]);
+  };
 
   const locate = () => {
     if (!navigator.geolocation) { setError('La géolocalisation n’est pas disponible dans ce navigateur.'); return; }
