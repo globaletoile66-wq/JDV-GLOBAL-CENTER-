@@ -56,6 +56,8 @@ export default function StudioVisualEditorPage() {
   const [notice, setNotice] = useState('Choisissez une page, puis cliquez sur un élément dans l’aperçu pour le personnaliser.');
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const rulesRef = useRef<DesignRule[]>(rules);
+  useEffect(() => { rulesRef.current = rules; }, [rules]);
 
   const previewWidth = viewport === 'mobile' ? '390px' : viewport === 'tablet' ? '820px' : '100%';
 
@@ -78,6 +80,8 @@ export default function StudioVisualEditorPage() {
     if (!doc) return;
     const win = frame?.contentWindow;
     if (!win) return;
+    if (doc.documentElement.dataset.jdvEditorListeners === 'true') return;
+    doc.documentElement.dataset.jdvEditorListeners = 'true';
     const old = doc.getElementById('jdv-editor-selection-style');
     old?.remove();
     const selectionStyle = doc.createElement('style');
@@ -86,16 +90,16 @@ export default function StudioVisualEditorPage() {
     doc.head.appendChild(selectionStyle);
     doc.addEventListener('pointerover', (event) => {
       const target = event.target;
-      if (target instanceof Element) target.setAttribute('data-jdv-editor-hover', 'true');
+      if (target && (target as Node).nodeType === 1) (target as Element).setAttribute('data-jdv-editor-hover', 'true');
     }, true);
     doc.addEventListener('pointerout', (event) => {
       const target = event.target;
-      if (target instanceof Element) target.removeAttribute('data-jdv-editor-hover');
+      if (target && (target as Node).nodeType === 1) (target as Element).removeAttribute('data-jdv-editor-hover');
     }, true);
     doc.addEventListener('click', (event) => {
       const target = event.target;
-      if (!(target instanceof Element)) return;
-      const element = target.closest('body *');
+      if (!target || (target as Node).nodeType !== 1) return;
+      const element = (target as Element).closest('body *');
       if (!element || element.closest('[data-jdv-editor-chrome]')) return;
       event.preventDefault();
       event.stopPropagation();
@@ -103,7 +107,7 @@ export default function StudioVisualEditorPage() {
       element.setAttribute('data-jdv-editor-selected', 'true');
       const selector = buildSelector(element);
       const computed = win.getComputedStyle(element);
-      const saved = rules.find(rule => rule.selector === selector)?.styles ?? {};
+      const saved = rulesRef.current.find(rule => rule.selector === selector)?.styles ?? {};
       setSelected({
         selector,
         tag: element.tagName.toLowerCase(),
@@ -124,7 +128,7 @@ export default function StudioVisualEditorPage() {
       });
       setNotice('Élément sélectionné. Ajustez les propriétés à droite, puis enregistrez.');
     }, true);
-  }, [rules]);
+  }, []);
 
   useEffect(() => {
     const frame = frameRef.current;
