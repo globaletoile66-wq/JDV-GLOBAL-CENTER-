@@ -8,10 +8,12 @@ import { JDVProvider } from '@/contexts/JDVContext';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import StudioQuickControls from '@/components/theme/StudioQuickControls';
 import StudioDesignRuntime from '@/components/theme/StudioDesignRuntime';
+import ResponsiveMobileNavigation from '@/components/navigation/ResponsiveMobileNavigation';
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export const metadata: Metadata = {
@@ -31,7 +33,12 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthProvider>
           <JDVProvider>
-            <ThemeProvider>{children}<StudioDesignRuntime /><StudioQuickControls /></ThemeProvider>
+            <ThemeProvider>
+              {children}
+              <ResponsiveMobileNavigation />
+              <StudioDesignRuntime />
+              <StudioQuickControls />
+            </ThemeProvider>
             <Toaster
               position="bottom-right"
               toastOptions={{
