@@ -6,9 +6,6 @@ import { createClient } from '@/lib/supabase/client';
 type Rule = { selector: string; styles: Record<string, string> };
 type EditorConfig = { rulesByPath?: Record<string, Rule[]> };
 
-function cssEscape(value: string) {
-  return value.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
-}
 
 export default function StudioDesignRuntime() {
   useEffect(() => {
