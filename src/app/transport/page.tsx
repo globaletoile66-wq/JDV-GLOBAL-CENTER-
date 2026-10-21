@@ -59,11 +59,12 @@ export default function TransportPage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'transport') : false;
     const [routeResult, serviceResult, bookingResult, deliveryResult] = await Promise.all([
       supabase.from('transport_routes').select('id,name,origin_city,destination_city,distance_km,is_active').eq('is_active', true).order('name').limit(100),
       supabase.from('transport_service_types').select('id,code,name,is_active').eq('is_active', true).order('name').limit(100),
-      user ? supabase.from('transport_bookings').select('id,reference,pickup_address,destination_address,scheduled_at,passengers_count,booking_status,created_at').eq('passenger_user_id', user.id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null } as any),
-      user ? supabase.from('transport_deliveries').select('id,reference,recipient_name,recipient_phone,pickup_address,destination_address,delivery_status,created_at').eq('sender_user_id', user.id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null } as any),
+      hasMembership && user ? supabase.from('transport_bookings').select('id,reference,pickup_address,destination_address,scheduled_at,passengers_count,booking_status,created_at').eq('passenger_user_id', user.id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null } as any),
+      hasMembership && user ? supabase.from('transport_deliveries').select('id,reference,recipient_name,recipient_phone,pickup_address,destination_address,delivery_status,created_at').eq('sender_user_id', user.id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null } as any),
     ]);
     if (routeResult.error) setError(routeResult.error.message);
     else setRoutes((routeResult.data ?? []) as RouteRow[]);
