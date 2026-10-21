@@ -51,9 +51,22 @@ drop policy if exists travel_airlines_public_verified_read on public.travel_airl
 create policy travel_airlines_public_verified_read on public.travel_airlines
   for select to anon, authenticated using (is_active = true and verification_status = 'verified');
 drop policy if exists travel_airlines_owner_manage on public.travel_airlines;
-create policy travel_airlines_owner_manage on public.travel_airlines
-  for all to authenticated using (created_by = (select auth.uid()))
-  with check (created_by = (select auth.uid()));
+drop policy if exists travel_airlines_owner_insert_pending on public.travel_airlines;
+create policy travel_airlines_owner_insert_pending on public.travel_airlines
+  for insert to authenticated with check (
+    created_by = (select auth.uid()) and verification_status = 'pending' and is_active = false
+  );
+drop policy if exists travel_airlines_owner_update_pending on public.travel_airlines;
+create policy travel_airlines_owner_update_pending on public.travel_airlines
+  for update to authenticated using (
+    created_by = (select auth.uid()) and verification_status = 'pending' and is_active = false
+  ) with check (
+    created_by = (select auth.uid()) and verification_status = 'pending' and is_active = false
+  );
+drop policy if exists travel_airlines_admin_manage on public.travel_airlines;
+create policy travel_airlines_admin_manage on public.travel_airlines
+  for all to authenticated using (is_super_admin())
+  with check (is_super_admin());
 
 drop policy if exists travel_flights_public_schedule_read on public.travel_flights;
 create policy travel_flights_public_schedule_read on public.travel_flights
@@ -65,8 +78,21 @@ create policy travel_flights_public_schedule_read on public.travel_flights
   );
 drop policy if exists travel_flights_creator_manage on public.travel_flights;
 create policy travel_flights_creator_manage on public.travel_flights
-  for all to authenticated using (created_by = (select auth.uid()))
-  with check (created_by = (select auth.uid()));
+  for all to authenticated using (
+    created_by = (select auth.uid()) and exists (
+      select 1 from public.travel_airlines a
+      where a.id = airline_id and a.created_by = (select auth.uid())
+    )
+  ) with check (
+    created_by = (select auth.uid()) and exists (
+      select 1 from public.travel_airlines a
+      where a.id = airline_id and a.created_by = (select auth.uid())
+    )
+  );
+drop policy if exists travel_flights_admin_manage on public.travel_flights;
+create policy travel_flights_admin_manage on public.travel_flights
+  for all to authenticated using (is_super_admin())
+  with check (is_super_admin());
 
 create table if not exists public.travel_flight_booking_requests (
   id uuid primary key default gen_random_uuid(),
@@ -119,9 +145,22 @@ drop policy if exists travel_restaurants_public_read on public.travel_restaurant
 create policy travel_restaurants_public_read on public.travel_restaurants
   for select to anon, authenticated using (is_active = true and verification_status = 'verified');
 drop policy if exists travel_restaurants_owner_manage on public.travel_restaurants;
-create policy travel_restaurants_owner_manage on public.travel_restaurants
-  for all to authenticated using (created_by = (select auth.uid()))
-  with check (created_by = (select auth.uid()));
+drop policy if exists travel_restaurants_owner_insert_pending on public.travel_restaurants;
+create policy travel_restaurants_owner_insert_pending on public.travel_restaurants
+  for insert to authenticated with check (
+    created_by = (select auth.uid()) and verification_status = 'pending' and is_active = false
+  );
+drop policy if exists travel_restaurants_owner_update_pending on public.travel_restaurants;
+create policy travel_restaurants_owner_update_pending on public.travel_restaurants
+  for update to authenticated using (
+    created_by = (select auth.uid()) and verification_status = 'pending' and is_active = false
+  ) with check (
+    created_by = (select auth.uid()) and verification_status = 'pending' and is_active = false
+  );
+drop policy if exists travel_restaurants_admin_manage on public.travel_restaurants;
+create policy travel_restaurants_admin_manage on public.travel_restaurants
+  for all to authenticated using (is_super_admin())
+  with check (is_super_admin());
 
 create table if not exists public.travel_restaurant_reservations (
   id uuid primary key default gen_random_uuid(),
