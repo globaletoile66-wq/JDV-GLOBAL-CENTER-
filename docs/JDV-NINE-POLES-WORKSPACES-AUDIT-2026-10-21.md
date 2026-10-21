@@ -20,4 +20,4 @@ La page d’accueil présente neuf portes d’entrée. Chaque porte ouvre un esp
 8. Formation & Carrière — academy, jobs
 9. Agriculture & Énergie — agriculture, energy
 
-Le registre contient actuellement 28 modules distincts ; les neuf groupes couvrent ces 28 identifiants une seule fois. Le chiffre affiché est calculé depuis le registre pour éviter d’annoncer un total qui ne correspond pas au code.
+Le registre contient actuellement 29 modules distincts ; les neuf groupes couvrent ces 29 identifiants une seule fois, sans doublon ni module oublié. Le chiffre affiché est calculé depuis le registre pour éviter d’annoncer un total qui ne correspond pas au code.
