@@ -1,7 +1,7 @@
 name: Verifier le build
 on:
   push:
-    branches: ['work/**', 'integration/**', 'supabase-sync-2026-09-24', 'feat/jdv-transit-360', 'feat/jdv-sante-care-network', 'feat/jdv-assurance-core-2026-10-18', 'feat/jdv-assurance-operations-2026-10-19']
+    branches: ['work/**', 'integration/**', 'supabase-sync-2026-09-24', 'feat/jdv-transit-360', 'feat/jdv-sante-care-network', 'feat/jdv-assurance-core-2026-10-18', 'feat/jdv-assurance-operations-2026-10-19', 'feat/responsive-interface-foundation-2026-10-21']
   workflow_dispatch:
 permissions:
   contents: write
