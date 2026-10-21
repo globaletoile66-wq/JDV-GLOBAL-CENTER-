@@ -174,6 +174,34 @@ export default function StudioVisualEditorPage() {
     return () => frame.removeEventListener('load', onLoad);
   }, [injectSelectionMode]);
 
+  useEffect(() => {
+    if (!loaded) return;
+    const doc = frameRef.current?.contentDocument;
+    if (!doc) return;
+    for (const rule of rules) {
+      let element: Element | null = null;
+      try { element = doc.querySelector(rule.selector); } catch { element = null; }
+      if (!element) continue;
+      for (const [key, value] of Object.entries(rule.styles)) (element as HTMLElement).style.setProperty(key, value);
+      if (typeof rule.text === 'string' && element.children.length === 0) element.textContent = rule.text;
+    }
+  }, [rules, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    const doc = frameRef.current?.contentDocument;
+    if (!doc) return;
+    doc.querySelectorAll('[data-jdv-studio-block]').forEach(node => node.remove());
+    for (const block of blocks) {
+      const node = doc.createElement(block.kind === 'button' ? 'button' : block.kind === 'section' || block.kind === 'card' ? 'section' : 'p');
+      node.dataset.jdvStudioBlock = block.id;
+      node.textContent = block.text;
+      const style = node as HTMLElement;
+      style.style.cssText = block.kind === 'button' ? 'display:inline-block;padding:12px 18px;margin:10px;background:#4f46e5;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer' : block.kind === 'card' ? 'display:block;padding:24px;margin:16px 0;background:#fff;color:#172033;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 8px 24px #0f172a12' : block.kind === 'section' ? 'display:block;min-height:100px;padding:28px;margin:16px 0;background:#f1f5f9;color:#172033;border-radius:16px' : 'padding:8px;margin:8px 0;font-size:18px;color:#172033';
+      (doc.querySelector('main') ?? doc.body).appendChild(node);
+    }
+  }, [blocks, loaded]);
+
   const changeStyle = (key: string, value: string) => {
     if (!selected) return;
     const next = { ...selected, styles: { ...selected.styles, [key]: value } };
