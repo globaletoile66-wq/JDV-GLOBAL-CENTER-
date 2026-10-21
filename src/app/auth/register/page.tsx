@@ -31,8 +31,6 @@ export default function RegisterPage() {
         if (loadError) { setError('Impossible de charger la liste des pays. Réessayez dans un instant.'); return; }
         const items = (data ?? []) as Country[];
         setCountries(items);
-        const benin = items.find((item) => item.iso_code?.toUpperCase() === 'BJ');
-        if (benin) setCountryId(benin.id);
       });
     return () => { active = false; };
   }, [supabase]);
