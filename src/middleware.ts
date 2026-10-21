@@ -80,18 +80,21 @@ export async function middleware(request: NextRequest) {
 
   // A valid global session alone does not grant access to another application's workspace.
   if (user && requiredAppKey) {
-    const { data: appMembership, error: membershipError } = await supabase
-      .from('app_memberships')
-      .select('id,status')
-      .eq('user_id', user.id)
-      .eq('app_key', requiredAppKey)
-      .maybeSingle();
+    const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_super_admin');
+    if (adminError || isSuperAdmin !== true) {
+      const { data: appMembership, error: membershipError } = await supabase
+        .from('app_memberships')
+        .select('id,status')
+        .eq('user_id', user.id)
+        .eq('app_key', requiredAppKey)
+        .maybeSingle();
 
-    if (membershipError || !appMembership || appMembership.status !== 'active') {
-      const url = request.nextUrl.clone();
-      url.pathname = `/inscription/${requiredAppKey}`;
-      url.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(url);
+      if (membershipError || !appMembership || appMembership.status !== 'active') {
+        const url = request.nextUrl.clone();
+        url.pathname = `/inscription/${requiredAppKey}`;
+        url.searchParams.set('redirect', pathname);
+        return NextResponse.redirect(url);
+      }
     }
   }
 
