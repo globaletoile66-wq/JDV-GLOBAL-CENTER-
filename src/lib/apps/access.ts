@@ -10,12 +10,16 @@ export async function hasApplicationMembership(
   userId: string,
   appKey: string,
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('app_memberships')
-    .select('id,status')
-    .eq('user_id', userId)
-    .eq('app_key', appKey)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from('app_memberships')
+      .select('id,status')
+      .eq('user_id', userId)
+      .eq('app_key', appKey)
+      .maybeSingle();
 
-  return !error && data?.status === 'active';
+    return !error && data?.status === 'active';
+  } catch {
+    return false;
+  }
 }
