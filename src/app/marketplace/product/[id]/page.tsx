@@ -117,7 +117,14 @@ export default function ProductDetailPage() {
   useEffect(() => { loadListing(); }, [loadListing]);
 
   const handleAddToCart = async () => {
-    if (!user) { router.push('/auth/login'); return; }
+    if (!user) { router.push('/inscription/marketplace'); return; }
+    const { data: membership, error: membershipError } = await supabase
+      .from('app_memberships').select('id,status')
+      .eq('user_id', user.id).eq('app_key', 'marketplace').maybeSingle();
+    if (membershipError || !membership || membership.status !== 'active') {
+      router.push('/inscription/marketplace');
+      return;
+    }
     if (!listing) return;
     setAddingToCart(true);
     try {
