@@ -1,0 +1,1 @@
+-- Studio visual editor config validation migration.
