@@ -15,6 +15,12 @@ create table if not exists public.app_memberships (
 
 create index if not exists app_memberships_user_app_idx on public.app_memberships(user_id, app_key, status);
 
+-- Preserve existing users as Global Center members only. They must explicitly join each other app.
+insert into public.app_memberships (user_id, app_key, status, role)
+select u.id, 'global_center', 'active', 'member'
+from auth.users u
+on conflict (user_id, app_key) do nothing;
+
 create table if not exists public.app_user_settings (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -155,7 +161,7 @@ begin
   end if;
 
   if p_app_key not in (
-    'marketplace', 'agriculture', 'immo', 'health', 'academy', 'social',
+    'global_center', 'marketplace', 'agriculture', 'immo', 'health', 'academy', 'social',
     'media', 'pub', 'pay', 'tontine', 'travel', 'transport', 'insurance',
     'energy', 'ai', 'business', 'transit', 'services', 'procurement', 'accounting',
     'inventory', 'hr', 'jobs', 'entertainment'
