@@ -11,6 +11,12 @@ export async function hasApplicationMembership(
   appKey: string,
 ): Promise<boolean> {
   try {
+    try {
+      const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_super_admin');
+      if (!adminError && isSuperAdmin === true) return true;
+    } catch {
+      // Continue with the user's own membership check if admin lookup is unavailable.
+    }
     const { data, error } = await supabase
       .from('app_memberships')
       .select('id,status')
