@@ -27,7 +27,7 @@ Réorganisation de la navigation publique et des points d’entrée communs, de 
 
 ## Contrôles et limites
 
-- Vérification statique du registre : neuf entrées de branches déclarées et neuf fichiers de page correspondants présents dans l’arborescence au commit de base.
+- Vérification statique du registre : 29 destinations de modules et 29 fichiers de page correspondants présents dans l’arborescence au commit de base ; les neuf destinations du catalogue de branches sont également présentes.
 - Recherche GitHub des valeurs officielles : elles sont centralisées dans `src/lib/jdv/contact.ts` et ne sont pas ajoutées aux nouveaux composants de navigation ni à la page de présentation.
 - Les liens privés restent conditionnés au rôle `isSuperAdmin` dans le composant partagé. Les autorisations côté serveur existantes doivent toujours assurer la protection réelle des pages.
 - La compilation Next.js, les tests automatisés et l’affichage mobile en navigateur restent à vérifier via les contrôles du PR.
