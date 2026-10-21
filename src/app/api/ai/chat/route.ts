@@ -36,6 +36,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Connexion requise.' }, { status: 401 });
   }
 
+  const { data: appMembership, error: membershipError } = await supabase
+    .from('app_memberships')
+    .select('id,status')
+    .eq('user_id', user.id)
+    .eq('app_key', 'ai')
+    .maybeSingle();
+
+  if (membershipError || !appMembership || appMembership.status !== 'active') {
+    return NextResponse.json({
+      error: 'Inscris-toi à JDV AI avant d’utiliser l’assistant.',
+      code: 'APP_MEMBERSHIP_REQUIRED',
+    }, { status: 403 });
+  }
+
   let body: { conversationId?: unknown; prompt?: unknown };
   try {
     body = await request.json();
