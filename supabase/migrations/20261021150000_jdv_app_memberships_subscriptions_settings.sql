@@ -300,6 +300,7 @@ begin
     'transport_requests','travel_bookings','travel_commissions','travel_documents','travel_favorites',
     'travel_itineraries','travel_itinerary_items','travel_quotes','travel_reports','travel_requests','travelers',
     'ai_access_log','ai_conversations','ai_messages','ai_org_policies','ai_provider_configs','ai_usage',
+    'wallets','wallet_transactions','transfers','transfer_events','payment_requests',
     'jdv_service_requests','warehouse_inventory','warehouse_subwarehouse_inventory',
     'pub_advertisers','pub_campaigns','pub_campaign_placements','pub_creatives','pub_impressions','pub_partners',
     'tontine_members','tontine_contribution_schedules','tontine_contributions','tontine_cycles',
@@ -322,6 +323,7 @@ begin
       elsif v_table like 'transport_%' then v_app := 'transport';
       elsif v_table like 'travel_%' then v_app := 'travel';
       elsif v_table like 'ai_%' then v_app := 'ai';
+      elsif v_table like 'wallet_%' or v_table like 'transfer%' or v_table = 'payment_requests' then v_app := 'pay';
       elsif v_table like 'jdv_service_%' then v_app := 'services';
       elsif v_table like 'warehouse_%' then v_app := 'inventory';
       end if;
@@ -367,6 +369,7 @@ begin
       elsif v_table like 'transport_%' then v_app := 'transport';
       elsif v_table like 'travel_%' then v_app := 'travel';
       elsif v_table like 'ai_%' then v_app := 'ai';
+      elsif v_table like 'wallet_%' or v_table like 'transfer%' or v_table = 'payment_requests' then v_app := 'pay';
       elsif v_table like 'jdv_service_%' then v_app := 'services';
       elsif v_table like 'warehouse_%' then v_app := 'inventory';
       end if;
