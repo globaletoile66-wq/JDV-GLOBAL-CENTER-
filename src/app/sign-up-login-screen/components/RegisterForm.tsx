@@ -77,7 +77,7 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
       if (result.session) {
         setSuccessMessage(`Votre compte ${application?.name ?? 'JDV Global Center'} est créé. Vous pouvez maintenant continuer.`);
         toast.success('Inscription réussie.');
-        router.replace(getJDVApplicationHome(appKey));
+        router.replace(appKey === 'global_center' ? '/user-dashboard' : getJDVApplicationHome(appKey));
       } else {
         setSuccessMessage('Un email de confirmation vient de vous être envoyé. Confirmez votre adresse avant de vous connecter. Votre inscription concerne uniquement cette application ; aucun abonnement payant n’a été activé.');
         toast.success('Vérifiez votre boîte email pour confirmer votre inscription.');
