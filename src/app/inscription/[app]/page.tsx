@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ShieldCheck, UserRoundPlus } from 'lucide-react';
@@ -10,7 +10,7 @@ import { getJDVApplication } from '@/lib/apps/registry';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
-export default function ApplicationRegistrationPage() {
+function ApplicationRegistrationContent() {
   const params = useParams<{ app: string }>();
   const app = getJDVApplication(params.app);
   const [mode, setMode] = useState<'register' | 'login'>('register');
@@ -115,5 +115,13 @@ export default function ApplicationRegistrationPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function ApplicationRegistrationPage() {
+  return (
+    <Suspense fallback={<main className="grid min-h-screen place-items-center bg-[#f5f7fb] text-[#0B1B3D]"><span className="text-sm font-semibold">Chargement de l’inscription…</span></main>}>
+      <ApplicationRegistrationContent />
+    </Suspense>
   );
 }
