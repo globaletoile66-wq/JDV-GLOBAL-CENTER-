@@ -116,7 +116,7 @@ returns public.app_memberships
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $jdv_join$
 declare
   v_user_id uuid := auth.uid();
   v_membership public.app_memberships;
@@ -148,7 +148,7 @@ begin
 
   return v_membership;
 end;
-$;
+$jdv_join$;
 
 revoke all on function public.jdv_join_application(text) from public;
 grant execute on function public.jdv_join_application(text) to authenticated;
