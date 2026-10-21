@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { getJDVApplication, getJDVApplicationHome } from '@/lib/apps/registry';
 
 interface RegisterFormData {
   first_name: string;
@@ -50,6 +51,7 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
   const router = useRouter();
   const { signUp } = useAuth();
   const [successMessage, setSuccessMessage] = useState('');
+  const application = getJDVApplication(appKey);
 
   const {
     register,
@@ -73,9 +75,9 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
 
       setSuccess(true);
       if (result.session) {
-        setSuccessMessage(`Votre compte ${appKey === 'marketplace' ? 'JDV Marketplace' : 'JDV Global Center'} est créé. Vous pouvez maintenant continuer.`);
+        setSuccessMessage(`Votre compte ${application?.name ?? 'JDV Global Center'} est créé. Vous pouvez maintenant continuer.`);
         toast.success('Inscription réussie.');
-        router.replace(appKey === 'marketplace' ? '/marketplace' : '/user-dashboard');
+        router.replace(getJDVApplicationHome(appKey));
       } else {
         setSuccessMessage('Un email de confirmation vient de vous être envoyé. Confirmez votre adresse avant de vous connecter. Votre inscription concerne uniquement cette application ; aucun abonnement payant n’a été activé.');
         toast.success('Vérifiez votre boîte email pour confirmer votre inscription.');
@@ -107,7 +109,7 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-1">Créer mon compte</h2>
         <p className="text-sm text-muted-foreground">
-          Créez votre accès à {appKey === 'marketplace' ? 'JDV Marketplace' : 'JDV Global Center'}
+          Créez votre accès à {application?.name ?? 'JDV Global Center'}
         </p>
       </div>
 
