@@ -270,6 +270,7 @@ alter table public.jdv_studio_settings enable row level security;
 grant select, insert, update on public.jdv_studio_settings to authenticated;
 drop policy if exists "Super admins read global Studio settings" on public.jdv_studio_settings;
 drop policy if exists "Authenticated users read global Studio settings" on public.jdv_studio_settings;
+drop policy if exists "Public read safe global Studio settings" on public.jdv_studio_settings;
 create policy "Public read safe global Studio settings" on public.jdv_studio_settings for select to anon, authenticated using (true);
 grant select (scope_key, config) on public.jdv_studio_settings to anon;
 drop policy if exists "Super admins create global Studio settings" on public.jdv_studio_settings;
