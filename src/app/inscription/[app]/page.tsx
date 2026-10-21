@@ -14,7 +14,7 @@ function ApplicationRegistrationContent() {
   const params = useParams<{ app: string }>();
   const app = getJDVApplication(params.app);
   const [mode, setMode] = useState<'register' | 'login'>('register');
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedRedirect = searchParams.get('redirect');
@@ -37,6 +37,7 @@ function ApplicationRegistrationContent() {
   const accent = branchAccent[app?.key ?? ''] ?? '#F28C28';
   const [membershipState, setMembershipState] = useState<'checking' | 'none' | 'active' | 'error'>('checking');
   const [joining, setJoining] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [joinError, setJoinError] = useState('');
 
   useEffect(() => {
@@ -62,6 +63,21 @@ function ApplicationRegistrationContent() {
   useEffect(() => {
     if (membershipState === 'active' && app) router.replace(redirectTo);
   }, [membershipState, app, router, redirectTo]);
+
+  const signOutToRegister = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+      setMembershipState('none');
+      setJoinError('');
+      setMode('register');
+    } catch {
+      setJoinError('La déconnexion a échoué. Rechargez la page puis réessayez.');
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   const joinApplication = async () => {
     if (!app || !user || joining) return;
@@ -104,6 +120,8 @@ function ApplicationRegistrationContent() {
           {membershipState === 'error' && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">La vérification de l’inscription est momentanément indisponible.</p>}
           {joinError && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{joinError}</p>}
           <button type="button" disabled={joining || membershipState === 'error'} onClick={() => void joinApplication()} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F28C28] px-5 py-3.5 font-extrabold text-white disabled:opacity-60">{joining ? 'Activation…' : 'M’inscrire à cette application'}</button>
+          {membershipState === 'error' && <p className="mt-3 text-sm leading-6 text-slate-600">La vérification de votre adhésion ne répond pas. Vous pouvez vous déconnecter pour ouvrir le formulaire de création de compte au lieu de rester bloqué sur cet écran.</p>}
+          <button type="button" disabled={signingOut} onClick={() => void signOutToRegister()} className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-slate-300 px-5 py-3 font-bold text-[#0B1B3D] disabled:opacity-60">{signingOut ? 'Déconnexion…' : 'Me déconnecter et ouvrir le formulaire d’inscription'}</button>
           <p className="mt-4 text-xs leading-5 text-slate-500">L’activation du compte ne vaut pas abonnement. Les fonctionnalités payantes vérifieront séparément les droits et le statut de paiement.</p>
         </section>
       </main>
