@@ -300,6 +300,7 @@ begin
     'transport_requests','travel_bookings','travel_commissions','travel_documents','travel_favorites',
     'travel_itineraries','travel_itinerary_items','travel_quotes','travel_reports','travel_requests','travelers',
     'ai_access_log','ai_conversations','ai_messages','ai_org_policies','ai_provider_configs','ai_usage',
+    'jdv_service_requests','warehouse_inventory','warehouse_subwarehouse_inventory',
     'pub_advertisers','pub_campaigns','pub_campaign_placements','pub_creatives','pub_impressions','pub_partners',
     'tontine_members','tontine_contribution_schedules','tontine_contributions','tontine_cycles',
     'tontine_documents','tontine_financial_reconciliations','tontine_join_links',
@@ -321,6 +322,8 @@ begin
       elsif v_table like 'transport_%' then v_app := 'transport';
       elsif v_table like 'travel_%' then v_app := 'travel';
       elsif v_table like 'ai_%' then v_app := 'ai';
+      elsif v_table like 'jdv_service_%' then v_app := 'services';
+      elsif v_table like 'warehouse_%' then v_app := 'inventory';
       end if;
       execute format('drop policy if exists jdv_branch_membership_required on public.%I', v_table);
       execute format(
@@ -347,7 +350,7 @@ begin
     'transport_seats','transport_service_types','transport_stops','transport_vehicle_types','transport_vehicles',
     'travel_accommodation_media','travel_accommodations','travel_activities','travel_activity_media',
     'travel_agencies','travel_agents','travel_availability','travel_destinations','travel_guides',
-    'travel_rooms','travel_tour_stops','travel_tours','ai_model_catalog'
+    'travel_rooms','travel_tour_stops','travel_tours','ai_model_catalog','jdv_service_offerings'
   ] loop
     if to_regclass('public.' || v_table) is not null then
       if v_table like 'immo_%' then v_app := 'immo';
@@ -364,6 +367,8 @@ begin
       elsif v_table like 'transport_%' then v_app := 'transport';
       elsif v_table like 'travel_%' then v_app := 'travel';
       elsif v_table like 'ai_%' then v_app := 'ai';
+      elsif v_table like 'jdv_service_%' then v_app := 'services';
+      elsif v_table like 'warehouse_%' then v_app := 'inventory';
       end if;
       execute format('drop policy if exists jdv_branch_membership_insert on public.%I', v_table);
         execute format('drop policy if exists jdv_branch_membership_update on public.%I', v_table);
