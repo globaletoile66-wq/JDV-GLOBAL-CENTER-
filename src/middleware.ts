@@ -45,24 +45,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Protected routes — require authentication
-  const protectedPaths = ['/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain', '/abonnements', '/espace'];
-  const isProtected = protectedPaths.some((p) => isPathOrChild(pathname, p));
-
-  if (!user && isProtected) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/auth/login';
-    url.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(url);
-  }
-
-  if (user && isProtected) {
-    const mfa = await mfaRedirect(supabase, request);
-    if (mfa) return mfa;
-  }
-
-  // Sensitive workspaces are separate applications: a valid global session
-  // alone does not grant access to JDV Pay, Business or Tontine operations.
+  // Separate public browsing from app-specific account/workspace routes.
   const tontineActionRoute =
     isPathOrChild(pathname, '/tontine/concepteur') ||
     pathname === '/tontine/contrat' ||
@@ -78,6 +61,24 @@ export async function middleware(request: NextRequest) {
     tontineActionRoute ? 'tontine' :
     globalCenterRoute ? 'global_center' : null;
 
+  const protectedPaths = ['/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain', '/abonnements', '/espace'];
+  const isProtected = protectedPaths.some((p) => isPathOrChild(pathname, p)) || tontineActionRoute;
+
+  if (!user && isProtected) {
+    const url = request.nextUrl.clone();
+    url.pathname = requiredAppKey && ['pay', 'business', 'tontine'].includes(requiredAppKey)
+      ? `/inscription/${requiredAppKey}`
+      : '/auth/login';
+    url.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (user && isProtected) {
+    const mfa = await mfaRedirect(supabase, request);
+    if (mfa) return mfa;
+  }
+
+  // A valid global session alone does not grant access to another application's workspace.
   if (user && requiredAppKey) {
     const { data: appMembership, error: membershipError } = await supabase
       .from('app_memberships')
