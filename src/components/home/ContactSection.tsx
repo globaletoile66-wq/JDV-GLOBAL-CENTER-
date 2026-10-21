@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { getSupabase } from '../../lib/jdv/supabase';
-import { CONTACT } from '../../lib/jdv/contact';
 
 export default function ContactSection() {
   const [f, setF] = useState({ name: '', email: '', subject: '', message: '' });
@@ -18,18 +17,6 @@ export default function ContactSection() {
     else setMsg({ ok: false, text: 'Le message n’a pas pu être envoyé. Vérifiez les champs et réessayez.' });
   }
 
-  const channels: { label: string; value: string; href?: string }[] = [];
-  if (CONTACT.email) channels.push({ label: 'Email', value: CONTACT.email, href: `mailto:${CONTACT.email}` });
-  CONTACT.phone?.forEach((phone, index) => channels.push({
-    label: CONTACT.phone!.length > 1 ? `Téléphone ${index + 1}` : 'Téléphone',
-    value: phone,
-    href: `tel:${phone.replace(/[^+\d]/g, '')}`,
-  }));
-  if (CONTACT.whatsapp) channels.push({ label: 'WhatsApp', value: 'Nous écrire sur WhatsApp', href: `https://wa.me/${CONTACT.whatsapp}` });
-  if (CONTACT.address) channels.push({ label: 'Adresse', value: CONTACT.address });
-  if (CONTACT.hours) channels.push({ label: 'Horaires', value: CONTACT.hours });
-  CONTACT.socials.forEach((s) => channels.push({ label: s.label, value: s.url.replace(/^https?:\/\//, ''), href: s.url }));
-
   const input = 'mt-1 w-full rounded-lg border border-[var(--jdv-border)] px-3 py-2';
   return (
     <section id="contact" aria-labelledby="contact-title" className="bg-[var(--jdv-primary-soft)] py-16">
@@ -37,14 +24,7 @@ export default function ContactSection() {
         <div>
           <h2 id="contact-title" className="text-3xl font-bold" style={{ color: 'var(--jdv-primary-text)' }}>Contact</h2>
           <p className="mt-3 text-[var(--jdv-muted)]">Une question, un partenariat, une démonstration ? Écrivez-nous.</p>
-          {channels.length > 0 && (
-            <dl className="mt-6 space-y-3 text-sm">
-              {channels.map((c) => (
-                <div key={c.label}><dt className="font-semibold">{c.label}</dt>
-                  <dd>{c.href ? <a href={c.href} className="underline" style={{ color: 'var(--jdv-primary-text)' }} {...(c.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{c.value}</a> : c.value}</dd></div>
-              ))}
-            </dl>
-          )}
+          <p className="mt-6 text-sm text-[var(--jdv-muted)]">Utilisez le formulaire pour envoyer votre demande à notre équipe.</p>
         </div>
         <form onSubmit={submit} className="space-y-3 rounded-2xl border border-[var(--jdv-border)] bg-white p-6">
           <label className="block text-sm">Nom<input required maxLength={100} value={f.name} onChange={set('name')} className={input} /></label>
