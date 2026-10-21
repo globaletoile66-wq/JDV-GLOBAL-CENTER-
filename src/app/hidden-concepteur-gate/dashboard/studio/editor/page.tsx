@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Eye, Monitor, Smartphone, Tablet, MousePointer2, Save, RotateCcw, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Check, Eye, Monitor, Smartphone, Tablet, MousePointer2, Save, RotateCcw, ExternalLink, Plus, Type, LayoutPanelTop, Square, Copy, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 type DesignRule = { selector: string; styles: Record<string, string>; text?: string };
-type Config = { designEditor?: { rulesByPath?: Record<string, DesignRule[]> }; [key: string]: unknown };
+type StudioBlock = { id: string; kind: 'section' | 'text' | 'button' | 'card'; text: string };
+type Config = { designEditor?: { rulesByPath?: Record<string, DesignRule[]>; blocksByPath?: Record<string, StudioBlock[]> }; [key: string]: unknown };
 type Selected = { selector: string; tag: string; text: string; styles: Record<string, string> };
 
 const editableStyles = [
@@ -58,6 +59,9 @@ export default function StudioVisualEditorPage() {
   const [selected, setSelected] = useState<Selected | null>(null);
   const [textDraft, setTextDraft] = useState('');
   const [rules, setRules] = useState<DesignRule[]>([]);
+  const [blocks, setBlocks] = useState<StudioBlock[]>([]);
+  const blocksRef = useRef<StudioBlock[]>(blocks);
+  useEffect(() => { blocksRef.current = blocks; }, [blocks]);
   const [notice, setNotice] = useState('Choisissez une page, puis cliquez sur un élément dans l’aperçu pour le personnaliser.');
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -72,6 +76,7 @@ export default function StudioVisualEditorPage() {
       if (error) throw error;
       const config = (data?.config ?? {}) as Config;
       setRules(config.designEditor?.rulesByPath?.[targetPath] ?? []);
+      setBlocks(config.designEditor?.blocksByPath?.[targetPath] ?? []);
     } catch (error) {
       setNotice('Lecture des réglages impossible : ' + (error instanceof Error ? error.message : 'vérifiez la table jdv_studio_settings et ses droits.'));
     }
@@ -155,6 +160,15 @@ export default function StudioVisualEditorPage() {
         for (const [key, value] of Object.entries(rule.styles)) (element as HTMLElement).style.setProperty(key, value);
         if (typeof rule.text === 'string' && element.children.length === 0) element.textContent = rule.text;
       }
+      doc.querySelectorAll('[data-jdv-studio-block]').forEach(node => node.remove());
+      for (const block of blocksRef.current) {
+        const node = doc.createElement(block.kind === 'button' ? 'button' : block.kind === 'section' || block.kind === 'card' ? 'section' : 'p');
+        node.dataset.jdvStudioBlock = block.id;
+        node.textContent = block.text;
+        const style = node as HTMLElement;
+        style.style.cssText = block.kind === 'button' ? 'display:inline-block;padding:12px 18px;margin:10px;background:#4f46e5;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer' : block.kind === 'card' ? 'display:block;padding:24px;margin:16px 0;background:#fff;color:#172033;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 8px 24px #0f172a12' : block.kind === 'section' ? 'display:block;min-height:100px;padding:28px;margin:16px 0;background:#f1f5f9;color:#172033;border-radius:16px' : 'padding:8px;margin:8px 0;font-size:18px;color:#172033';
+        (doc.querySelector('main') ?? doc.body).appendChild(node);
+      }
     };
     frame.addEventListener('load', onLoad);
     return () => frame.removeEventListener('load', onLoad);
@@ -172,6 +186,28 @@ export default function StudioVisualEditorPage() {
       if (found) return current.map(rule => rule.selector === next.selector ? { ...rule, styles: { ...rule.styles, [key]: value } } : rule);
       return [...current, { selector: next.selector, styles: { [key]: value } }];
     });
+  };
+
+  const addBlock = (kind: StudioBlock['kind']) => {
+    const doc = frameRef.current?.contentDocument;
+    if (!doc) { setNotice('Chargez une page avant d’ajouter un composant.'); return; }
+    const labels: Record<StudioBlock['kind'], string> = { section: 'Nouvelle section — votre contenu', text: 'Votre texte ici', button: 'Mon bouton', card: 'Nouvelle carte de contenu' };
+    const block: StudioBlock = { id: 'jdv-block-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6), kind, text: labels[kind] };
+    setBlocks(current => [...current, block]);
+    const node = doc.createElement(kind === 'button' ? 'button' : kind === 'section' || kind === 'card' ? 'section' : 'p');
+    node.dataset.jdvStudioBlock = block.id; node.textContent = block.text;
+    const style = node as HTMLElement;
+    style.style.cssText = kind === 'button' ? 'display:inline-block;padding:12px 18px;margin:10px;background:#4f46e5;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer' : kind === 'card' ? 'display:block;padding:24px;margin:16px 0;background:#fff;color:#172033;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 8px 24px #0f172a12' : kind === 'section' ? 'display:block;min-height:100px;padding:28px;margin:16px 0;background:#f1f5f9;color:#172033;border-radius:16px' : 'padding:8px;margin:8px 0;font-size:18px;color:#172033';
+    (doc.querySelector('[data-jdv-editor-selected]')?.parentElement ?? doc.querySelector('main') ?? doc.body).appendChild(node);
+    setNotice('Composant ajouté à la page. Sélectionnez-le pour modifier son texte et ses styles, puis enregistrez.');
+  };
+
+  const removeSelectedBlock = () => {
+    const element = frameRef.current?.contentDocument?.querySelector('[data-jdv-editor-selected]') as HTMLElement | null;
+    const id = element?.dataset.jdvStudioBlock;
+    if (!id) { setNotice('Sélectionnez un bloc ajouté depuis la bibliothèque pour le supprimer.'); return; }
+    element?.remove(); setBlocks(current => current.filter(block => block.id !== id)); setSelected(null);
+    setNotice('Bloc retiré. Enregistrez pour conserver cette modification.');
   };
 
   const changeText = (value: string) => {
@@ -206,6 +242,7 @@ export default function StudioVisualEditorPage() {
         designEditor: {
           ...(existing.designEditor ?? {}),
           rulesByPath: { ...previous, [path]: rules },
+          blocksByPath: { ...(existing.designEditor?.blocksByPath ?? {}), [path]: blocks },
           updatedAt: new Date().toISOString(),
           updatedBy: user.id,
         },
@@ -265,7 +302,18 @@ export default function StudioVisualEditorPage() {
         </div>
         <a href={path} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm"><ExternalLink size={15}/> Ouvrir la page</a>
       </div>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid min-w-0 gap-4 2xl:grid-cols-[220px_minmax(0,1fr)_340px]">
+        <aside className="h-fit rounded-2xl border border-border bg-card p-4">
+          <div className="mb-2 flex items-center gap-2"><Plus size={17} className="text-accent"/><h2 className="font-bold">Bibliothèque</h2></div>
+          <p className="mb-4 text-xs leading-5 text-muted-foreground">Ajoutez des éléments à votre composition, sans modèle imposé.</p>
+          <div className="space-y-2">
+            <button type="button" onClick={() => addBlock('section')} className="flex w-full items-center gap-2 rounded-xl border border-border p-3 text-left text-sm hover:bg-muted"><LayoutPanelTop size={17}/> Section</button>
+            <button type="button" onClick={() => addBlock('text')} className="flex w-full items-center gap-2 rounded-xl border border-border p-3 text-left text-sm hover:bg-muted"><Type size={17}/> Bloc de texte</button>
+            <button type="button" onClick={() => addBlock('button')} className="flex w-full items-center gap-2 rounded-xl border border-border p-3 text-left text-sm hover:bg-muted"><Square size={17}/> Bouton</button>
+            <button type="button" onClick={() => addBlock('card')} className="flex w-full items-center gap-2 rounded-xl border border-border p-3 text-left text-sm hover:bg-muted"><Copy size={17}/> Carte</button>
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">{blocks.length} composant(s) ajouté(s) à cette page</p>
+        </aside>
         <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-muted/40">
           <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2 text-xs text-muted-foreground"><span><MousePointer2 size={14} className="mr-1 inline"/> Cliquez sur un élément pour le sélectionner</span><span>{loaded ? 'Aperçu chargé' : 'Chargement de la page…'}</span></div>
           <div className="overflow-auto p-2 sm:p-4">
@@ -287,6 +335,7 @@ export default function StudioVisualEditorPage() {
               : property.type === 'align' ? <select value={selected.styles[property.key]} onChange={e => changeStyle(property.key,e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-foreground"><option value="left">Gauche</option><option value="center">Centré</option><option value="right">Droite</option><option value="justify">Justifié</option></select>
               : <input value={selected.styles[property.key]} onChange={e => changeStyle(property.key,e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-foreground" placeholder={property.fallback}/>}
             </label>)}
+            <button type="button" onClick={removeSelectedBlock} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 px-3 py-2.5 text-sm font-semibold text-rose-600"><Trash2 size={15}/> Supprimer le bloc ajouté</button>
             <button type="button" onClick={clearSelected} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold"><RotateCcw size={15}/> Retirer le style personnalisé</button>
           </div>}
           <div className="mt-5 border-t border-border pt-4"><p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">À savoir</p><ul className="space-y-2 text-xs text-muted-foreground"><li>• Les changements de cette première version portent sur les styles, pas sur les données métier.</li><li>• Les styles sont enregistrés par chemin de page.</li><li>• Prévisualisez sur mobile avant de publier.</li></ul></div>
