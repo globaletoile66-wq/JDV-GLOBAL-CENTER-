@@ -113,7 +113,6 @@ export default function HomePage() {
               <li><Link className="hover:text-foreground" href="/marketplace">Marketplace</Link></li>
               <li><Link className="hover:text-foreground" href="/auth/login">Connexion</Link></li>
               <li><Link className="hover:text-foreground" href="/auth/register">Créer un compte</Link></li>
-              <li><Link className="hover:text-foreground" href="/legal">Informations légales</Link></li>
             </ul>
           </div>
         </div>
