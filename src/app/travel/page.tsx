@@ -2,11 +2,12 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Compass, Hotel, RefreshCw, Search, Send, Heart, BriefcaseBusiness, ShieldCheck, MapPinned } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Compass, Hotel, RefreshCw, Search, Send, Heart, BriefcaseBusiness, ShieldCheck, MapPinned, Plane, Utensils } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
-type Destination = { id: string; name: string; city: string | null; short_description: string | null; description: string | null; image_url: string | null; is_active: boolean };
+type Destination = { id: string; name: string; city: string | null; short_description: string | null; description: string | null; image_url: string | null; is_active: boolean; country_id: string | null };
+type TravelCountry = { id: string; name: string; iso_code: string };
 type Tour = { id: string; title: string; description: string | null; duration_days: number; capacity: number | null; price: number; currency_id: string | null; destination_id?: string | null; publish_status: string };
 type Accommodation = { id: string; name: string; accommodation_type: string; description: string | null; destination_id: string | null; capacity: number | null; publish_status: string };
 type Activity = { id: string; name: string; description: string | null; duration_minutes: number | null; price: number; currency_id: string | null; destination_id: string | null; publish_status: string };
@@ -21,6 +22,8 @@ export default function TravelPage() {
   const { user, loading } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [countries, setCountries] = useState<TravelCountry[]>([]);
+  const [countryId, setCountryId] = useState('');
   const [tours, setTours] = useState<Tour[]>([]);
   const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -43,10 +46,25 @@ export default function TravelPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const [{ data: countryRows }, { data: profile }] = await Promise.all([
+        supabase.from('countries').select('id,name,iso_code').eq('is_active', true).order('name'),
+        user ? supabase.from('profiles').select('country_id').eq('id', user.id).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      if (!active) return;
+      const rows = (countryRows ?? []) as TravelCountry[];
+      setCountries(rows);
+      setCountryId((profile as { country_id?: string | null } | null)?.country_id || rows.find((item) => item.iso_code === 'BJ')?.id || '');
+    })();
+    return () => { active = false; };
+  }, [supabase, user]);
+
   const load = useCallback(async () => {
     setBusy(true); setError('');
     const [destinationResult, tourResult, accommodationResult, activityResult, currencyResult, requestResult, favoriteResult] = await Promise.all([
-      supabase.from('travel_destinations').select('id,name,city,short_description,description,image_url,is_active').eq('is_active', true).order('name').limit(100),
+      supabase.from('travel_destinations').select('id,name,city,short_description,description,image_url,is_active,country_id').eq('is_active', true).order('name').limit(100),
       supabase.from('travel_tours').select('id,title,description,duration_days,capacity,price,currency_id,publish_status').eq('publish_status', 'published').order('created_at', { ascending: false }).limit(100),
       supabase.from('travel_accommodations').select('id,name,accommodation_type,description,destination_id,capacity,publish_status').eq('publish_status', 'published').order('name').limit(100),
       supabase.from('travel_activities').select('id,name,description,duration_minutes,price,currency_id,destination_id,publish_status').eq('publish_status', 'published').order('name').limit(100),
@@ -82,10 +100,12 @@ export default function TravelPage() {
     const cur = currencies.find((item) => item.id === id);
     return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + (cur?.code ? ' ' + cur.code : '');
   };
-  const filteredDestinations = destinations.filter((item) => [item.name, item.city, item.short_description, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
-  const filteredTours = tours.filter((item) => [item.title, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
-  const filteredAccommodations = accommodations.filter((item) => [item.name, item.accommodation_type, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
-  const filteredActivities = activities.filter((item) => [item.name, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const countryDestinations = destinations.filter((item) => !countryId || item.country_id === countryId);
+  const countryDestinationIds = new Set(countryDestinations.map((item) => item.id));
+  const filteredDestinations = countryDestinations.filter((item) => [item.name, item.city, item.short_description, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const filteredTours = tours.filter((item) => (!item.destination_id || countryDestinationIds.has(item.destination_id)) && [item.title, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const filteredAccommodations = accommodations.filter((item) => (!item.destination_id || countryDestinationIds.has(item.destination_id)) && [item.name, item.accommodation_type, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const filteredActivities = activities.filter((item) => (!item.destination_id || countryDestinationIds.has(item.destination_id)) && [item.name, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
 
   const submitRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -116,6 +136,7 @@ export default function TravelPage() {
             <div className="mt-5 flex flex-wrap gap-2"><a href="#travel-catalogue" className="rounded-xl bg-[#F28C28] px-4 py-2.5 text-sm font-bold text-[#0B1B3D]">Explorer les offres</a><a href="#travel-request" className="rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/5">Préparer mon voyage</a><Link href="/travel/mon-espace" className="rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/5">Mon espace voyageur</Link></div></div><div className="rounded-2xl border border-white/10 px-5 py-4"><div className="text-xs text-white/40">Offres publiées</div><div className="mt-1 text-2xl font-bold">{tours.length + accommodations.length + activities.length}</div></div></div>
           {error && <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
           {message && <div role="status" className="mt-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-4 text-sm text-[#F28C28]">{message}</div>}
+          <div className="mt-6 flex flex-wrap items-center gap-3"><label htmlFor="travel-country" className="text-xs font-semibold uppercase tracking-wide text-white/50">Pays de recherche</label><select id="travel-country" value={countryId} onChange={(e) => setCountryId(e.target.value)} className="rounded-xl border border-white/10 bg-[#09152f] px-3 py-2.5 text-sm text-white"><option value="">Tous les pays</option>{countries.map((country) => <option key={country.id} value={country.id}>{country.name}</option>)}</select><span className="text-xs text-white/40">Pays du profil sélectionné par défaut ; les destinations internationales restent accessibles.</span></div>
           <div className="mt-7 flex items-center gap-3 rounded-xl border border-white/10 px-3 py-2.5"><Search size={16} className="text-white/40" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une destination, un circuit ou une activité…" className="w-full bg-transparent text-sm outline-none placeholder:text-white/30" /></div>
           <section aria-label="Services JDV Travel" className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <a href="#travel-request" className="rounded-2xl border border-white/10 bg-[#09152f]/60 p-4 hover:border-[#F28C28]/50"><MapPinned size={20} className="text-[#F28C28]"/><h2 className="mt-3 font-bold">Voyage sur mesure</h2><p className="mt-1 text-xs leading-5 text-white/50">Dates, budget et besoins particuliers.</p></a>
