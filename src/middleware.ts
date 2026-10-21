@@ -61,6 +61,34 @@ export async function middleware(request: NextRequest) {
     if (mfa) return mfa;
   }
 
+  // Sensitive workspaces are separate applications: a valid global session
+  // alone does not grant access to JDV Pay, Business or Tontine operations.
+  const tontineActionRoute =
+    isPathOrChild(pathname, '/tontine/concepteur') ||
+    pathname === '/tontine/contrat' ||
+    (pathname.startsWith('/tontine/categories/') && pathname.endsWith('/contrat')) ||
+    isPathOrChild(pathname, '/tontine/join');
+  const requiredAppKey =
+    isPathOrChild(pathname, '/pay') ? 'pay' :
+    isPathOrChild(pathname, '/business') ? 'business' :
+    tontineActionRoute ? 'tontine' : null;
+
+  if (user && requiredAppKey) {
+    const { data: appMembership, error: membershipError } = await supabase
+      .from('app_memberships')
+      .select('id,status')
+      .eq('user_id', user.id)
+      .eq('app_key', requiredAppKey)
+      .maybeSingle();
+
+    if (membershipError || !appMembership || appMembership.status !== 'active') {
+      const url = request.nextUrl.clone();
+      url.pathname = `/inscription/${requiredAppKey}`;
+      url.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Hidden concepteur portal: authentication plus server-side authorization.
   if (isPathOrChild(pathname, '/hidden-concepteur-gate')) {
     if (!user) {
