@@ -35,7 +35,7 @@ export default function CreateBusinessPage() {
       setCurrencies((currencyResult.data ?? []) as Currency[]);
       const preferred = profile?.country_id && items.some(country => country.id === profile.country_id)
         ? profile.country_id
-        : items.find(country => country.iso_code?.toUpperCase() === 'BJ')?.id ?? '';
+        : '';
       setCountryId(current => current || preferred);
       setForm(current => ({ ...current, phone: current.phone || profile?.phone || '', email: current.email || user?.email || '' }));
     });
