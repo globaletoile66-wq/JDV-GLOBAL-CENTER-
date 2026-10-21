@@ -13,7 +13,7 @@ const MODULE_CODES: Record<string, string> = {
   marketplace: 'jdv_marketplace', agriculture: 'jdv_agriculture', immo: 'jdv_immo', health: 'jdv_health',
   academy: 'jdv_academy', social: 'jdv_social', media: 'jdv_media', pub: 'jdv_pub', pay: 'jdv_pay',
   tontine: 'jdv_tontine', travel: 'jdv_travel', transport: 'jdv_transport', insurance: 'jdv_insurance',
-  energy: 'jdv_energy', business: 'jdv_business', transit: 'jdv_transit', services: 'jdv_services',
+  energy: 'jdv_energy', ai: 'jdv_ai', business: 'jdv_business', transit: 'jdv_transit', services: 'jdv_services',
   procurement: 'jdv_procurement', accounting: 'jdv_accounting', inventory: 'jdv_inventory', hr: 'jdv_hr',
   jobs: 'jdv_jobs', entertainment: 'jdv_entertainment',
 };
