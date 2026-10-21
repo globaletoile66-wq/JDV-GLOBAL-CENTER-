@@ -260,6 +260,97 @@ create trigger jdv_marketplace_order_membership_required
   before insert on public.marketplace_orders
   for each row execute function public.jdv_require_marketplace_membership_for_order();
 
+-- Enforce branch membership at the database layer for the other public-facing apps.
+-- Public catalogue tables get mutation-only gates so browsing remains possible.
+do $jdv_branch_rls$
+declare
+  v_table text;
+  v_app text;
+begin
+  -- Private records and user operations: membership plus the table's existing
+  -- ownership/role policies are both required.
+  foreach v_table in array array[
+    'immo_favorites','immo_requests','immo_appointments','immo_agent_applications',
+    'immo_mandates','immo_commissions','immo_leases','immo_reservations',
+    'immo_disputes','immo_documents','immo_maintenance_requests',
+    'immo_maintenance_quotes','immo_maintenance_interventions','immo_maintenance_invoices',
+    'immo_rent_schedules','immo_tenant_followups','immo_property_inspections',
+    'immo_construction_briefs','immo_project_cost_items','immo_project_cost_payments',
+    'health_appointments','health_documents','health_emergency_contacts','health_home_care_requests',
+    'health_invoices','health_laboratory_orders','health_laboratory_results',
+    'health_medical_record_access_log','health_medical_records','health_patient_consents',
+    'health_prescription_items','health_prescriptions','health_search_history',
+    'health_search_preferences','health_teleconsultation_requests','health_verification_records',
+    'academy_enrollments','academy_lesson_progress','academy_assessment_submissions',
+    'academy_certificates','academy_results',
+    'social_reactions','social_comments','social_follows','social_conversations',
+    'social_messages','social_event_registrations','social_group_memberships','social_app_preferences',
+    'media_content_metrics','media_channels',
+    'pub_advertisers','pub_campaigns','pub_campaign_placements','pub_creatives','pub_impressions','pub_partners',
+    'tontine_members','tontine_contribution_schedules','tontine_contributions','tontine_cycles',
+    'tontine_documents','tontine_financial_reconciliations','tontine_join_links',
+    'tontine_organization_board','tontine_party_verifications','tontine_payout_dispatches',
+    'tontine_payouts','tontine_pool_entries','tontine_reminders_sent','tontine_rotations'
+  ] loop
+    if to_regclass('public.' || v_table) is not null then
+      if v_table like 'immo_%' then v_app := 'immo';
+      elsif v_table like 'health_%' then v_app := 'health';
+      elsif v_table like 'academy_%' then v_app := 'academy';
+      elsif v_table like 'social_%' then v_app := 'social';
+      elsif v_table like 'media_%' then v_app := 'media';
+      elsif v_table like 'pub_%' then v_app := 'pub';
+      elsif v_table like 'tontine_%' then v_app := 'tontine';
+      end if;
+      execute format('drop policy if exists jdv_branch_membership_required on public.%I', v_table);
+      execute format(
+        'create policy jdv_branch_membership_required on public.%I as restrictive for all to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active'')) with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
+        v_table, v_app, v_app
+      );
+    end if;
+  end loop;
+
+  -- Public catalogues can be read without enrollment; any mutation still needs
+  -- membership in the application and must satisfy existing owner/admin rules.
+  foreach v_table in array array[
+    'immo_properties','immo_property_media','immo_property_types','immo_agents','immo_agencies','immo_developers',
+    'health_services','health_provider_profiles','health_provider_presence','health_professionals','health_specialties','health_availabilities','health_on_call_schedules',
+    'academy_programs','academy_courses','academy_lessons','academy_assessments','academy_assessment_questions','academy_assessment_answer_keys','academy_live_sessions',
+    'social_profiles','social_posts','social_groups','social_events','social_external_links',
+    'media_contents','media_categories','media_content_categories',
+    'pub_placements','pub_pricing_rules',
+    'tontines','tontine_classes'
+  ] loop
+    if to_regclass('public.' || v_table) is not null then
+      if v_table like 'immo_%' then v_app := 'immo';
+      elsif v_table like 'health_%' then v_app := 'health';
+      elsif v_table like 'academy_%' then v_app := 'academy';
+      elsif v_table like 'social_%' then v_app := 'social';
+      elsif v_table like 'media_%' then v_app := 'media';
+      elsif v_table like 'pub_%' then v_app := 'pub';
+      elsif v_table like 'tontine_%' then v_app := 'tontine';
+      end if;
+      foreach v_app in array array[v_app] loop
+        execute format('drop policy if exists jdv_branch_membership_insert on public.%I', v_table);
+        execute format('drop policy if exists jdv_branch_membership_update on public.%I', v_table);
+        execute format('drop policy if exists jdv_branch_membership_delete on public.%I', v_table);
+        execute format(
+          'create policy jdv_branch_membership_insert on public.%I as restrictive for insert to authenticated with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
+          v_table, v_app
+        );
+        execute format(
+          'create policy jdv_branch_membership_update on public.%I as restrictive for update to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active'')) with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
+          v_table, v_app, v_app
+        );
+        execute format(
+          'create policy jdv_branch_membership_delete on public.%I as restrictive for delete to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
+          v_table, v_app
+        );
+      end loop;
+    end if;
+  end loop;
+end;
+$jdv_branch_rls$;
+
 -- Public read-only catalog: exposes only available agricultural offers, never farm ownership data.
 create or replace function public.jdv_agriculture_public_catalog()
 returns table (
