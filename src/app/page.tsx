@@ -5,6 +5,9 @@ import { useMemo, useState } from 'react';
 import { ArrowRight, Building2, ShoppingBag, Sparkles, BriefcaseBusiness, Settings2, GitMerge, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
+import Image from 'next/image';
+import GlobalHeader from '@/components/navigation/GlobalHeader';
+import { JDV_BRANCHES } from '@/lib/jdv/branch-catalog';
 import { useJDV } from '@/contexts/JDVContext';
 import { translate } from '@/lib/i18n';
 import { getGroupedJDVModules } from '@/lib/jdv/application-registry';
@@ -30,17 +33,7 @@ export default function HomePage() {
   }, [moduleGroups, moduleSearch]);
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-3"><AppLogo size={40}/><div><div className="font-extrabold">JDV</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Global Center</div></div></Link>
-          <nav aria-label="Navigation principale" className="hidden items-center gap-4 text-sm font-semibold text-muted-foreground xl:flex"><Link href="/about" className="transition hover:text-foreground">À propos</Link><Link href="/branches" className="transition hover:text-foreground">Nos branches</Link><Link href="/help" className="transition hover:text-foreground">Aide</Link></nav>
-          <div className="flex items-center gap-2">
-            {!loading && user && isSuperAdmin && <><Link href="/super-admin" className="inline-flex btn-secondary"><ShieldCheck size={16}/>{translate(activeLanguage, 'superAdmin')}</Link><Link href="/hidden-concepteur-gate/dashboard/studio" className="inline-flex btn-secondary"><SlidersHorizontal size={16}/>{translate(activeLanguage, 'designerStudio')}</Link></>}
-            <Link href="/architecture/branches" className="hidden lg:inline-flex btn-secondary"><GitMerge size={16}/>{translate(activeLanguage, 'analytics')}</Link><Link href="/parametres/branches" className="hidden md:inline-flex btn-secondary"><Settings2 size={16}/>{translate(activeLanguage, 'settings')}</Link><Link href="/marketplace" className="hidden sm:inline-flex btn-secondary"><ShoppingBag size={16}/>{translate(activeLanguage, 'marketplace')}</Link><Link href="/business/create" className="hidden lg:inline-flex btn-secondary"><BriefcaseBusiness size={16}/>{translate(activeLanguage, 'registerBusiness')}</Link>
-            {!loading && <Link href={user?'/dashboard':'/auth/login'} className="btn-primary">{user ? translate(activeLanguage, 'mySpace') : translate(activeLanguage, 'login')}<ArrowRight size={16}/></Link>}
-          </div>
-        </div>
-      </header>
+      <GlobalHeader />
 
       <section className="mx-auto max-w-7xl px-4 pb-10 pt-16">
         <div className="grid items-center gap-10 lg:grid-cols-[1.2fr_.8fr]">
@@ -65,6 +58,22 @@ export default function HomePage() {
             <Link href="/business/create" className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 font-bold text-black">Commencer l’enregistrement<ArrowRight size={17}/></Link>
           </div>
         </div>
+
+        <section aria-labelledby="branch-preview-title" className="mx-auto mt-8 max-w-7xl px-4 sm:px-6">
+          <div className="rounded-[2rem] border border-border bg-card p-5 sm:p-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-2xl"><p className="text-xs font-extrabold uppercase tracking-[.2em] text-accent">Un écosystème · neuf branches</p><h2 id="branch-preview-title" className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Découvrez les univers JDV</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Une présentation commune, des identités métier distinctes et des parcours qui restent adaptés à chaque activité.</p></div>
+              <Link href="/branches" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-bold transition hover:border-accent/50">Voir les neuf branches <ArrowRight size={16}/></Link>
+            </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {JDV_BRANCHES.map((branch, index) => <Link key={branch.id} href={branch.href} className="group flex min-w-0 items-center gap-4 rounded-2xl border border-border bg-background p-4 transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-card p-2"><Image src={branch.logo} alt="" width={48} height={48} className="h-full w-full object-contain" unoptimized /></span>
+                <span className="min-w-0 flex-1"><span className="block text-[10px] font-extrabold uppercase tracking-[.16em] text-accent">0{index + 1} · {branch.eyebrow}</span><span className="mt-1 block font-bold">{branch.name}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{branch.description}</span></span>
+                <ArrowRight size={16} className="shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-accent"/>
+              </Link>)}
+            </div>
+          </div>
+        </section>
 
         <div className="mt-16 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-semibold text-accent">ÉCOSYSTÈME JDV</p><h2 className="mt-1 text-2xl font-extrabold">Les applications, regroupées par univers</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Une entrée commune, des pôles plus lisibles et des parcours métier qui restent distincts.</p></div><span className="text-sm text-muted-foreground">{moduleCount} applications · {moduleGroups.length} pôles</span></div>
         {isSuperAdmin && <div className="mt-6 mb-5 rounded-2xl border border-accent/30 bg-accent/5 p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-accent">AUTRES · ESPACE PRIVÉ</p><h3 className="mt-1 font-bold">Centre de contrôle du concepteur</h3><p className="mt-1 text-sm text-muted-foreground">Administration de la plateforme, configuration et pilotage global. Cet espace n’est pas public.</p></div><Link href="/hidden-concepteur-gate/dashboard" className="btn-primary shrink-0">Ouvrir le centre de contrôle<ArrowRight size={16}/></Link></div></div>}
