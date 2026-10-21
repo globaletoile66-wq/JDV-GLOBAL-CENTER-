@@ -282,7 +282,8 @@ begin
     'health_prescription_items','health_prescriptions','health_search_history',
     'health_search_preferences','health_teleconsultation_requests','health_verification_records',
     'academy_enrollments','academy_lesson_progress','academy_assessment_submissions',
-    'academy_certificates','academy_results',
+    'academy_certificates','academy_results','academy_lessons','academy_assessments',
+    'academy_assessment_questions','academy_assessment_answer_keys','academy_live_sessions',
     'social_reactions','social_comments','social_follows','social_conversations',
     'social_messages','social_event_registrations','social_group_memberships','social_app_preferences',
     'media_content_metrics','media_channels',
@@ -314,7 +315,7 @@ begin
   foreach v_table in array array[
     'immo_properties','immo_property_media','immo_property_types','immo_agents','immo_agencies','immo_developers',
     'health_services','health_provider_profiles','health_provider_presence','health_professionals','health_specialties','health_availabilities','health_on_call_schedules',
-    'academy_programs','academy_courses','academy_lessons','academy_assessments','academy_assessment_questions','academy_assessment_answer_keys','academy_live_sessions',
+    'academy_programs','academy_courses',
     'social_profiles','social_posts','social_groups','social_events','social_external_links',
     'media_contents','media_categories','media_content_categories',
     'pub_placements','pub_pricing_rules',
@@ -329,23 +330,21 @@ begin
       elsif v_table like 'pub_%' then v_app := 'pub';
       elsif v_table like 'tontine_%' then v_app := 'tontine';
       end if;
-      foreach v_app in array array[v_app] loop
-        execute format('drop policy if exists jdv_branch_membership_insert on public.%I', v_table);
+      execute format('drop policy if exists jdv_branch_membership_insert on public.%I', v_table);
         execute format('drop policy if exists jdv_branch_membership_update on public.%I', v_table);
         execute format('drop policy if exists jdv_branch_membership_delete on public.%I', v_table);
-        execute format(
-          'create policy jdv_branch_membership_insert on public.%I as restrictive for insert to authenticated with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
+      execute format(
+        'create policy jdv_branch_membership_insert on public.%I as restrictive for insert to authenticated with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
           v_table, v_app
         );
-        execute format(
-          'create policy jdv_branch_membership_update on public.%I as restrictive for update to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active'')) with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
+      execute format(
+        'create policy jdv_branch_membership_update on public.%I as restrictive for update to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active'')) with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
           v_table, v_app, v_app
         );
-        execute format(
-          'create policy jdv_branch_membership_delete on public.%I as restrictive for delete to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
-          v_table, v_app
-        );
-      end loop;
+      execute format(
+        'create policy jdv_branch_membership_delete on public.%I as restrictive for delete to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = %L and m.status = ''active''))',
+        v_table, v_app
+      );
     end if;
   end loop;
 end;
