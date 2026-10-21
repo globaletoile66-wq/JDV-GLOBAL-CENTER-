@@ -20,6 +20,7 @@ function ApplicationRegistrationContent() {
   const requestedRedirect = searchParams.get('redirect');
   const hasRequestedRedirect = Boolean(requestedRedirect && requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//'));
   const redirectTo = hasRequestedRedirect ? requestedRedirect! : (app?.homePath ?? '/');
+  const authDestination = hasRequestedRedirect ? redirectTo : (app?.key === 'global_center' ? (app?.homePath ?? '/user-dashboard') : `/applications/${app?.key}/subscription`);
   const supabase = useMemo(() => createClient(), []);
   const [membershipState, setMembershipState] = useState<'checking' | 'none' | 'active' | 'error'>('checking');
   const [joining, setJoining] = useState(false);
@@ -110,8 +111,8 @@ function ApplicationRegistrationContent() {
               <button type="button" onClick={() => setMode('login')} className={`flex-1 rounded-lg px-3 py-3 text-sm font-bold transition ${mode === 'login' ? 'bg-white text-[#0B1B3D] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Se connecter</button>
             </div>
             {mode === 'register'
-              ? <RegisterForm appKey={app.key} redirectTo={redirectTo} onSwitchToLogin={() => setMode('login')} />
-              : <LoginForm appKey={app.key} redirectTo={redirectTo} onSwitchToRegister={() => setMode('register')} />}
+              ? <RegisterForm appKey={app.key} redirectTo={authDestination} onSwitchToLogin={() => setMode('login')} />
+              : <LoginForm appKey={app.key} redirectTo={authDestination} onSwitchToRegister={() => setMode('register')} />}
           </div>
         </section>
       </div>
