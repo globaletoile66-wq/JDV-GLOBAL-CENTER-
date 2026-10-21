@@ -48,7 +48,9 @@ export default function ResponsiveMobileNavigation() {
   const mobileItems = currentApp.id === 'travel' ? travelItems : [
     { href: currentApp.href, label: currentBranch?.name.replace(/^JDV( Global Center)?/i, '').trim() || 'Accueil', icon: Home },
     { href: '/branches', label: 'Explorer', icon: Compass },
-    { href: '/marketplace', label: 'Services', icon: Store },
+    currentApp.id === 'marketplace'
+      ? { href: '/help', label: 'Aide', icon: Compass }
+      : { href: '/marketplace', label: 'Services', icon: Store },
     { href: '/dashboard', label: 'Compte', icon: UserRound },
   ];
 
@@ -63,7 +65,8 @@ export default function ResponsiveMobileNavigation() {
           <div className="jdv-desktop-context-nav__links">
             {desktopItems.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
+              const isContextRoot = currentApp.id !== 'travel' && item.href === currentApp.href;
+              const active = pathname === item.href || (!isContextRoot && item.href !== '/' && pathname.startsWith(item.href + '/'));
               return (
                 <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={`jdv-desktop-context-nav__link${active ? ' is-active' : ''}`}>
                   <Icon size={16} aria-hidden="true" />
@@ -77,7 +80,8 @@ export default function ResponsiveMobileNavigation() {
       <nav className="jdv-mobile-nav" aria-label="Navigation principale mobile">
         {mobileItems.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
+          const isContextRoot = currentApp.id !== 'travel' && item.href === currentApp.href;
+          const active = pathname === item.href || (!isContextRoot && item.href !== '/' && pathname.startsWith(item.href + '/'));
           return (
             <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={`jdv-mobile-nav__item${active ? ' is-active' : ''}`}>
               <Icon size={20} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
