@@ -1,17 +1,56 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ShieldCheck, UserRoundPlus } from 'lucide-react';
 import LoginForm from '@/app/sign-up-login-screen/components/LoginForm';
 import RegisterForm from '@/app/sign-up-login-screen/components/RegisterForm';
 import { getJDVApplication } from '@/lib/apps/registry';
+import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 export default function ApplicationRegistrationPage() {
   const params = useParams<{ app: string }>();
   const app = getJDVApplication(params.app);
   const [mode, setMode] = useState<'register' | 'login'>('register');
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [membershipState, setMembershipState] = useState<'checking' | 'none' | 'active' | 'error'>('checking');
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState('');
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || !app) { setMembershipState('none'); return; }
+    let active = true;
+    void supabase.from('app_memberships').select('id,status').eq('user_id', user.id).eq('app_key', app.key).maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) setMembershipState('error');
+        else if (data?.status === 'active') setMembershipState('active');
+        else setMembershipState('none');
+      });
+    return () => { active = false; };
+  }, [authLoading, user, app, supabase]);
+
+  useEffect(() => {
+    if (membershipState === 'active' && app) router.replace(app.homePath);
+  }, [membershipState, app, router]);
+
+  const joinApplication = async () => {
+    if (!app || !user || joining) return;
+    setJoining(true);
+    setJoinError('');
+    const { error } = await supabase.rpc('jdv_join_application', { p_app_key: app.key });
+    if (error) {
+      setJoinError('Impossible d’activer cet espace pour le moment. Vérifiez que la migration des inscriptions par application est appliquée et réessayez.');
+      setJoining(false);
+      return;
+    }
+    router.replace(app.homePath);
+  };
 
   if (!app) {
     return (
@@ -20,6 +59,27 @@ export default function ApplicationRegistrationPage() {
           <h1 className="text-2xl font-black">Application introuvable</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">Cette branche JDV n’est pas reconnue. Ouvrez le catalogue officiel pour choisir l’application voulue.</p>
           <Link href="/branches" className="mt-6 inline-flex rounded-xl bg-[#F28C28] px-5 py-3 font-bold text-white">Voir les applications</Link>
+        </section>
+      </main>
+    );
+  }
+
+  if (authLoading || (user && membershipState === 'checking')) {
+    return <main className="grid min-h-screen place-items-center bg-[#f5f7fb] text-[#0B1B3D]"><span className="text-sm font-semibold">Vérification de votre accès…</span></main>;
+  }
+
+  if (user && membershipState !== 'active') {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#f5f7fb] px-4 py-8 text-[#0B1B3D]">
+        <section className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
+          <Link href={app.homePath} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#0B1B3D]"><ArrowLeft size={16}/> Retour à {app.name}</Link>
+          <div className="mt-8 inline-flex rounded-xl bg-orange-50 p-3 text-[#D96C12]"><UserRoundPlus size={25}/></div>
+          <h1 className="mt-5 text-3xl font-black">Activer votre espace {app.name}</h1>
+          <p className="mt-3 leading-7 text-slate-600">Vous êtes connecté à JDV, mais vous n’êtes pas encore inscrit à cette application. Confirmez votre inscription ici pour créer votre espace propre à cette branche. Cela n’active aucun abonnement payant et ne donne pas accès aux autres applications.</p>
+          {membershipState === 'error' && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">La vérification de l’inscription est momentanément indisponible.</p>}
+          {joinError && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{joinError}</p>}
+          <button type="button" disabled={joining || membershipState === 'error'} onClick={() => void joinApplication()} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F28C28] px-5 py-3.5 font-extrabold text-white disabled:opacity-60">{joining ? 'Activation…' : 'M’inscrire à cette application'}</button>
+          <p className="mt-4 text-xs leading-5 text-slate-500">L’activation du compte ne vaut pas abonnement. Les fonctionnalités payantes vérifieront séparément les droits et le statut de paiement.</p>
         </section>
       </main>
     );
