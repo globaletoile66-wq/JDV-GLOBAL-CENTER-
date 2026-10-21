@@ -64,9 +64,21 @@ export default function CheckoutPage() {
   const [newAddress, setNewAddress] = useState({ label: 'Domicile', full_name: '', phone: '', address_line1: '', city: '' });
 
   useEffect(() => {
-    if (!user) { router.push('/auth/login'); return; }
-    loadCheckoutData();
-  }, [user]);
+    if (!user) { router.replace('/inscription/marketplace'); return; }
+    let active = true;
+    void (async () => {
+      const { data: membership, error } = await supabase
+        .from('app_memberships').select('id,status')
+        .eq('user_id', user.id).eq('app_key', 'marketplace').maybeSingle();
+      if (!active) return;
+      if (error || !membership || membership.status !== 'active') {
+        router.replace('/inscription/marketplace');
+        return;
+      }
+      loadCheckoutData();
+    })();
+    return () => { active = false; };
+  }, [user, router, supabase]);
 
   const loadCheckoutData = async () => {
     if (!user) return;
