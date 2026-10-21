@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, RefreshCw, Search, Tractor, Sprout, Package, ClipboardList, Plus, CheckCircle2, AlertCircle, MapPin } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Farm = { id: string; name: string; farm_type: string; city: string | null; area_hectares: number | null; status: string };
 type Crop = { id: string; farm_id: string; name: string; variety: string | null; season: string | null; planted_area_hectares: number | null; planting_date: string | null; expected_harvest_date: string | null; expected_yield: number | null; actual_yield: number | null; unit: string | null; status: string };
@@ -18,7 +20,9 @@ const secondary = 'inline-flex items-center justify-center gap-2 rounded-xl bord
 
 export default function AgriculturePage() {
   const { user, loading: authLoading } = useAuth();
-  const supabase = createClient();
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [hasMembership, setHasMembership] = useState(false);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [crops, setCrops] = useState<Crop[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -36,8 +40,13 @@ export default function AgriculturePage() {
   const [recordForm, setRecordForm] = useState({ crop_id: '', record_date: new Date().toISOString().slice(0, 10), activity_type: 'observation', quantity: '', unit: 'kg', cost_amount: '', notes: '' });
 
   const load = useCallback(async () => {
-    if (!user) { setFarms([]); setCrops([]); setProducts([]); setRecords([]); setBusy(false); return; }
+    if (!user) { setHasMembership(false); setFarms([]); setCrops([]); setProducts([]); setRecords([]); setBusy(false); return; }
     setBusy(true); setError('');
+    const allowed = await hasApplicationMembership(supabase, user.id, 'agriculture');
+    if (!allowed) {
+      setHasMembership(false); setFarms([]); setCrops([]); setProducts([]); setRecords([]); setBusy(false); return;
+    }
+    setHasMembership(true);
     const [farmResult, cropResult, productResult, recordResult] = await Promise.all([
       supabase.from('agri_farms').select('id,name,farm_type,city,area_hectares,status').order('created_at', { ascending: false }),
       supabase.from('agri_crops').select('id,farm_id,name,variety,season,planted_area_hectares,planting_date,expected_harvest_date,expected_yield,actual_yield,unit,status').order('created_at', { ascending: false }),
@@ -64,7 +73,8 @@ export default function AgriculturePage() {
 
   const saveFarm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !farmForm.name.trim()) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'agriculture')) { router.push('/inscription/agriculture'); return; }
+    if (!farmForm.name.trim()) return;
     setSaving(true); setError(''); setNotice('');
     const { error: saveError } = await supabase.from('agri_farms').insert({
       owner_user_id: user.id, name: farmForm.name.trim(), farm_type: farmForm.farm_type,
@@ -78,6 +88,7 @@ export default function AgriculturePage() {
 
   const saveCrop = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'agriculture')) { router.push('/inscription/agriculture'); return; }
     if (!cropForm.farm_id || !cropForm.name.trim()) return;
     setSaving(true); setError(''); setNotice('');
     const { error: saveError } = await supabase.from('agri_crops').insert({
@@ -93,6 +104,7 @@ export default function AgriculturePage() {
 
   const saveProduct = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'agriculture')) { router.push('/inscription/agriculture'); return; }
     if (!productForm.farm_id || !productForm.name.trim()) return;
     setSaving(true); setError(''); setNotice('');
     const { error: saveError } = await supabase.from('agri_products').insert({
@@ -107,7 +119,8 @@ export default function AgriculturePage() {
 
   const saveRecord = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !recordForm.crop_id || !recordForm.activity_type.trim()) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'agriculture')) { router.push('/inscription/agriculture'); return; }
+    if (!recordForm.crop_id || !recordForm.activity_type.trim()) return;
     setSaving(true); setError(''); setNotice('');
     const { error: saveError } = await supabase.from('agri_production_records').insert({
       crop_id: recordForm.crop_id, record_date: recordForm.record_date, activity_type: recordForm.activity_type.trim(),
@@ -130,7 +143,7 @@ export default function AgriculturePage() {
         <section className="mt-7 overflow-hidden rounded-3xl border border-white/10 bg-white/[.05]">
           <div className="border-b border-white/10 bg-gradient-to-br from-[#163b2d] to-[#0B1B3D] p-6 sm:p-8"><div className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-[#F28C28]">JDV GLOBAL CENTER · AGRICULTURE</p><h1 className="mt-3 flex items-center gap-3 text-3xl font-black sm:text-4xl"><Tractor className="text-[#F28C28]" size={34}/> JDV AGRICULTURE</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">Suivi des exploitations, cultures, productions et produits agricoles à partir des données réelles.</p></div><div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-2xl border border-white/10 bg-black/10 p-3"><div className="text-xs text-white/50">Exploitations</div><div className="text-2xl font-black">{farms.length}</div></div><div className="rounded-2xl border border-white/10 bg-black/10 p-3"><div className="text-xs text-white/50">Cultures</div><div className="text-2xl font-black">{crops.length}</div></div><div className="rounded-2xl border border-white/10 bg-black/10 p-3"><div className="text-xs text-white/50">Produits</div><div className="text-2xl font-black">{products.length}</div></div><div className="rounded-2xl border border-white/10 bg-black/10 p-3"><div className="text-xs text-white/50">Activités</div><div className="text-2xl font-black">{records.length}</div></div></div></div></div>
           <div className="p-5 sm:p-8">
-            {!user && <div className="mb-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-4 text-sm text-[#ffd4a5]">Connecte-toi pour accéder à tes exploitations et gérer tes données. <Link href="/auth/login" className="underline">Se connecter</Link></div>}
+            {(!user || !hasMembership) && <div className="mb-5 rounded-xl border border-[#F28C28]/30 bg-[#F28C28]/10 p-4 text-sm text-[#ffd4a5]">Tu peux découvrir JDV Agriculture, mais la gestion des exploitations, cultures et stocks nécessite une inscription propre à cette branche. <Link href="/inscription/agriculture" className="ml-1 font-bold underline">Créer ou activer mon compte Agriculture</Link></div>}}
             {error && <div role="alert" className="mb-5 flex items-start gap-2 rounded-xl border border-red-300/25 bg-red-300/10 p-4 text-sm text-red-100"><AlertCircle size={17} className="mt-0.5 shrink-0"/>{error}</div>}
             {notice && <div role="status" className="mb-5 flex items-start gap-2 rounded-xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm text-emerald-100"><CheckCircle2 size={17} className="mt-0.5 shrink-0"/>{notice}</div>}
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div className="flex flex-wrap gap-2">
