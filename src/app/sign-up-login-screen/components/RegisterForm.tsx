@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { getJDVApplication } from '@/lib/apps/registry';
 
 interface RegisterFormData {
   first_name: string;
@@ -37,14 +39,20 @@ const languages = [
 
 interface Props {
   onSwitchToLogin: () => void;
+  /** The branch the person is explicitly joining. */
+  appKey?: string;
+  redirectTo?: string;
 }
 
-export default function RegisterForm({ onSwitchToLogin }: Props) {
+export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center', redirectTo }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { signUp } = useAuth();
+  const [successMessage, setSuccessMessage] = useState('');
+  const application = getJDVApplication(appKey);
 
   const {
     register,
@@ -57,12 +65,30 @@ export default function RegisterForm({ onSwitchToLogin }: Props) {
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
-    // Backend integration point — replace with Supabase Auth signUp + profile creation trigger
-    await new Promise((res) => setTimeout(res, 1800));
-    setIsLoading(false);
-    setSuccess(true);
-    toast.success(`Compte créé ! Bienvenue ${data.first_name} sur JDV GLOBAL CENTER`);
-    setTimeout(() => router.push('/user-dashboard'), 1500);
+    try {
+      const result = await signUp(data.email, data.password, {
+        first_name: data.first_name.trim(),
+        last_name: data.last_name.trim(),
+        country_code: data.country,
+        preferred_language: data.language,
+        jdv_app_key: appKey,
+      });
+
+      setSuccess(true);
+      if (result.session) {
+        setSuccessMessage(`Votre compte ${application?.name ?? 'JDV Global Center'} est créé. Vous pouvez maintenant continuer.`);
+        toast.success('Inscription réussie.');
+        router.replace(redirectTo ?? (appKey === 'global_center' ? '/user-dashboard' : `/applications/${appKey}/subscription`));
+      } else {
+        setSuccessMessage('Un email de confirmation vient de vous être envoyé. Confirmez votre adresse avant de vous connecter. Votre inscription concerne uniquement cette application ; aucun abonnement payant n’a été activé.');
+        toast.success('Vérifiez votre boîte email pour confirmer votre inscription.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Inscription impossible. Vérifiez vos informations puis réessayez.';
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (success) {
@@ -72,11 +98,14 @@ export default function RegisterForm({ onSwitchToLogin }: Props) {
           <CheckCircle2 size={32} className="text-success" />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-foreground mb-2">Compte créé avec succès !</h3>
-          <p className="text-sm text-muted-foreground">
-            Redirection vers votre tableau de bord JDV...
-          </p>
+          <h3 className="text-xl font-bold text-foreground mb-2">Inscription enregistrée</h3>
+          <p className="text-sm text-muted-foreground">{successMessage}</p>
         </div>
+        {!/Votre compte .* est créé/.test(successMessage) && (
+          <button type="button" onClick={onSwitchToLogin} className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted/30">
+            J’ai confirmé mon e-mail — me connecter
+          </button>
+        )}
       </div>
     );
   }
@@ -86,7 +115,7 @@ export default function RegisterForm({ onSwitchToLogin }: Props) {
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-1">Créer mon compte</h2>
         <p className="text-sm text-muted-foreground">
-          Rejoignez l'écosystème JDV GLOBAL CENTER
+          Créez votre accès à {application?.name ?? 'JDV Global Center'}
         </p>
       </div>
 
@@ -286,7 +315,7 @@ export default function RegisterForm({ onSwitchToLogin }: Props) {
           {isLoading ? (
             <Loader2 size={18} className="animate-spin" />
           ) : (
-            'Créer mon compte JDV'
+            appKey === 'marketplace' ? 'Créer mon compte Marketplace' : 'Créer mon compte JDV'
           )}
         </button>
       </form>

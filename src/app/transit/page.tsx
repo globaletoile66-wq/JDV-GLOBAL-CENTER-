@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRightLeft, Globe2, RefreshCw, Search, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Country = { id: string; name: string; iso_code: string; flag_emoji: string | null };
 type TransitRequest = { id: string; operation_type: string | null; origin_country_id: string | null; destination_country_id: string | null; description: string | null; request_status: string; created_at: string };
@@ -22,6 +24,7 @@ const statuses: Record<string, string> = { open: 'Ouverte', quoted: 'Devis dispo
 
 export default function TransitPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [countries, setCountries] = useState<Country[]>([]);
   const [requests, setRequests] = useState<TransitRequest[]>([]);
@@ -38,9 +41,10 @@ export default function TransitPage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'transit') : false;
     const [countryResult, requestResult] = await Promise.all([
       supabase.from('countries').select('id,name,iso_code,flag_emoji').eq('is_active', true).order('name').limit(250),
-      user ? supabase.from('transit_requests').select('id,operation_type,origin_country_id,destination_country_id,description,request_status,created_at').eq('requester_user_id', user.id).order('created_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
+      hasMembership && user ? supabase.from('transit_requests').select('id,operation_type,origin_country_id,destination_country_id,description,request_status,created_at').eq('requester_user_id', user.id).order('created_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
     ]);
     if (countryResult.error) setError(countryResult.error.message);
     else setCountries((countryResult.data ?? []) as Country[]);
@@ -56,7 +60,7 @@ export default function TransitPage() {
 
   const submitRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour envoyer une demande de transit.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'transit')) { router.push('/inscription/transit'); return; }
     if (originId && destinationId && originId === destinationId && !['national'].includes(requestType)) {
       setError('Pour une demande internationale, choisissez deux pays différents.');
       return;

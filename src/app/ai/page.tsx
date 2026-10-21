@@ -2,15 +2,18 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Bot, MessageSquare, Plus, RefreshCw, Search, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Conversation = { id: string; title: string | null; status: string; created_at: string; updated_at: string };
 type Message = { id: string; conversation_id: string; user_id: string; role: string; content: string; provider: string | null; model: string | null; token_input: number | null; token_output: number | null; created_at: string };
 
 export default function AIPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -27,6 +30,7 @@ export default function AIPage() {
 
   const loadConversations = useCallback(async () => {
     if (!user) { setConversations([]); setMessages([]); setSelectedId(''); setBusy(false); return; }
+    if (!await hasApplicationMembership(supabase, user.id, 'ai')) { setConversations([]); setMessages([]); setSelectedId(''); setBusy(false); return; }
     setBusy(true); setError('');
     const { data, error: loadError } = await supabase.from('ai_conversations').select('id,title,status,created_at,updated_at').order('updated_at', { ascending: false }).limit(100);
     if (loadError) setError(loadError.message);
@@ -58,7 +62,7 @@ export default function AIPage() {
 
   const createConversation = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'ai')) { router.push('/inscription/ai'); return; }
     setSaving(true); setError(''); setMessage('');
     const { data, error: createError } = await supabase.from('ai_conversations').insert({
       user_id: user.id, title: title.trim() || 'Nouvelle conversation', context: {}, status: 'open',
@@ -77,7 +81,8 @@ export default function AIPage() {
   const sendPrompt = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = prompt.trim();
-    if (!user || !selectedId || !text || sending) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'ai')) { router.push('/inscription/ai'); return; }
+    if (!selectedId || !text || sending) return;
     setSending(true); setError(''); setMessage('');
     try {
       const response = await fetch('/api/ai/chat', {

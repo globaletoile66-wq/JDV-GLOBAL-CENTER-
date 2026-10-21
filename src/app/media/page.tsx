@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, FilePlus2, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Channel = { id: string; name: string; channel_type: string; status: string };
 type MediaContent = { id: string; channel_id: string; title: string; slug: string; content_type: string; body: string | null; media_url: string | null; published_at: string | null; status: string; created_at: string };
@@ -21,6 +23,7 @@ function slugify(value: string) {
 
 export default function MediaPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [contents, setContents] = useState<MediaContent[]>([]);
@@ -37,7 +40,17 @@ export default function MediaPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    if (!user) { setChannels([]); setContents([]); setBusy(false); return; }
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'media') : false;
+    if (!hasMembership) {
+      setChannels([]);
+      const { data, error: publicContentError } = await supabase.from('media_contents')
+        .select('id,channel_id,title,slug,content_type,body,media_url,published_at,status,created_at')
+        .eq('status', 'published').order('published_at', { ascending: false, nullsFirst: false }).limit(100);
+      if (publicContentError) setError(publicContentError.message);
+      else setContents((data ?? []) as MediaContent[]);
+      setBusy(false);
+      return;
+    }
     const [channelResult, contentResult] = await Promise.all([
       supabase.from('media_channels').select('id,name,channel_type,status').order('name').limit(100),
       supabase.from('media_contents').select('id,channel_id,title,slug,content_type,body,media_url,published_at,status,created_at').order('created_at', { ascending: false }).limit(100),
@@ -63,7 +76,7 @@ export default function MediaPage() {
 
   const createDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour créer un contenu.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'media')) { router.push('/inscription/media'); return; }
     if (!channelId) { setError('Aucune chaîne accessible. Demandez à un administrateur d’associer une chaîne à votre organisation.'); return; }
     if (!title.trim()) { setError('Le titre est obligatoire.'); return; }
     if (mediaUrl.trim() && !safeHttpUrl(mediaUrl.trim())) { setError('Le lien média doit être une URL HTTP ou HTTPS valide.'); return; }

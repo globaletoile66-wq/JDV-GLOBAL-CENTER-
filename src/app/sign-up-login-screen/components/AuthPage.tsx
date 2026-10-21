@@ -50,9 +50,9 @@ export default function AuthPage() {
           {/* Form */}
           <div className="animate-fade-in">
             {activeTab === 'login' ? (
-              <LoginForm onSwitchToRegister={() => setActiveTab('register')} />
+              <LoginForm appKey="global_center" onSwitchToRegister={() => setActiveTab('register')} />
             ) : (
-              <RegisterForm onSwitchToLogin={() => setActiveTab('login')} />
+              <RegisterForm appKey="global_center" onSwitchToLogin={() => setActiveTab('login')} />
             )}
           </div>
         </div>

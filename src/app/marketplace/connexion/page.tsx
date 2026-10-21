@@ -78,7 +78,7 @@ export default function MarketplaceConnexionPage() {
                 ))}
               </div>
               <div className="marketplace-auth-form">
-                <RegisterForm onSwitchToLogin={() => setMode('login')} />
+                <RegisterForm appKey="marketplace" onSwitchToLogin={() => setMode('login')} />
               </div>
               <p className="mt-6 text-center text-xs leading-5 text-gray-400">La création du compte ne déclenche aucun paiement. Les moyens de paiement et retraits ne seront configurés que dans les étapes dédiées, après vérification.</p>
             </>
@@ -95,7 +95,7 @@ export default function MarketplaceConnexionPage() {
               </p>
               <div className="my-7 flex items-center gap-3 text-xs text-gray-500"><span className="h-px flex-1 bg-gray-200" /><span>Connexion sécurisée JDV</span><span className="h-px flex-1 bg-gray-200" /></div>
               <div className="marketplace-auth-form">
-                <LoginForm onSwitchToRegister={() => setMode('register')} />
+                <LoginForm appKey="marketplace" onSwitchToRegister={() => setMode('register')} />
               </div>
               <p className="mt-8 text-center text-sm leading-6 text-gray-500">Vous avez déjà acheté sur JDV ?<br /><Link className="font-semibold text-[#D96C12] hover:underline" href="/marketplace/orders">Accéder à vos commandes</Link></p>
               <p className="mt-8 text-center text-xs text-gray-400">JDV Marketplace · Vos informations sont traitées selon les règles de sécurité de la plateforme.</p>

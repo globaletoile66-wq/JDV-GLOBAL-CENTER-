@@ -45,13 +45,31 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Protected routes — require authentication
-  const protectedPaths = ['/dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain', '/abonnements', '/espace'];
-  const isProtected = protectedPaths.some((p) => isPathOrChild(pathname, p));
+  // Separate public browsing from app-specific account/workspace routes.
+  const tontineActionRoute =
+    isPathOrChild(pathname, '/tontine/concepteur') ||
+    pathname === '/tontine/contrat' ||
+    (pathname.startsWith('/tontine/categories/') && pathname.endsWith('/contrat')) ||
+    isPathOrChild(pathname, '/tontine/join') ||
+    isPathOrChild(pathname, '/tontine/documents');
+  const globalCenterRoute = [
+    '/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications',
+    '/organizations', '/onboarding', '/terrain', '/abonnements', '/espace',
+  ].some((route) => isPathOrChild(pathname, route));
+  const requiredAppKey =
+    isPathOrChild(pathname, '/pay') ? 'pay' :
+    isPathOrChild(pathname, '/business') ? 'business' :
+    tontineActionRoute ? 'tontine' :
+    globalCenterRoute ? 'global_center' : null;
+
+  const protectedPaths = ['/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain', '/abonnements', '/espace'];
+  const isProtected = protectedPaths.some((p) => isPathOrChild(pathname, p)) || tontineActionRoute;
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
-    url.pathname = '/auth/login';
+    url.pathname = requiredAppKey && ['pay', 'business', 'tontine'].includes(requiredAppKey)
+      ? `/inscription/${requiredAppKey}`
+      : '/auth/login';
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }
@@ -59,6 +77,26 @@ export async function middleware(request: NextRequest) {
   if (user && isProtected) {
     const mfa = await mfaRedirect(supabase, request);
     if (mfa) return mfa;
+  }
+
+  // A valid global session alone does not grant access to another application's workspace.
+  if (user && requiredAppKey) {
+    const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_super_admin');
+    if (adminError || isSuperAdmin !== true) {
+      const { data: appMembership, error: membershipError } = await supabase
+        .from('app_memberships')
+        .select('id,status')
+        .eq('user_id', user.id)
+        .eq('app_key', requiredAppKey)
+        .maybeSingle();
+
+      if (membershipError || !appMembership || appMembership.status !== 'active') {
+        const url = request.nextUrl.clone();
+        url.pathname = `/inscription/${requiredAppKey}`;
+        url.searchParams.set('redirect', pathname);
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   // Hidden concepteur portal: authentication plus server-side authorization.

@@ -2,10 +2,12 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, BarChart3, CalendarDays, CircleDollarSign, Compass, Handshake, LayoutDashboard, Megaphone, RefreshCw, ShieldCheck, Sparkles, Target, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Advertiser = { id: string; legal_name: string; status: string; user_id: string | null };
 type Campaign = { id: string; name: string; objective: string | null; starts_at: string | null; ends_at: string | null; budget_amount: number; currency_id: string | null; status: string; created_at: string };
@@ -27,6 +29,7 @@ const modules = [
 
 export default function PubPage() {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [advertiser, setAdvertiser] = useState<Advertiser | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -43,16 +46,16 @@ export default function PubPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    if (!user) {
-      setAdvertiser(null); setCampaigns([]); setPlacements([]); setCurrencies([]); setPricingRules([]); setBusy(false);
-      return;
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'pub') : false;
+    let advertiserRow: Advertiser | null = null;
+    if (hasMembership && user) {
+      const advertiserResult = await supabase.from('pub_advertisers').select('id,legal_name,status,user_id').eq('user_id', user.id).maybeSingle();
+      if (advertiserResult.error) setError(advertiserResult.error.message);
+      advertiserRow = (advertiserResult.data ?? null) as Advertiser | null;
     }
-    const advertiserResult = await supabase.from('pub_advertisers').select('id,legal_name,status,user_id').eq('user_id', user.id).maybeSingle();
-    if (advertiserResult.error) setError(advertiserResult.error.message);
-    const advertiserRow = (advertiserResult.data ?? null) as Advertiser | null;
     setAdvertiser(advertiserRow);
     const [campaignResult, placementResult, currencyResult, pricingResult] = await Promise.all([
-      advertiserRow ? supabase.from('pub_campaigns').select('id,name,objective,starts_at,ends_at,budget_amount,currency_id,status,created_at').eq('advertiser_id', advertiserRow.id).order('created_at', { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
+      hasMembership && advertiserRow ? supabase.from('pub_campaigns').select('id,name,objective,starts_at,ends_at,budget_amount,currency_id,status,created_at').eq('advertiser_id', advertiserRow.id).order('created_at', { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
       supabase.from('pub_placements').select('id,name,placement_type,price_per_day,currency_id,is_active').eq('is_active', true).limit(200),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
       supabase.from('pub_pricing_rules').select('id,name,billing_model,unit_price,currency_id').eq('is_active', true).limit(100),
@@ -72,7 +75,8 @@ export default function PubPage() {
 
   const createAdvertiser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !legalName.trim()) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'pub')) { router.push('/inscription/pub'); return; }
+    if (!legalName.trim()) return;
     setSaving(true); setError('');
     const { error: insertError } = await supabase.from('pub_advertisers').insert({
       user_id: user.id, legal_name: legalName.trim(), contact_email: contactEmail.trim() || user.email || null,

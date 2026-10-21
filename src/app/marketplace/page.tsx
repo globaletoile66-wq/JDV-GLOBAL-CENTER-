@@ -2,25 +2,28 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, BadgeCheck, Heart, RefreshCw, Search, ShieldCheck, ShoppingBag, Sparkles, Store, Truck, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Listing = { id:string; seller_id:string; category_id:string|null; title:string; description:string|null; short_description:string|null; price:number; compare_at_price:number|null; currency_id:string|null; stock_quantity:number|null; track_inventory:boolean; is_featured:boolean; is_digital:boolean; tags:string[]|null; rating_average:number|null; rating_count:number|null };
 type Category = { id:string; name:string; icon_name?:string|null };
 type Currency = { id:string; code:string };
 
 export default function MarketplacePage() {
- const {user,loading}=useAuth(); const supabase=useMemo(()=>createClient(),[]);
+ const {user,loading}=useAuth(); const router=useRouter(); const supabase=useMemo(()=>createClient(),[]);
  const [listings,setListings]=useState<Listing[]>([]); const [categories,setCategories]=useState<Category[]>([]); const [currencies,setCurrencies]=useState<Currency[]>([]); const [favorites,setFavorites]=useState<string[]>([]);
  const [query,setQuery]=useState(''); const [categoryId,setCategoryId]=useState(''); const [busy,setBusy]=useState(true); const [error,setError]=useState(''); const [message,setMessage]=useState('');
  const load=useCallback(async()=>{
   setBusy(true);setError('');
+  const canLoadFavorites = user ? await hasApplicationMembership(supabase, user.id, 'marketplace') : false;
   const [l,c,cur,f]=await Promise.all([
    supabase.from('marketplace_listings').select('id,seller_id,category_id,title,description,short_description,price,compare_at_price,currency_id,stock_quantity,track_inventory,is_featured,is_digital,tags,rating_average,rating_count').eq('listing_status','published').order('is_featured',{ascending:false}).order('published_at',{ascending:false,nullsFirst:false}).limit(100),
    supabase.from('marketplace_categories').select('id,name,icon_name').eq('is_active',true).order('sort_order').limit(100),
    supabase.from('currencies').select('id,code').eq('is_active',true).limit(100),
-   user ? supabase.from('marketplace_favorites').select('listing_id').eq('user_id',user.id) : Promise.resolve({data:[],error:null} as any)
+   canLoadFavorites && user ? supabase.from('marketplace_favorites').select('listing_id').eq('user_id',user.id) : Promise.resolve({data:[],error:null} as any)
   ]);
   if(l.error)setError(l.error.message);else setListings((l.data||[]) as Listing[]);
   if(c.error)setError(x=>x||c.error!.message);else setCategories((c.data||[]) as Category[]);
@@ -32,7 +35,8 @@ export default function MarketplacePage() {
  const filtered=listings.filter(x=>[x.title,x.description,x.short_description,...(x.tags||[])].join(' ').toLowerCase().includes(query.trim().toLowerCase())&&(!categoryId||x.category_id===categoryId));
  const money=(amount:number,id:string|null)=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(amount)+' '+(currencies.find(x=>x.id===id)?.code||'');
  const toggle=async(item:Listing)=>{
-  if(!user){setError('Connectez-vous pour enregistrer vos favoris.');return}
+  if(!user){router.push('/inscription/marketplace');return}
+  if(!await hasApplicationMembership(supabase,user.id,'marketplace')){router.push('/inscription/marketplace');return}
   const exists=favorites.includes(item.id);setError('');setMessage('');
   const result=exists?await supabase.from('marketplace_favorites').delete().eq('user_id',user.id).eq('listing_id',item.id):await supabase.from('marketplace_favorites').insert({user_id:user.id,listing_id:item.id,seller_id:item.seller_id});
   if(result.error)setError(result.error.message);else{setFavorites(old=>exists?old.filter(id=>id!==item.id):[...old,item.id]);setMessage(exists?'Article retiré des favoris.':'Article ajouté aux favoris.')}
@@ -43,7 +47,7 @@ export default function MarketplacePage() {
    <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-4 sm:px-8">
     <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/65 transition hover:text-white"><ArrowLeft size={16}/> Accueil JDV</Link>
     <div className="flex items-center gap-2">
-     <Link href="/marketplace/connexion" className="rounded-xl border border-white/15 px-3 py-2 text-sm hover:border-[#F28C28]/60">Connexion</Link>
+     <Link href={user ? '/applications/marketplace/settings' : '/marketplace/connexion'} className="rounded-xl border border-white/15 px-3 py-2 text-sm hover:border-[#F28C28]/60">{user ? 'Mon espace' : 'Connexion'}</Link>
      <Link href="/marketplace/seller" className="hidden rounded-xl border border-white/15 px-3 py-2 text-sm hover:border-[#F28C28]/60 sm:inline-flex">Espace vendeur</Link>
      <Link href="/marketplace/seller/create" className="inline-flex items-center gap-2 rounded-xl bg-[#F28C28] px-4 py-2.5 text-sm font-bold text-[#10213d] transition hover:bg-[#ffab52]"><Store size={16}/> Ouvrir ma boutique</Link>
     </div>

@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Building2, MapPin, RefreshCw, Search, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type EnergySite = { id: string; name: string; site_type: string; address: string | null; city: string | null; capacity_kw: number | null; status: string; created_at: string };
 const inputClass = 'w-full rounded-xl border border-white/10 bg-[#09152f] px-3 py-3 text-sm text-white outline-none focus:border-[#F28C28]';
@@ -12,6 +14,7 @@ const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide t
 
 export default function EnergyPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [sites, setSites] = useState<EnergySite[]>([]);
   const [query, setQuery] = useState('');
@@ -28,7 +31,7 @@ export default function EnergyPage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
-    if (!user) { setSites([]); setBusy(false); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'energy')) { setSites([]); setBusy(false); return; }
     const { data, error: loadError } = await supabase.from('energy_sites').select('id,name,site_type,address,city,capacity_kw,status,created_at').order('created_at', { ascending: false }).limit(100);
     if (loadError) setError(loadError.message);
     else setSites((data ?? []) as EnergySite[]);
@@ -41,7 +44,7 @@ export default function EnergyPage() {
 
   const submitSite = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour créer un site énergétique.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'energy')) { router.push('/inscription/energy'); return; }
     if (!name.trim()) { setError('Le nom du site est obligatoire.'); return; }
     const capacityValue = capacity.trim() ? Number(capacity) : null;
     if (capacityValue != null && (!Number.isFinite(capacityValue) || capacityValue <= 0)) { setError('La capacité doit être un nombre positif en kW.'); return; }

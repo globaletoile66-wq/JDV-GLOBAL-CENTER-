@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, CalendarClock, Heart, MapPin, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Property = { id: string; title: string; slug: string; description: string | null; country_id: string | null; city: string | null; district: string | null; hide_exact_address: boolean; address: string | null; surface: number | null; land_surface: number | null; bedrooms: number | null; bathrooms: number | null; parking_spaces: number | null; furnished: boolean; price: number; currency_id: string | null; transaction_type: string; property_status: string; property_type_id: string; owner_user_id: string | null; business_id: string | null; published_at: string | null };
 type PropertyType = { id: string; name: string; code: string };
@@ -18,6 +20,7 @@ const transactionLabels: Record<string, string> = { rent: 'Location', sale: 'Ven
 
 export default function ImmoPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [properties, setProperties] = useState<Property[]>([]);
   const [types, setTypes] = useState<PropertyType[]>([]);
@@ -48,6 +51,7 @@ export default function ImmoPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'immo') : false;
     let propertyQuery = supabase.from('immo_properties')
       .select('id,title,slug,description,country_id,city,district,hide_exact_address,address,surface,land_surface,bedrooms,bathrooms,parking_spaces,furnished,price,currency_id,transaction_type,property_status,property_type_id,owner_user_id,business_id,published_at')
       .order('published_at', { ascending: false, nullsFirst: false }).limit(100);
@@ -65,12 +69,12 @@ export default function ImmoPage() {
       propertyQuery = propertyQuery.or('title.ilike.%' + term + '%,description.ilike.%' + term + '%,city.ilike.%' + term + '%,district.ilike.%' + term + '%');
     }
     const [propertyResult, typeResult, currencyResult, countryResult, favoriteResult, appointmentResult] = await Promise.all([
-      user ? propertyQuery : propertyQuery.eq('property_status', 'published'),
+      hasMembership ? propertyQuery : propertyQuery.eq('property_status', 'published'),
       supabase.from('immo_property_types').select('id,name,code').eq('is_active', true).order('sort_order'),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
       supabase.from('countries').select('id,name').eq('is_active', true).order('name').limit(250),
-      user ? supabase.from('immo_favorites').select('property_id').eq('user_id', user.id) : Promise.resolve({ data: [], error: null } as any),
-      user ? supabase.from('immo_appointments').select('id,property_id,scheduled_at,appointment_status,created_at').eq('requester_user_id', user.id).order('scheduled_at', { ascending: true }).limit(50) : Promise.resolve({ data: [], error: null } as any),
+      hasMembership && user ? supabase.from('immo_favorites').select('property_id').eq('user_id', user.id) : Promise.resolve({ data: [], error: null } as any),
+      hasMembership && user ? supabase.from('immo_appointments').select('id,property_id,scheduled_at,appointment_status,created_at').eq('requester_user_id', user.id).order('scheduled_at', { ascending: true }).limit(50) : Promise.resolve({ data: [], error: null } as any),
     ]);
     if (propertyResult.error) setError(propertyResult.error.message); else setProperties((propertyResult.data ?? []) as Property[]);
     if (typeResult.error) setError((current) => current || typeResult.error!.message); else setTypes((typeResult.data ?? []) as PropertyType[]);
@@ -103,7 +107,7 @@ export default function ImmoPage() {
   });
 
   const toggleFavorite = async (property: Property) => {
-    if (!user) { setError('Connectez-vous pour enregistrer un favori.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'immo')) { router.push('/inscription/immo'); return; }
     setError(''); setMessage('');
     const already = favorites.includes(property.id);
     const result = already
@@ -115,7 +119,8 @@ export default function ImmoPage() {
 
   const requestContact = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !contactProperty) { setError('Connectez-vous pour contacter au sujet de ce bien.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'immo')) { router.push('/inscription/immo'); return; }
+    if (!contactProperty) { setError('Sélectionnez un bien avant de poursuivre.'); return; }
     setSaving(true); setError(''); setMessage('');
     const { error: requestError } = await supabase.from('immo_requests').insert({
       requester_user_id: user.id,
@@ -130,7 +135,8 @@ export default function ImmoPage() {
 
   const requestAppointment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !appointmentProperty) { setError('Connectez-vous pour demander une visite.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'immo')) { router.push('/inscription/immo'); return; }
+    if (!appointmentProperty) { setError('Sélectionnez un bien avant de demander une visite.'); return; }
     const date = new Date(scheduledAt);
     if (!scheduledAt || Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) { setError('Choisissez une date et une heure futures.'); return; }
     setSaving(true); setError(''); setMessage('');

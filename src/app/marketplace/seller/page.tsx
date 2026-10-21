@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Store, Package, ShoppingCart, DollarSign, Star, TrendingUp, Plus, Eye, Edit, Pause, Play, Trash2, ArrowLeft, Loader2, AlertCircle, BarChart3, Settings, Shield, CheckCircle2, Clock, XCircle } from 'lucide-react';
@@ -77,7 +77,7 @@ const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 export default function SellerDashboardPage() {
   const { user, profile } = useAuth();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [stats, setStats] = useState<SellerStats | null>(null);
@@ -88,9 +88,21 @@ export default function SellerDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'listings' | 'orders' | 'settlements'>('overview');
 
   useEffect(() => {
-    if (!user) { router.push('/auth/login'); return; }
-    loadSellerData();
-  }, [user]);
+    if (!user) { router.replace('/inscription/marketplace'); return; }
+    let active = true;
+    void (async () => {
+      const { data: membership, error } = await supabase
+        .from('app_memberships').select('id,status')
+        .eq('user_id', user.id).eq('app_key', 'marketplace').maybeSingle();
+      if (!active) return;
+      if (error || !membership || membership.status !== 'active') {
+        router.replace('/inscription/marketplace');
+        return;
+      }
+      loadSellerData();
+    })();
+    return () => { active = false; };
+  }, [user, router, supabase]);
 
   const loadSellerData = async () => {
     if (!user) return;

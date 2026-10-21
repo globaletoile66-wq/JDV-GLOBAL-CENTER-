@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Bell, CalendarDays, ExternalLink, Heart, MessageCircle, RefreshCw, Search, Send, Settings, Share2, UserCheck, UserPlus, UserRound, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type SocialProfile = { id?: string; user_id: string; username: string; display_name: string | null; bio?: string | null; avatar_url?: string | null; profile_status?: string };
 type SocialPost = { id: string; author_user_id: string; body: string | null; media_url: string | null; visibility: string; status: string; created_at: string };
@@ -20,6 +22,7 @@ function validHttpUrl(value: string) {
 
 export default function SocialPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<SocialProfile | null>(null);
   const [profilesByUser, setProfilesByUser] = useState<Record<string, SocialProfile>>({});
@@ -43,11 +46,13 @@ export default function SocialPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    if (!user) { setProfile(null); setPosts([]); setReactions([]); setComments([]); setFollows([]); setProfilesByUser({}); setBusy(false); return; }
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'social') : false;
     const [profileResult, postsResult, followResult] = await Promise.all([
-      supabase.from('social_profiles').select('id,user_id,username,display_name,bio,avatar_url,profile_status').eq('user_id', user.id).maybeSingle(),
-      supabase.from('social_posts').select('id,author_user_id,body,media_url,visibility,status,created_at').eq('status', 'published').or(`visibility.eq.public,author_user_id.eq.${user.id}`).order('created_at', { ascending: false }).limit(100),
-      supabase.from('social_follows').select('follower_user_id,following_user_id,status').eq('follower_user_id', user.id),
+      hasMembership && user ? supabase.from('social_profiles').select('id,user_id,username,display_name,bio,avatar_url,profile_status').eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      user && hasMembership
+        ? supabase.from('social_posts').select('id,author_user_id,body,media_url,visibility,status,created_at').eq('status', 'published').or(`visibility.eq.public,author_user_id.eq.${user.id}`).order('created_at', { ascending: false }).limit(100)
+        : supabase.from('social_posts').select('id,author_user_id,body,media_url,visibility,status,created_at').eq('status', 'published').eq('visibility', 'public').order('created_at', { ascending: false }).limit(100),
+      hasMembership && user ? supabase.from('social_follows').select('follower_user_id,following_user_id,status').eq('follower_user_id', user.id) : Promise.resolve({ data: [], error: null }),
     ]);
     if (followResult.error) setError((current) => current || followResult.error!.message);
     else setFollows((followResult.data ?? []) as SocialFollow[]);
@@ -55,7 +60,7 @@ export default function SocialPage() {
     else {
       setProfile((profileResult.data ?? null) as SocialProfile | null);
       if (profileResult.data) { setUsername(profileResult.data.username); setDisplayName(profileResult.data.display_name || ''); setBio(profileResult.data.bio || ''); }
-      else if (!username) setUsername((user.email?.split('@')[0] || 'membre').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20) + '_' + user.id.slice(0, 4));
+      else if (user && hasMembership && !username) setUsername((user.email?.split('@')[0] || 'membre').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20) + '_' + user.id.slice(0, 4));
     }
     if (postsResult.error) {
       setError((current) => current || postsResult.error!.message);
@@ -64,12 +69,12 @@ export default function SocialPage() {
       const nextPosts = (postsResult.data ?? []) as SocialPost[];
       setPosts(nextPosts);
       const ids = nextPosts.map((post) => post.id);
-      const authorIds = Array.from(new Set([user.id, ...nextPosts.map((post) => post.author_user_id)]));
+      const authorIds = Array.from(new Set([...(user ? [user.id] : []), ...nextPosts.map((post) => post.author_user_id)]));
       if (ids.length) {
         const [profileList, reactionList, commentList] = await Promise.all([
           supabase.from('social_profiles').select('user_id,username,display_name,avatar_url,profile_status').in('user_id', authorIds),
-          supabase.from('social_reactions').select('id,post_id,user_id,reaction_type').in('post_id', ids),
-          supabase.from('social_comments').select('id,post_id,user_id,body,status,created_at').in('post_id', ids).eq('status', 'published').order('created_at', { ascending: true }).limit(300),
+          hasMembership ? supabase.from('social_reactions').select('id,post_id,user_id,reaction_type').in('post_id', ids) : Promise.resolve({ data: [], error: null }),
+          hasMembership ? supabase.from('social_comments').select('id,post_id,user_id,body,status,created_at').in('post_id', ids).eq('status', 'published').order('created_at', { ascending: true }).limit(300) : Promise.resolve({ data: [], error: null }),
         ]);
         if (profileList.error) setError((current) => current || profileList.error!.message);
         else {
@@ -115,7 +120,7 @@ export default function SocialPage() {
 
   const createProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
     const normalized = username.trim().toLowerCase();
     if (!/^[a-z0-9_]{3,30}$/.test(normalized)) { setError('Le nom d’utilisateur doit contenir 3 à 30 caractères : lettres, chiffres ou _ .'); return; }
     setSavingProfile(true); setError(''); setMessage('');
@@ -127,7 +132,7 @@ export default function SocialPage() {
 
   const publishPost = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour publier.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
     if (!profile) { setError('Créez d’abord votre profil communautaire.'); return; }
     if (!postBody.trim() && !mediaUrl.trim()) { setError('Ajoutez un texte ou un lien média.'); return; }
     if (mediaUrl.trim() && !validHttpUrl(mediaUrl.trim())) { setError('Le lien média doit être une URL HTTP ou HTTPS valide.'); return; }
@@ -139,7 +144,7 @@ export default function SocialPage() {
   };
 
   const toggleLike = async (post: SocialPost) => {
-    if (!user) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
     setActingOn(post.id); setError(''); setMessage('');
     const existing = reactions.find((item) => item.post_id === post.id && item.user_id === user.id && item.reaction_type === 'like');
     if (existing) {
@@ -155,7 +160,8 @@ export default function SocialPage() {
   };
 
   const toggleFollow = async (authorUserId: string) => {
-    if (!user || authorUserId === user.id) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
+    if (authorUserId === user.id) return;
     setActingOn(authorUserId); setError(''); setMessage('');
     const existing = follows.find((item) => item.following_user_id === authorUserId && item.follower_user_id === user.id);
     if (existing?.status === 'active') {
@@ -176,7 +182,7 @@ export default function SocialPage() {
 
   const addComment = async (event: FormEvent<HTMLFormElement>, post: SocialPost) => {
     event.preventDefault();
-    if (!user) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'social')) { router.push('/inscription/social'); return; }
     const body = (commentDrafts[post.id] || '').trim();
     if (!body) return;
     setActingOn(post.id); setError(''); setMessage('');

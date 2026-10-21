@@ -24,14 +24,16 @@ export default function CreateSellerStorePage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { router.replace('/auth/login?redirect=%2Fmarketplace%2Fseller%2Fcreate'); return; }
+    if (!user) { router.replace('/inscription/marketplace'); return; }
     let active = true;
     (async () => {
-      const [sellerResult, countryResult] = await Promise.all([
+      const [membershipResult, sellerResult, countryResult] = await Promise.all([
+        supabase.from('app_memberships').select('id,status').eq('user_id', user.id).eq('app_key', 'marketplace').maybeSingle(),
         supabase.from('marketplace_sellers').select('id').eq('user_id', user.id).maybeSingle(),
         supabase.from('countries').select('id,name,iso_code').eq('is_active', true).order('name')
       ]);
       if (!active) return;
+      if (membershipResult.error || !membershipResult.data || membershipResult.data.status !== 'active') { router.replace('/inscription/marketplace'); return; }
       if (sellerResult.data) { router.replace('/marketplace/seller'); return; }
       if (countryResult.error) setError('Impossible de charger la liste des pays. Réessayez.');
       else setCountries((countryResult.data || []) as Country[]);

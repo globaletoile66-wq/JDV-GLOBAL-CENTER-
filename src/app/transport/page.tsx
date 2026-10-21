@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, Bike, BusFront, CalendarClock, CarFront,
   CheckCircle2, Clock3, Globe2, MapPin, MapPinned, Package, PackageCheck,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type RouteRow = { id: string; name: string; origin_city: string; destination_city: string; distance_km: number | null; is_active: boolean };
 type ServiceType = { id: string; code: string; name: string; is_active: boolean };
@@ -31,6 +33,7 @@ const deliveryLabels: Record<string, string> = {
 
 export default function TransportPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [routes, setRoutes] = useState<RouteRow[]>([]);
   const [services, setServices] = useState<ServiceType[]>([]);
@@ -56,11 +59,12 @@ export default function TransportPage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'transport') : false;
     const [routeResult, serviceResult, bookingResult, deliveryResult] = await Promise.all([
       supabase.from('transport_routes').select('id,name,origin_city,destination_city,distance_km,is_active').eq('is_active', true).order('name').limit(100),
       supabase.from('transport_service_types').select('id,code,name,is_active').eq('is_active', true).order('name').limit(100),
-      user ? supabase.from('transport_bookings').select('id,reference,pickup_address,destination_address,scheduled_at,passengers_count,booking_status,created_at').eq('passenger_user_id', user.id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null } as any),
-      user ? supabase.from('transport_deliveries').select('id,reference,recipient_name,recipient_phone,pickup_address,destination_address,delivery_status,created_at').eq('sender_user_id', user.id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null } as any),
+      hasMembership && user ? supabase.from('transport_bookings').select('id,reference,pickup_address,destination_address,scheduled_at,passengers_count,booking_status,created_at').eq('passenger_user_id', user.id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null } as any),
+      hasMembership && user ? supabase.from('transport_deliveries').select('id,reference,recipient_name,recipient_phone,pickup_address,destination_address,delivery_status,created_at').eq('sender_user_id', user.id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null } as any),
     ]);
     if (routeResult.error) setError(routeResult.error.message);
     else setRoutes((routeResult.data ?? []) as RouteRow[]);
@@ -85,7 +89,7 @@ export default function TransportPage() {
 
   const submitRide = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour envoyer une demande.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'transport')) { router.push('/inscription/transport'); return; }
     if (!serviceTypeId) { setError('Aucun service de transport actif n’est disponible.'); return; }
     if (!pickup.trim() || !destination.trim()) { setError('Renseignez le départ et la destination.'); return; }
     setSaving(true); setError(''); setNotice('');
@@ -109,7 +113,7 @@ export default function TransportPage() {
 
   const submitParcel = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour envoyer un colis.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'transport')) { router.push('/inscription/transport'); return; }
     if (!pickup.trim() || !destination.trim() || !recipientName.trim()) {
       setError('Renseignez le départ, la destination et le nom du destinataire.'); return;
     }

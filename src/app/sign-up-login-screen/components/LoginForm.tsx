@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
+import { getJDVApplication } from '@/lib/apps/registry';
 
 interface LoginFormData {
   email: string;
@@ -13,54 +16,66 @@ interface LoginFormData {
   remember: boolean;
 }
 
-// Demo credentials for testing
-const DEMO_CREDENTIALS = [
-  { role: 'Utilisateur', email: 'kofi.mensah@jdvglobal.com', password: 'JDV@Demo2026' },
-  { role: 'Admin Organisation', email: 'amina.diallo@jdvbusiness.com', password: 'JDV@Admin2026' },
-];
 
 interface Props {
   onSwitchToRegister: () => void;
+  /** When set, login is valid only for users enrolled in this application. */
+  appKey?: string;
+  redirectTo?: string;
 }
 
-export default function LoginForm({ onSwitchToRegister }: Props) {
+export default function LoginForm({ onSwitchToRegister, appKey, redirectTo }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { signIn, signOut } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
+  const application = getJDVApplication(appKey);
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
     setError,
   } = useForm<LoginFormData>({ defaultValues: { remember: false } });
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-    // Backend integration point — replace with Supabase Auth signInWithPassword
-    await new Promise((res) => setTimeout(res, 1400));
+    try {
+      await signIn(data.email, data.password);
 
-    const valid = DEMO_CREDENTIALS.some(
-      (c) => c.email === data.email && c.password === data.password
-    );
+      if (appKey) {
+        const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_super_admin');
+        if (adminError || isSuperAdmin !== true) {
+        const { data: membership, error: membershipError } = await supabase
+          .from('app_memberships')
+          .select('id,status')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+          .eq('app_key', appKey)
+          .maybeSingle();
 
-    if (!valid) {
-      setIsLoading(false);
+        if (membershipError) {
+          await signOut();
+          setError('root', { message: 'La vérification des droits de cette application est indisponible. Réessayez plus tard ; aucun accès n’a été accordé.' });
+          return;
+        }
+        if (!membership || membership.status !== 'active') {
+          toast.info('Votre compte JDV existe déjà. Activez maintenant votre espace pour cette application.');
+          router.replace(`/inscription/${appKey}${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`);
+          return;
+        }
+        }
+      }
+
+      toast.success('Connexion réussie.');
+      router.push(redirectTo ?? (!appKey || appKey === 'global_center' ? '/user-dashboard' : `/applications/${appKey}/subscription`));
+    } catch {
       setError('root', {
-        message: 'Identifiants invalides — utilisez les comptes de démonstration ci-dessous pour vous connecter.',
+        message: 'Connexion impossible. Vérifiez votre adresse email, votre mot de passe et votre inscription à cette application, puis réessayez.',
       });
-      return;
+    } finally {
+      setIsLoading(false);
     }
-
-    toast.success('Connexion réussie — Bienvenue sur JDV GLOBAL CENTER');
-    setIsLoading(false);
-    router.push('/user-dashboard');
-  };
-
-  const fillCredentials = (email: string, password: string) => {
-    setValue('email', email);
-    setValue('password', password);
   };
 
   return (
@@ -68,7 +83,7 @@ export default function LoginForm({ onSwitchToRegister }: Props) {
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-foreground mb-1">Bon retour</h2>
         <p className="text-sm text-muted-foreground">
-          Connectez-vous à votre espace JDV GLOBAL CENTER
+          Connectez-vous à votre espace {application?.name ?? 'JDV Global Center'}
         </p>
       </div>
 
@@ -162,30 +177,6 @@ export default function LoginForm({ onSwitchToRegister }: Props) {
           )}
         </button>
       </form>
-
-      {/* Demo credentials */}
-      <div className="mt-6 p-4 rounded-xl bg-muted/30 border border-border">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Comptes de démonstration
-        </p>
-        <div className="flex flex-col gap-2">
-          {DEMO_CREDENTIALS.map((cred) => (
-            <div key={`cred-${cred.role}`} className="flex items-center justify-between gap-3 py-1.5">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-foreground">{cred.role}</p>
-                <p className="text-xs text-muted-foreground truncate">{cred.email}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => fillCredentials(cred.email, cred.password)}
-                className="px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20 text-accent text-xs font-semibold hover:bg-accent/20 transition-colors flex-shrink-0"
-              >
-                Utiliser
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <p className="text-center text-sm text-muted-foreground mt-6">
         Pas encore de compte ?{' '}
