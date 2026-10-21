@@ -28,7 +28,7 @@ for insert to authenticated with check (
   ) and (
     room_id is null or exists (
       select 1 from public.travel_rooms r
-      where r.id = room_id and r.accommodation_id = accommodation_id and r.is_active = true
+      where r.id = travel_accommodation_booking_requests.room_id and r.accommodation_id = travel_accommodation_booking_requests.accommodation_id and r.is_active = true
     )
   )
 );
