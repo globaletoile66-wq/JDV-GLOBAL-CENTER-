@@ -403,6 +403,81 @@ begin
 end;
 $jdv_branch_rls$;
 
+-- SECURITY DEFINER RPCs can bypass table RLS. These row triggers enforce the
+-- selected app membership at the point of creation for sensitive workflows.
+create or replace function public.jdv_require_app_membership_for_row()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $jdv_app_row_guard$
+declare
+  v_app_key text;
+begin
+  if current_setting('request.jwt.claim.role', true) = 'service_role' then
+    return new;
+  end if;
+  if auth.uid() is null then
+    raise exception 'JDV_APP_MEMBERSHIP_REQUIRED';
+  end if;
+  if public.is_super_admin() then
+    return new;
+  end if;
+
+  if tg_table_name like 'ai_%' then v_app_key := 'ai';
+  elsif tg_table_name like 'health_%' then v_app_key := 'health';
+  elsif tg_table_name like 'insurance_%' then v_app_key := 'insurance';
+  elsif tg_table_name like 'tontine_%' then v_app_key := 'tontine';
+  elsif tg_table_name like 'travel_%' then v_app_key := 'travel';
+  elsif tg_table_name like 'transport_%' then v_app_key := 'transport';
+  elsif tg_table_name like 'transit_%' then v_app_key := 'transit';
+  elsif tg_table_name like 'energy_%' then v_app_key := 'energy';
+  elsif tg_table_name like 'jdv_service_%' then v_app_key := 'services';
+  else
+    raise exception 'JDV_APP_MEMBERSHIP_GUARD_UNMAPPED_TABLE: %', tg_table_name;
+  end if;
+
+  if not exists (
+    select 1 from public.app_memberships m
+    where m.user_id = auth.uid()
+      and m.app_key = v_app_key
+      and m.status = 'active'
+  ) then
+    raise exception 'JDV_APP_MEMBERSHIP_REQUIRED: %', v_app_key;
+  end if;
+
+  return new;
+end;
+$jdv_app_row_guard$;
+
+revoke all on function public.jdv_require_app_membership_for_row() from public;
+
+do $jdv_sensitive_insert_triggers$
+declare
+  v_table text;
+begin
+  foreach v_table in array array[
+    'ai_conversations','ai_messages',
+    'health_appointments',
+    'insurance_customers',
+    'tontines','tontine_members',
+    'travel_bookings',
+    'transport_bookings','transport_deliveries',
+    'transit_requests',
+    'energy_sites',
+    'jdv_service_requests'
+  ] loop
+    if to_regclass('public.' || v_table) is not null then
+      execute format('drop trigger if exists jdv_app_membership_required_before_insert on public.%I', v_table);
+      execute format(
+        'create trigger jdv_app_membership_required_before_insert before insert on public.%I for each row execute function public.jdv_require_app_membership_for_row()',
+        v_table
+      );
+    end if;
+  end loop;
+end;
+$jdv_sensitive_insert_triggers$;
+
 -- Public read-only catalog: exposes only available agricultural offers, never farm ownership data.
 create or replace function public.jdv_agriculture_public_catalog()
 returns table (
