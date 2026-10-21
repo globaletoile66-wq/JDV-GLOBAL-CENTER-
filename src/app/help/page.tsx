@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Search, ChevronDown, ChevronRight, MessageCircle, Mail, Phone } from 'lucide-react';
+import { ArrowLeft, Search, ChevronDown, ChevronRight, MessageCircle, Mail, Phone, MapPin } from 'lucide-react';
+import { CONTACT } from '@/lib/jdv/contact';
 import AppLogo from '@/components/ui/AppLogo';
 
 const FAQ_ITEMS = [
@@ -115,27 +116,35 @@ export default function HelpPage() {
           )}
         </div>
 
-        {/* Contact */}
-        <div className="jdv-card">
-          <h2 className="text-xl font-bold text-foreground mb-6">Vous n'avez pas trouvé votre réponse ?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { icon: Mail, label: 'Email', value: 'support@jdvglobal.com', href: 'mailto:support@jdvglobal.com' },
-              { icon: MessageCircle, label: 'Chat', value: 'Bientôt disponible', href: '#' },
-              { icon: Phone, label: 'Téléphone', value: 'Bientôt disponible', href: '#' },
-            ]?.map((c) => (
-              <a key={c?.label} href={c?.href} className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border hover:border-accent/40 transition-colors text-center">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                  <c.icon size={20} className="text-accent" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground text-sm">{c?.label}</p>
-                  <p className="text-xs text-muted-foreground">{c?.value}</p>
-                </div>
+        {/* Coordonnées officielles : affichées uniquement dans le Centre d'aide */}
+        <section aria-labelledby="help-contact-title" className="jdv-card">
+          <h2 id="help-contact-title" className="text-xl font-bold text-foreground mb-2">Contacter le Centre d'aide</h2>
+          <p className="text-sm text-muted-foreground mb-6">Notre équipe est à votre écoute pour vos questions sur JDV GLOBAL CENTER.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {CONTACT.email && (
+              <a href={`mailto:${CONTACT.email}`} className="flex items-center gap-3 p-4 rounded-xl border border-border hover:border-accent/40 transition-colors">
+                <span className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center"><Mail size={20} className="text-accent" /></span>
+                <span className="min-w-0"><span className="block font-semibold text-foreground text-sm">E-mail</span><span className="block text-sm text-muted-foreground break-all">{CONTACT.email}</span></span>
+              </a>
+            )}
+            {CONTACT.phone?.map((phone, index) => (
+              <a key={phone} href={`tel:${phone.replace(/[^+\\d]/g, '')}`} className="flex items-center gap-3 p-4 rounded-xl border border-border hover:border-accent/40 transition-colors">
+                <span className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center"><Phone size={20} className="text-accent" /></span>
+                <span className="min-w-0"><span className="block font-semibold text-foreground text-sm">Téléphone {index + 1}</span><span className="block text-sm text-muted-foreground">{phone}</span></span>
               </a>
             ))}
+            {CONTACT.address && (
+              <div className="flex items-center gap-3 p-4 rounded-xl border border-border">
+                <span className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center"><MapPin size={20} className="text-accent" /></span>
+                <span><span className="block font-semibold text-foreground text-sm">Adresse</span><span className="block text-sm text-muted-foreground">{CONTACT.address}</span></span>
+              </div>
+            )}
+            <div className="flex items-center gap-3 p-4 rounded-xl border border-border">
+              <span className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center"><MessageCircle size={20} className="text-accent" /></span>
+              <span><span className="block font-semibold text-foreground text-sm">Chat</span><span className="block text-sm text-muted-foreground">Bientôt disponible</span></span>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
