@@ -78,6 +78,28 @@ create policy "Users can delete their own app settings"
   on public.app_user_settings for delete to authenticated
   using (user_id = (select auth.uid()));
 
+drop policy if exists jdv_app_settings_membership_required on public.app_user_settings;
+create policy jdv_app_settings_membership_required
+  on public.app_user_settings as restrictive for all to authenticated
+  using (
+    public.is_super_admin()
+    or exists (
+      select 1 from public.app_memberships m
+      where m.user_id = (select auth.uid())
+        and m.app_key = app_user_settings.app_key
+        and m.status = 'active'
+    )
+  )
+  with check (
+    public.is_super_admin()
+    or exists (
+      select 1 from public.app_memberships m
+      where m.user_id = (select auth.uid())
+        and m.app_key = app_user_settings.app_key
+        and m.status = 'active'
+    )
+  );
+
 -- Create a membership only for the application explicitly chosen during signup.
 -- This does not create a subscription and does not grant access to other apps.
 create or replace function public.jdv_create_app_membership_on_signup()
