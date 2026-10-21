@@ -100,6 +100,11 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
           <h3 className="text-xl font-bold text-foreground mb-2">Inscription enregistrée</h3>
           <p className="text-sm text-muted-foreground">{successMessage}</p>
         </div>
+        {!/Votre compte .* est créé/.test(successMessage) && (
+          <button type="button" onClick={onSwitchToLogin} className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted/30">
+            J’ai confirmé mon e-mail — me connecter
+          </button>
+        )}
       </div>
     );
   }
