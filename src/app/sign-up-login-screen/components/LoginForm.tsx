@@ -81,7 +81,7 @@ export default function LoginForm({ onSwitchToRegister, appKey, redirectTo }: Pr
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-1">Bon retour</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-1">Connexion à {application?.name ?? 'JDV Global Center'}</h2>
         <p className="text-sm text-muted-foreground">
           Connectez-vous à votre espace {application?.name ?? 'JDV Global Center'}
         </p>
@@ -179,7 +179,7 @@ export default function LoginForm({ onSwitchToRegister, appKey, redirectTo }: Pr
       </form>
 
       <p className="text-center text-sm text-muted-foreground mt-6">
-        Pas encore de compte ?{' '}
+        Pas encore de compte pour {application?.name ?? 'JDV Global Center'} ?{' '}
         <button
           type="button"
           onClick={onSwitchToRegister}
