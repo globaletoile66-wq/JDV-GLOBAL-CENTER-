@@ -422,6 +422,7 @@ set search_path = ''
 as $jdv_catalog$
   select p.id, p.name, p.product_type, p.quantity, p.unit, p.unit_price, c.code, p.created_at
   from public.agri_products p
+  join public.agri_farms f on f.id = p.farm_id and f.status = 'active'
   left join public.currencies c on c.id = p.currency_id
   where p.availability_status = 'available'
   order by p.created_at desc
