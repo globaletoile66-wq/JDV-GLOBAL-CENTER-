@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type Destination = { id: string; name: string; city: string | null; short_description: string | null; description: string | null; image_url: string | null; is_active: boolean; country_id: string | null };
 type TravelCountry = { id: string; name: string; iso_code: string };
-type Tour = { id: string; title: string; description: string | null; duration_days: number; capacity: number | null; price: number; currency_id: string | null; destination_id?: string | null; publish_status: string };
+type Tour = { id: string; title: string; description: string | null; duration_days: number; capacity: number | null; price: number; currency_id: string | null; destination_ids?: string[]; publish_status: string };
 type Accommodation = { id: string; name: string; accommodation_type: string; description: string | null; destination_id: string | null; capacity: number | null; publish_status: string };
 type Activity = { id: string; name: string; description: string | null; duration_minutes: number | null; price: number; currency_id: string | null; destination_id: string | null; publish_status: string };
 type Currency = { id: string; code: string; symbol: string | null };
@@ -65,7 +65,7 @@ export default function TravelPage() {
     setBusy(true); setError('');
     const [destinationResult, tourResult, accommodationResult, activityResult, currencyResult, requestResult, favoriteResult] = await Promise.all([
       supabase.from('travel_destinations').select('id,name,city,short_description,description,image_url,is_active,country_id').eq('is_active', true).order('name').limit(100),
-      supabase.from('travel_tours').select('id,title,description,duration_days,capacity,price,currency_id,publish_status').eq('publish_status', 'published').order('created_at', { ascending: false }).limit(100),
+      supabase.from('travel_tours').select('id,title,description,duration_days,capacity,price,currency_id,publish_status,travel_tour_stops(destination_id)').eq('publish_status', 'published').order('created_at', { ascending: false }).limit(100),
       supabase.from('travel_accommodations').select('id,name,accommodation_type,description,destination_id,capacity,publish_status').eq('publish_status', 'published').order('name').limit(100),
       supabase.from('travel_activities').select('id,name,description,duration_minutes,price,currency_id,destination_id,publish_status').eq('publish_status', 'published').order('name').limit(100),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
@@ -73,7 +73,7 @@ export default function TravelPage() {
       user ? supabase.from('travel_favorites').select('target_id').eq('user_id', user.id).eq('target_type', 'destination') : Promise.resolve({ data: [], error: null } as any),
     ]);
     if (destinationResult.error) setError(destinationResult.error.message); else { const rows = (destinationResult.data ?? []) as Destination[]; setDestinations(rows); setDestinationId((current) => current || rows[0]?.id || ''); }
-    if (tourResult.error) setError((current) => current || tourResult.error!.message); else setTours((tourResult.data ?? []) as Tour[]);
+    if (tourResult.error) setError((current) => current || tourResult.error!.message); else setTours((tourResult.data ?? []).map((row: any) => ({ ...row, destination_ids: (row.travel_tour_stops ?? []).map((stop: { destination_id: string | null }) => stop.destination_id).filter(Boolean) })) as Tour[]);
     if (accommodationResult.error) setError((current) => current || accommodationResult.error!.message); else setAccommodations((accommodationResult.data ?? []) as Accommodation[]);
     if (activityResult.error) setError((current) => current || activityResult.error!.message); else setActivities((activityResult.data ?? []) as Activity[]);
     if (currencyResult.error) setError((current) => current || currencyResult.error!.message); else setCurrencies((currencyResult.data ?? []) as Currency[]);
@@ -103,7 +103,7 @@ export default function TravelPage() {
   const countryDestinations = destinations.filter((item) => !countryId || item.country_id === countryId);
   const countryDestinationIds = new Set(countryDestinations.map((item) => item.id));
   const filteredDestinations = countryDestinations.filter((item) => [item.name, item.city, item.short_description, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
-  const filteredTours = tours.filter((item) => (!item.destination_id || countryDestinationIds.has(item.destination_id)) && [item.title, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const filteredTours = tours.filter((item) => (!countryId || (item.destination_ids ?? []).some((id) => countryDestinationIds.has(id))) && [item.title, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
   const filteredAccommodations = accommodations.filter((item) => (!item.destination_id || countryDestinationIds.has(item.destination_id)) && [item.name, item.accommodation_type, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
   const filteredActivities = activities.filter((item) => (!item.destination_id || countryDestinationIds.has(item.destination_id)) && [item.name, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
 
