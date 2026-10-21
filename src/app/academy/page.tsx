@@ -3,9 +3,11 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, BookOpen, GraduationCap, RefreshCw, Search, Plus, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Program = { id: string; organization_id: string | null; name: string; description: string | null; program_type: string; duration_hours: number | null; price: number | null; currency_id: string | null; status: string };
 type Currency = { id: string; code: string; name: string; symbol: string };
@@ -19,6 +21,7 @@ const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-x
 
 export default function AcademyPage() {
   const { user, loading: authLoading, isSuperAdmin } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -121,7 +124,8 @@ export default function AcademyPage() {
 
   const saveProgram = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !programForm.name.trim()) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'academy')) { router.push('/inscription/academy'); return; }
+    if (!programForm.name.trim()) return;
     if (!isSuperAdmin && !manageableOrganizationIds.includes(programForm.organization_id)) { setError('La création de programmes est réservée aux administrateurs de l’organisation.'); return; }
     const price = programForm.price.trim() ? Number(programForm.price) : null;
     const durationHours = programForm.duration_hours.trim() ? Number(programForm.duration_hours) : null;
@@ -151,7 +155,8 @@ export default function AcademyPage() {
 
   const saveCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !courseForm.program_id || !courseForm.title.trim()) return;
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'academy')) { router.push('/inscription/academy'); return; }
+    if (!courseForm.program_id || !courseForm.title.trim()) return;
     if (!isSuperAdmin && !manageableProgramIds.includes(courseForm.program_id)) { setError('La création de cours est réservée aux administrateurs autorisés du programme.'); return; }
     setSaving(true); setError(''); setNotice('');
     const { error: saveError } = await supabase.from('academy_courses').insert({
@@ -173,7 +178,8 @@ export default function AcademyPage() {
   };
 
   const updateEnrollmentStatus = async (enrollment: Enrollment, status: 'confirmed' | 'completed' | 'cancelled') => {
-    if (!user || (!isSuperAdmin && !manageableCourseIds.includes(enrollment.course_id) && enrollment.student_user_id !== user.id)) { setError('Tu ne disposes pas des droits nécessaires pour modifier cette inscription.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'academy')) { router.push('/inscription/academy'); return; }
+    if (!isSuperAdmin && !manageableCourseIds.includes(enrollment.course_id) && enrollment.student_user_id !== user.id) { setError('Tu ne disposes pas des droits nécessaires pour modifier cette inscription.'); return; }
     if (enrollment.student_user_id === user.id && status !== 'cancelled') { setError('Un apprenant ne peut ni confirmer ni terminer sa propre inscription depuis cette action.'); return; }
     setSaving(true); setError(''); setNotice('');
     const { error: updateError } = await supabase.from('academy_enrollments').update({ enrollment_status: status, completed_at: status === 'completed' ? new Date().toISOString() : null }).eq('id', enrollment.id);
@@ -186,6 +192,7 @@ export default function AcademyPage() {
   };
 
   const publishProgram = async (program: Program) => {
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'academy')) { router.push('/inscription/academy'); return; }
     if (!isSuperAdmin && !manageableProgramIds.includes(program.id)) { setError('Seul un administrateur autorisé peut publier ce programme.'); return; }
     setSaving(true); setError(''); setNotice('');
     const { error: publishError } = await supabase
@@ -198,7 +205,7 @@ export default function AcademyPage() {
   };
 
   const enroll = async (course: Course) => {
-    if (!user) { setError('Connecte-toi pour demander une inscription.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'academy')) { router.push('/inscription/academy'); return; }
     if (course.status !== 'open') { setError('Les inscriptions ne sont pas ouvertes pour ce cours.'); return; }
     setSaving(true); setError(''); setNotice('');
     const { error: enrollError } = await supabase.from('academy_enrollments').insert({
