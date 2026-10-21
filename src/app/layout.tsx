@@ -9,6 +9,7 @@ import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import StudioQuickControls from '@/components/theme/StudioQuickControls';
 import StudioDesignRuntime from '@/components/theme/StudioDesignRuntime';
 import ResponsiveMobileNavigation from '@/components/navigation/ResponsiveMobileNavigation';
+import ApplicationAccountShortcut from '@/components/apps/ApplicationAccountShortcut';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -35,6 +36,7 @@ export default function RootLayout({
           <JDVProvider>
             <ThemeProvider>
               {children}
+              <ApplicationAccountShortcut />
               <ResponsiveMobileNavigation />
               <StudioDesignRuntime />
               <StudioQuickControls />
