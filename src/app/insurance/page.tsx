@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, ClipboardCheck, ClipboardList, CreditCard, FileText, RefreshCw, Search, ShieldCheck, ShieldPlus, UserRoundCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Product = { id: string; code: string; name: string; description: string | null; insurance_type: string; currency_id: string | null; premium_frequency: string; base_premium: number; is_active: boolean };
 type Currency = { id: string; code: string; symbol: string };
@@ -12,6 +14,7 @@ const frequencyLabels: Record<string, string> = { one_time: 'Paiement unique', m
 
 export default function InsurancePage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [products, setProducts] = useState<Product[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
@@ -43,7 +46,7 @@ export default function InsurancePage() {
 
   const filtered = products.filter((product) => [product.name, product.code, product.insurance_type, product.description].join(' ').toLowerCase().includes(query.toLowerCase()));
   const createCustomerProfile = async () => {
-    if (!user) { setMessage('Connectez-vous pour créer votre profil assuré.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'insurance')) { router.push('/inscription/insurance'); return; }
     if (customerId) { setMessage('Votre profil assuré existe déjà.'); return; }
     setCreating(true); setError(''); setMessage('');
     const { data: profile, error: profileError } = await supabase.from('profiles').select('full_name,phone,email,country_id').eq('id', user.id).maybeSingle();
