@@ -28,6 +28,30 @@ create table if not exists public.app_user_settings (
 alter table public.app_memberships enable row level security;
 alter table public.app_user_settings enable row level security;
 
+-- Restrictive RLS gates prevent authenticated users from using an unrelated
+-- JDV account to read/write private Agriculture operations. Public catalog RPC
+-- remains read-only and is granted separately below.
+do $jdv_agri_rls$
+declare
+  v_table text;
+begin
+  foreach v_table in array array[
+    'agri_farms',
+    'agri_crops',
+    'agri_products',
+    'agri_production_records',
+    'agri_orders',
+    'agri_order_items'
+  ] loop
+    execute format('drop policy if exists jdv_agriculture_membership_required on public.%I', v_table);
+    execute format(
+      'create policy jdv_agriculture_membership_required on public.%I as restrictive for all to authenticated using (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = ''agriculture'' and m.status = ''active'')) with check (public.is_super_admin() or exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.app_key = ''agriculture'' and m.status = ''active''))',
+      v_table
+    );
+  end loop;
+end;
+$jdv_agri_rls$;
+
 drop policy if exists "Users can read their own app memberships" on public.app_memberships;
 create policy "Users can read their own app memberships"
   on public.app_memberships for select to authenticated
