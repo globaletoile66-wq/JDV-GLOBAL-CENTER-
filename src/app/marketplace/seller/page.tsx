@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Store, Package, ShoppingCart, DollarSign, Star, TrendingUp, Plus, Eye, Edit, Pause, Play, Trash2, ArrowLeft, Loader2, AlertCircle, BarChart3, Settings, Shield, CheckCircle2, Clock, XCircle } from 'lucide-react';
@@ -77,7 +77,7 @@ const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 export default function SellerDashboardPage() {
   const { user, profile } = useAuth();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [stats, setStats] = useState<SellerStats | null>(null);
