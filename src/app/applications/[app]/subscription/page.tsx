@@ -51,19 +51,24 @@ export default function ApplicationSubscriptionPage() {
     if (!app) { setChecking(false); return; }
     if (!user) { router.replace(`/inscription/${app.key}`); return; }
     let active = true;
-    void supabase.from('app_memberships').select('id,status')
-      .eq('user_id', user.id).eq('app_key', app.key).maybeSingle()
-      .then(({ data, error: membershipError }) => {
-        if (!active) return;
-        if (membershipError) {
-          setError('Impossible de vérifier votre inscription à cette application.');
-          setChecking(false);
-        } else if (!data || data.status !== 'active') {
-          router.replace(`/inscription/${app.key}`);
-        } else {
-          setChecking(false);
-        }
-      });
+    void (async () => {
+      const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_super_admin');
+      if (!adminError && isSuperAdmin === true) {
+        if (active) setChecking(false);
+        return;
+      }
+      const { data, error: membershipError } = await supabase.from('app_memberships').select('id,status')
+        .eq('user_id', user.id).eq('app_key', app.key).maybeSingle();
+      if (!active) return;
+      if (membershipError) {
+        setError('Impossible de vérifier votre inscription à cette application.');
+        setChecking(false);
+      } else if (!data || data.status !== 'active') {
+        router.replace(`/inscription/${app.key}`);
+      } else {
+        setChecking(false);
+      }
+    })();
     return () => { active = false; };
   }, [authLoading, app, user, router, supabase]);
 
