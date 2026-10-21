@@ -31,7 +31,7 @@ export default function EnergyPage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
-    if (!user) { setSites([]); setBusy(false); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'energy')) { setSites([]); setBusy(false); return; }
     const { data, error: loadError } = await supabase.from('energy_sites').select('id,name,site_type,address,city,capacity_kw,status,created_at').order('created_at', { ascending: false }).limit(100);
     if (loadError) setError(loadError.message);
     else setSites((data ?? []) as EnergySite[]);
