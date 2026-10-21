@@ -6,7 +6,7 @@ import { ArrowLeft, Check, Eye, Monitor, Smartphone, Tablet, MousePointer2, Save
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-type DesignRule = { selector: string; styles: Record<string, string> };
+type DesignRule = { selector: string; styles: Record<string, string>; text?: string };
 type Config = { designEditor?: { rulesByPath?: Record<string, DesignRule[]> }; [key: string]: unknown };
 type Selected = { selector: string; tag: string; text: string; styles: Record<string, string> };
 
@@ -21,7 +21,11 @@ const editableStyles = [
   { key: 'border', label: 'Bordure', type: 'text', fallback: '1px solid #d1d5db' },
   { key: 'box-shadow', label: 'Ombre', type: 'text', fallback: '0 4px 18px rgba(15,23,42,.12)' },
   { key: 'width', label: 'Largeur', type: 'size', fallback: 'auto' },
+  { key: 'min-height', label: 'Hauteur minimale', type: 'size', fallback: 'auto' },
+  { key: 'position', label: 'Position CSS', type: 'text', fallback: 'static' },
   { key: 'text-align', label: 'Alignement du texte', type: 'align', fallback: 'left' },
+  { key: 'opacity', label: 'Transparence (0–1)', type: 'size', fallback: '1' },
+  { key: 'transform', label: 'Transformation CSS', type: 'text', fallback: 'none' },
 ];
 
 function buildSelector(element: Element): string {
@@ -52,6 +56,7 @@ export default function StudioVisualEditorPage() {
   const [path, setPath] = useState('/');
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [selected, setSelected] = useState<Selected | null>(null);
+  const [textDraft, setTextDraft] = useState('');
   const [rules, setRules] = useState<DesignRule[]>([]);
   const [notice, setNotice] = useState('Choisissez une page, puis cliquez sur un élément dans l’aperçu pour le personnaliser.');
   const [busy, setBusy] = useState(false);
@@ -111,7 +116,7 @@ export default function StudioVisualEditorPage() {
       setSelected({
         selector,
         tag: element.tagName.toLowerCase(),
-        text: (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 90),
+        text: saved.text ?? (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 90),
         styles: {
           color: saved.color ?? computed.color,
           'background-color': saved['background-color'] ?? computed.backgroundColor,
@@ -124,8 +129,13 @@ export default function StudioVisualEditorPage() {
           'box-shadow': saved['box-shadow'] ?? computed.boxShadow,
           width: saved.width ?? computed.width,
           'text-align': saved['text-align'] ?? computed.textAlign,
+          'min-height': saved['min-height'] ?? computed.minHeight,
+          position: saved.position ?? computed.position,
+          opacity: saved.opacity ?? computed.opacity,
+          transform: saved.transform ?? computed.transform,
         },
       });
+      setTextDraft(saved.text ?? ((element.children.length === 0 ? element.textContent : '') ?? '').trim().slice(0, 500));
       setNotice('Élément sélectionné. Ajustez les propriétés à droite, puis enregistrez.');
     }, true);
   }, []);
@@ -133,7 +143,19 @@ export default function StudioVisualEditorPage() {
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
-    const onLoad = () => { setLoaded(true); injectSelectionMode(); };
+    const onLoad = () => {
+      setLoaded(true);
+      injectSelectionMode();
+      const doc = frame.contentDocument;
+      if (!doc) return;
+      for (const rule of rulesRef.current) {
+        let element: Element | null = null;
+        try { element = doc.querySelector(rule.selector); } catch { element = null; }
+        if (!element) continue;
+        for (const [key, value] of Object.entries(rule.styles)) (element as HTMLElement).style.setProperty(key, value);
+        if (typeof rule.text === 'string' && element.children.length === 0) element.textContent = rule.text;
+      }
+    };
     frame.addEventListener('load', onLoad);
     return () => frame.removeEventListener('load', onLoad);
   }, [injectSelectionMode]);
@@ -149,6 +171,25 @@ export default function StudioVisualEditorPage() {
       const found = current.find(rule => rule.selector === next.selector);
       if (found) return current.map(rule => rule.selector === next.selector ? { ...rule, styles: { ...rule.styles, [key]: value } } : rule);
       return [...current, { selector: next.selector, styles: { [key]: value } }];
+    });
+  };
+
+  const changeText = (value: string) => {
+    setTextDraft(value);
+    if (!selected) return;
+    const doc = frameRef.current?.contentDocument;
+    const element = doc?.querySelector('[data-jdv-editor-selected]') as HTMLElement | null;
+    if (!element) return;
+    if (element.children.length > 0) {
+      setNotice('Pour protéger la structure de la page, le texte est éditable directement uniquement sur les éléments sans sous-éléments. Les styles restent modifiables.');
+      return;
+    }
+    element.textContent = value;
+    setSelected(current => current ? { ...current, text: value } : current);
+    setRules(current => {
+      const found = current.find(rule => rule.selector === selected.selector);
+      if (found) return current.map(rule => rule.selector === selected.selector ? { ...rule, text: value } : rule);
+      return [...current, { selector: selected.selector, styles: {}, text: value }];
     });
   };
 
@@ -236,6 +277,10 @@ export default function StudioVisualEditorPage() {
         <aside className="h-fit rounded-2xl border border-border bg-card p-4 xl:sticky xl:top-24">
           <div className="mb-4 flex items-center justify-between"><div><h2 className="font-bold">Propriétés</h2><p className="text-xs text-muted-foreground">{selected ? '<' + selected.tag + '> · ' + (selected.text || 'sans texte') : 'Aucun élément sélectionné'}</p></div><MousePointer2 size={18} className="text-accent"/></div>
           {!selected ? <div className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">Cliquez sur un titre, un bouton, une carte ou une section dans l’aperçu pour commencer à la personnaliser.</div> : <div className="space-y-3">
+            <label className="block text-xs font-semibold text-muted-foreground">Texte du contenu
+              <textarea value={textDraft} onChange={e => changeText(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" placeholder={selected.text || 'Texte de l’élément'}/>
+              <span className="mt-1 block font-normal">Pour préserver les cartes et boutons composés de plusieurs éléments, le texte direct est modifiable lorsque l’élément sélectionné n’a pas d’enfant.</span>
+            </label>
             {editableStyles.map(property => <label key={property.key} className="block text-xs font-semibold text-muted-foreground">{property.label}
               {property.type === 'color' ? <div className="mt-1 flex items-center gap-2"><input type="color" value={/^#[0-9a-fA-F]{6}$/.test(selected.styles[property.key]) ? selected.styles[property.key] : property.fallback} onChange={e => changeStyle(property.key, e.target.value)} className="h-9 w-12 rounded border-0 bg-transparent"/><input value={selected.styles[property.key]} onChange={e => changeStyle(property.key, e.target.value)} className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground"/></div>
               : property.type === 'weight' ? <select value={selected.styles[property.key]} onChange={e => changeStyle(property.key,e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-foreground"><option value="400">Normal</option><option value="500">Moyen</option><option value="600">Semi-gras</option><option value="700">Gras</option><option value="800">Très gras</option><option value="900">Noir</option></select>
