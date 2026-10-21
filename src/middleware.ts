@@ -53,7 +53,7 @@ export async function middleware(request: NextRequest) {
     ['/immo', 'immo'], ['/health', 'health'], ['/academy', 'academy'],
     ['/social', 'social'], ['/media', 'media'], ['/pub', 'pub'],
     ['/pay', 'pay'], ['/tontine', 'tontine'], ['/travel', 'travel'],
-    ['/transport', 'transport'], ['/insurance', 'insurance'], ['/energy', 'energy'],
+    ['/transport', 'transport'], ['/insurance', 'insurance'], ['/legal', 'legal'], ['/energy', 'energy'],
     ['/ai', 'ai'], ['/business', 'business'], ['/transit', 'transit'],
     ['/services', 'services'], ['/procurement', 'procurement'],
     ['/accounting', 'accounting'], ['/inventory', 'inventory'], ['/hr', 'hr'],
