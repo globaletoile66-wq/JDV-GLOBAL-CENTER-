@@ -113,9 +113,9 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-1">Créer mon compte</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-1">Créer mon compte {application?.name ?? 'JDV Global Center'}</h2>
         <p className="text-sm text-muted-foreground">
-          Créez votre accès à {application?.name ?? 'JDV Global Center'}
+          Votre inscription dédiée à {application?.name ?? 'JDV Global Center'}
         </p>
       </div>
 
