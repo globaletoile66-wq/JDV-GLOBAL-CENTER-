@@ -107,6 +107,11 @@ export default function TravelPage() {
   const filteredAccommodations = accommodations.filter((item) => (!item.destination_id || countryDestinationIds.has(item.destination_id)) && [item.name, item.accommodation_type, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
   const filteredActivities = activities.filter((item) => (!item.destination_id || countryDestinationIds.has(item.destination_id)) && [item.name, item.description].join(' ').toLowerCase().includes(query.toLowerCase()));
 
+  useEffect(() => {
+    const selectedIsInCountry = destinations.some((item) => item.id === destinationId && (!countryId || item.country_id === countryId));
+    if (!selectedIsInCountry) setDestinationId(countryDestinations[0]?.id || '');
+  }, [countryId, destinations, destinationId]);
+
   const submitRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) { setError('Connectez-vous pour envoyer une demande de voyage.'); return; }
