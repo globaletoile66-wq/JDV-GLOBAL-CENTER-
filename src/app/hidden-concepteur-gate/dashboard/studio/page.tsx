@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Film, Globe2, ImagePlus, Palette, RotateCcw, ShieldCheck, SlidersHorizontal, Type, PanelsTopLeft, Shapes } from 'lucide-react';
+import { ArrowLeft, Check, Film, Globe2, ImagePlus, Palette, RotateCcw, ShieldCheck, SlidersHorizontal, Type, PanelsTopLeft, Shapes, Monitor, Save } from 'lucide-react';
 import { PRESETS, DEFAULT_THEME, type JdvTheme, isHex } from '@/lib/theme/palettes';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -115,6 +115,25 @@ export default function ConcepteurStudioPage() {
   };
   return <main className="min-h-screen bg-background text-foreground">
     <header className="border-b border-border bg-card/80"><div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4"><Link href="/hidden-concepteur-gate/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft size={16}/> Portail concepteur</Link><div className="flex flex-wrap items-center gap-2"><Link href="/hidden-concepteur-gate/dashboard/studio/editor" className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-white"><SlidersHorizontal size={15}/> Éditeur visuel libre</Link><span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold"><ShieldCheck size={14}/> Studio global</span></div></div></header>
+    <section className="border-b border-border bg-gradient-to-br from-slate-950 via-indigo-950 to-violet-950 text-white">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[1.2fr_.8fr] lg:items-center">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.24em] text-violet-300">ESPACE CRÉATIF · JDV GLOBAL CENTER</p>
+          <h2 className="mt-3 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">Imaginez votre interface. Construisez-la à votre manière.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Un atelier de conception pour personnaliser vos pages, tester les formats ordinateur, tablette et téléphone, ajuster les styles et préparer vos propres compositions sans modèle imposé.</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/hidden-concepteur-gate/dashboard/studio/editor" className="inline-flex items-center gap-2 rounded-xl bg-violet-400 px-5 py-3 font-bold text-slate-950 shadow-lg shadow-black/20 transition hover:bg-violet-300"><SlidersHorizontal size={17}/> Ouvrir l’atelier de conception <span aria-hidden="true">→</span></Link>
+            <span className="inline-flex items-center rounded-xl border border-white/15 px-4 py-3 text-sm text-slate-300">Aperçu multi-écrans · Réglages par page</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[.06] p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-violet-400/15 text-violet-200"><Palette size={18}/></div><p className="font-bold">Identité visuelle</p><p className="mt-1 text-xs leading-5 text-slate-400">Couleurs, typographies, formes et ambiance.</p></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.06] p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-sky-400/15 text-sky-200"><PanelsTopLeft size={18}/></div><p className="font-bold">Composition</p><p className="mt-1 text-xs leading-5 text-slate-400">Sections, textes, cartes et boutons.</p></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.06] p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-200"><Monitor size={18}/></div><p className="font-bold">Responsive</p><p className="mt-1 text-xs leading-5 text-slate-400">Vérifiez vos choix sur plusieurs écrans.</p></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.06] p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/15 text-amber-200"><Save size={18}/></div><p className="font-bold">Réglages globaux</p><p className="mt-1 text-xs leading-5 text-slate-400">Conservez l’identité visuelle de la plateforme.</p></div>
+        </div>
+      </div>
+    </section>
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div className="max-w-3xl"><p className="text-xs font-bold uppercase tracking-[.2em] text-accent">JDV GLOBAL CENTER · DESIGN SYSTEM</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">{translate(activeLanguage,'studioTitle')}</h1><p className="mt-3 text-muted-foreground">Réglez les couleurs, les formes, la police, la densité et les médias. Prévisualisez puis appliquez les préférences visuelles de cet appareil.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={apply} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 font-bold text-white"><Check size={16}/> Appliquer les réglages</button><button type="button" onClick={resetAll} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold"><RotateCcw size={15}/> Réinitialiser</button></div></div>
       {notice&&<p role="status" className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm">{notice}</p>}
