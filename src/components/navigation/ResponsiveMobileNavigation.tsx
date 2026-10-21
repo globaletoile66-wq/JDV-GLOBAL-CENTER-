@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Compass, Home, Hotel, LayoutGrid, Plane, Store, UserRound, UtensilsCrossed, Handshake } from 'lucide-react';
+import { Compass, Home, Hotel, Plane, Store, UserRound, UtensilsCrossed, Handshake, BriefcaseBusiness } from 'lucide-react';
 import { JDV_MODULES } from '@/lib/jdv/application-registry';
 import { JDV_BRANCHES } from '@/lib/jdv/branch-catalog';
 
@@ -16,16 +16,20 @@ const travelItems: NavItem[] = [
   { href: '/travel/partenaires', label: 'Partenaires', icon: Handshake },
 ];
 
+const travelDesktopItems: NavItem[] = [
+  { href: '/travel', label: 'Vue d’ensemble', icon: Home },
+  { href: '/travel/vols', label: 'Vols', icon: Plane },
+  { href: '/travel/hebergements', label: 'Hébergements', icon: Hotel },
+  { href: '/travel/restaurants', label: 'Restaurants', icon: UtensilsCrossed },
+  { href: '/travel/partenaires', label: 'Partenaires', icon: Handshake },
+];
+
 const defaultItems: NavItem[] = [
   { href: '/', label: 'Accueil', icon: Home },
   { href: '/branches', label: 'Explorer', icon: Compass },
   { href: '/marketplace', label: 'Services', icon: Store },
   { href: '/dashboard', label: 'Compte', icon: UserRound },
 ];
-
-const publicOnlyRoots = new Set([
-  '/', '/about', '/branches', '/help', '/auth', '/legal-notice', '/privacy',
-]);
 
 export default function ResponsiveMobileNavigation() {
   const pathname = usePathname() || '/';
@@ -34,9 +38,20 @@ export default function ResponsiveMobileNavigation() {
     .find((item) => pathname === item.href || pathname.startsWith(item.href + '/'));
   const currentBranch = JDV_BRANCHES.find((item) => pathname === item.href || pathname.startsWith(item.href + '/'));
 
-  if (!currentApp || publicOnlyRoots.has(pathname)) return null;
+  if (!currentApp) return null;
 
-  const items = currentApp.id === 'travel' ? travelItems : [
+  const branchModules = currentApp.branchId
+    ? JDV_MODULES.filter((item) => item.branchId === currentApp.branchId && item.href !== currentApp.href)
+    : [];
+  const desktopItems = currentApp.id === 'travel'
+    ? travelDesktopItems
+    : [
+        { href: currentApp.href, label: 'Accueil', icon: Home },
+        ...branchModules.slice(0, 2).map((item) => ({ href: item.href, label: item.name.replace(/^JDV( Global Center)?/i, '').trim(), icon: BriefcaseBusiness })),
+        { href: '/branches', label: 'Toutes les branches', icon: Compass },
+        { href: '/marketplace', label: 'Services', icon: Store },
+      ].slice(0, 5);
+  const mobileItems = currentApp.id === 'travel' ? travelItems : [
     { href: currentApp.href, label: currentBranch?.name.replace(/^JDV( Global Center)?/i, '').trim() || 'Accueil', icon: Home },
     { href: '/branches', label: 'Explorer', icon: Compass },
     { href: '/marketplace', label: 'Services', icon: Store },
@@ -44,22 +59,39 @@ export default function ResponsiveMobileNavigation() {
   ];
 
   return (
-    <nav className="jdv-mobile-nav" aria-label="Navigation principale mobile">
-      {items.map((item) => {
-        const Icon = item.icon;
-        const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={active ? 'page' : undefined}
-            className={`jdv-mobile-nav__item${active ? ' is-active' : ''}`}
-          >
-            <Icon size={20} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      <nav className="jdv-desktop-context-nav" aria-label={`Navigation de ${currentBranch?.name || currentApp.name}`}>
+        <div className="jdv-desktop-context-nav__inner">
+          <div className="jdv-desktop-context-nav__identity">
+            <span className="jdv-desktop-context-nav__eyebrow">ESPACE JDV</span>
+            <span className="jdv-desktop-context-nav__title">{currentBranch?.name || currentApp.name}</span>
+          </div>
+          <div className="jdv-desktop-context-nav__links">
+            {desktopItems.map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
+              return (
+                <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={`jdv-desktop-context-nav__link${active ? ' is-active' : ''}`}>
+                  <Icon size={16} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
+      <nav className="jdv-mobile-nav" aria-label="Navigation principale mobile">
+        {mobileItems.map((item) => {
+          const Icon = item.icon;
+          const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
+          return (
+            <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={`jdv-mobile-nav__item${active ? ' is-active' : ''}`}>
+              <Icon size={20} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </>
   );
 }
