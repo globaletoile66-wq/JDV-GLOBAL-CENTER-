@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, CalendarDays, Clock3, RefreshCw, Search, ShieldCheck, Video, Stethoscope } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type HealthService = {
   id: string; name: string; service_type: string; description: string | null;
@@ -31,6 +33,7 @@ function formatMoney(price: number | null, currency: string | null) {
 
 export default function HealthPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [services, setServices] = useState<HealthService[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -70,7 +73,7 @@ export default function HealthPage() {
   const serviceName = (id: string | null) => services.find((service) => service.id === id)?.name || 'Service de santé';
 
   const book = async (service: HealthService) => {
-    if (!user) { setMessage('Connectez-vous pour prendre rendez-vous.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'health')) { router.push('/inscription/health'); return; }
     if (!service.professional_id || !service.business_id || service.price == null || !service.currency_id) {
       setMessage('Ce service n’est pas encore réservable : professionnel, établissement, prix ou devise manquant.');
       return;
