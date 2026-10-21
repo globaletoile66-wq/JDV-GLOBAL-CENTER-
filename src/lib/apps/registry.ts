@@ -10,6 +10,7 @@ export interface JDVApplication {
  * A shared JDV identity never implies membership in every application.
  */
 export const JDV_APPLICATIONS: JDVApplication[] = [
+  { key: 'global_center', name: 'JDV Global Center', homePath: '/user-dashboard', description: 'Gérer votre identité et votre espace central JDV.' },
   { key: 'marketplace', name: 'JDV Marketplace', homePath: '/marketplace', description: 'Acheter, vendre et gérer une boutique.' },
   { key: 'agriculture', name: 'JDV Agriculture', homePath: '/agriculture', description: 'Découvrir les produits et services agricoles.' },
   { key: 'immo', name: 'JDV Immo', homePath: '/immo', description: 'Explorer les biens et services immobiliers.' },
