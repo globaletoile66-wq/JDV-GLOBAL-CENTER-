@@ -1,3 +1,5 @@
+import { extraMessages } from './i18n-extra';
+
 export type JDVLanguage = 'fr' | 'en' | 'pt' | 'es' | 'ar';
 
 const messages: Record<JDVLanguage, Record<string, string>> = {
@@ -48,7 +50,21 @@ const messages: Record<JDVLanguage, Record<string, string>> = {
   },
 };
 
-export function translate(language: string, key: string): string {
+function lookup(language: string, key: string): string | undefined {
   const locale = (language in messages ? language : 'fr') as JDVLanguage;
-  return messages[locale][key] ?? messages.fr[key] ?? key;
+  return messages[locale][key] ?? extraMessages[locale]?.[key] ?? messages.fr[key] ?? extraMessages.fr[key];
+}
+
+function interpolate(text: string, vars?: Record<string, string | number>): string {
+  if (!vars) return text;
+  return text.replace(/\{(\w+)\}/g, (match, name: string) => (name in vars ? String(vars[name]) : match));
+}
+
+export function translate(language: string, key: string, vars?: Record<string, string | number>): string {
+  return interpolate(lookup(language, key) ?? key, vars);
+}
+
+/** Comme translate, mais renvoie le texte de repli (au lieu de la clé) si la clé n’existe dans aucune langue. */
+export function translateOr(language: string, key: string, fallback: string, vars?: Record<string, string | number>): string {
+  return interpolate(lookup(language, key) ?? fallback, vars);
 }

@@ -35,7 +35,12 @@ export const JDVProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem('jdv-language-v1');
-      if (stored && ['fr', 'en', 'pt', 'es', 'ar'].includes(stored)) setActiveLanguageState(stored);
+      const supported = ['fr', 'en', 'pt', 'es', 'ar'];
+      if (stored && supported.includes(stored)) setActiveLanguageState(stored);
+      else {
+        const browser = (window.navigator.language || 'fr').slice(0, 2).toLowerCase();
+        if (supported.includes(browser)) setActiveLanguageState(browser);
+      }
     } catch { /* Le stockage local peut être indisponible. */ }
   }, []);
 
