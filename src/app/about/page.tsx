@@ -7,6 +7,7 @@ import {
   Sparkles, Target, Users,
 } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
+import GlobalHeader from '@/components/navigation/GlobalHeader';
 import { getGroupedJDVModules } from '@/lib/jdv/application-registry';
 
 const principles = [
@@ -28,26 +29,7 @@ export default function AboutPage() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#F7F8FC] text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-          <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="JDV Global Center, accueil">
-            <AppLogo size={42} />
-            <span className="min-w-0">
-              <span className="block text-sm font-black tracking-[.08em] text-[#101B3D]">JDV GLOBAL CENTER</span>
-              <span className="block text-[10px] font-semibold uppercase tracking-[.18em] text-slate-500">Notre identité · Notre écosystème</span>
-            </span>
-          </Link>
-          <nav aria-label="Navigation de la page officielle" className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
-            <a href="#vision" className="transition hover:text-[#A77C2C]">Vision</a>
-            <a href="#ecosysteme" className="transition hover:text-[#A77C2C]">Écosystème</a>
-            <a href="#confiance" className="transition hover:text-[#A77C2C]">Confiance</a>
-            <a href="#opportunites" className="transition hover:text-[#A77C2C]">Opportunités</a>
-          </nav>
-          <Link href="/branches" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#101B3D] px-3.5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#1A2B58] sm:px-4 sm:text-sm">
-            Découvrir <ArrowRight size={15} />
-          </Link>
-        </div>
-      </header>
+      <GlobalHeader />
 
       <section className="relative isolate border-b border-[#1A2B58] bg-[#0B1534] text-white">
         <div aria-hidden="true" className="absolute inset-0 -z-10 overflow-hidden">
