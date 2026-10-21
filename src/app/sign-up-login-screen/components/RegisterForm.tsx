@@ -15,6 +15,7 @@ interface RegisterFormData {
   password: string;
   confirm_password: string;
   country: string;
+  phone: string;
   language: string;
   terms: boolean;
 }
@@ -62,6 +63,7 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
   } = useForm<RegisterFormData>({ defaultValues: { language: 'fr', country: 'bj' } });
 
   const password = watch('password');
+  const selectedCountry = countries.find((country) => country.id === watch('country')) ?? countries[0];
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
@@ -69,7 +71,8 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
       const result = await signUp(data.email, data.password, {
         first_name: data.first_name.trim(),
         last_name: data.last_name.trim(),
-        country_code: data.country,
+        country_code: selectedCountry.code,
+        phone: `${selectedCountry.phone} ${data.phone.trim()}`,
         preferred_language: data.language,
         jdv_app_key: appKey,
       });
@@ -199,6 +202,33 @@ export default function RegisterForm({ onSwitchToLogin, appKey = 'global_center'
           {errors.country && (
             <p className="text-xs text-danger font-medium">{errors.country.message}</p>
           )}
+        </div>
+
+        {/* Phone */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="reg-phone" className="text-sm font-semibold text-foreground">
+            Numéro de téléphone <span className="text-danger">*</span>
+          </label>
+          <p className="text-xs text-muted-foreground -mt-0.5">
+            Indicatif sélectionné selon votre pays : {selectedCountry.phone}
+          </p>
+          <div className="flex gap-2">
+            <span className="inline-flex min-w-20 items-center justify-center rounded-lg border border-border bg-muted/30 px-3 text-sm font-semibold text-foreground">{selectedCountry.phone}</span>
+            <input
+              id="reg-phone"
+              type="tel"
+              autoComplete="tel-national"
+              inputMode="tel"
+              placeholder="Votre numéro"
+              className="jdv-input min-w-0 flex-1"
+              {...register('phone', {
+                required: 'Numéro de téléphone requis',
+                validate: (value) => value.replace(/[\s().-]/g, '').length >= 6 || 'Numéro de téléphone invalide',
+                pattern: { value: /^[0-9\s().-]+$/, message: 'Utilisez uniquement les chiffres et séparateurs du numéro' },
+              })}
+            />
+          </div>
+          {errors.phone && <p className="text-xs text-danger font-medium">{errors.phone.message}</p>}
         </div>
 
         {/* Language */}
