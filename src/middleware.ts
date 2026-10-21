@@ -41,11 +41,40 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
 
-  // Separate public browsing from app-specific account/workspace routes.
+  // Each application has its own visible login and registration entry points.
+  // Keep the global landing page and branch directory public; entering an app
+  // requires an active membership, regardless of whether the route is a home or
+  // an operation (for example creating a tontine).
+  const appAuthAliases: Record<string, { appKey: string; mode: 'login' | 'register' }> = {};
+  const branchPaths: Array<[string, string]> = [
+    ['/marketplace', 'marketplace'], ['/agriculture', 'agriculture'],
+    ['/immo', 'immo'], ['/health', 'health'], ['/academy', 'academy'],
+    ['/social', 'social'], ['/media', 'media'], ['/pub', 'pub'],
+    ['/pay', 'pay'], ['/tontine', 'tontine'], ['/travel', 'travel'],
+    ['/transport', 'transport'], ['/insurance', 'insurance'], ['/energy', 'energy'],
+    ['/ai', 'ai'], ['/business', 'business'], ['/transit', 'transit'],
+    ['/services', 'services'], ['/procurement', 'procurement'],
+    ['/accounting', 'accounting'], ['/inventory', 'inventory'], ['/hr', 'hr'],
+    ['/jobs', 'jobs'], ['/entertainment', 'entertainment'],
+  ];
+  for (const [basePath, appKey] of branchPaths) {
+    appAuthAliases[`${basePath}/connexion`] = { appKey, mode: 'login' };
+    appAuthAliases[`${basePath}/inscription`] = { appKey, mode: 'register' };
+  }
+  const authAlias = appAuthAliases[pathname];
+  if (authAlias) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/inscription/${authAlias.appKey}`;
+    url.searchParams.set('mode', authAlias.mode);
+    const redirect = request.nextUrl.searchParams.get('redirect');
+    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) url.searchParams.set('redirect', redirect);
+    return NextResponse.redirect(url);
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+
   const tontineActionRoute =
     isPathOrChild(pathname, '/tontine/concepteur') ||
     pathname === '/tontine/contrat' ||
@@ -56,18 +85,15 @@ export async function middleware(request: NextRequest) {
     '/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications',
     '/organizations', '/onboarding', '/terrain', '/abonnements', '/espace',
   ].some((route) => isPathOrChild(pathname, route));
-  const requiredAppKey =
-    isPathOrChild(pathname, '/pay') ? 'pay' :
-    isPathOrChild(pathname, '/business') ? 'business' :
-    tontineActionRoute ? 'tontine' :
-    globalCenterRoute ? 'global_center' : null;
+  const appRoute = branchPaths.find(([basePath]) => isPathOrChild(pathname, basePath));
+  const requiredAppKey = appRoute?.[1] ?? (globalCenterRoute ? 'global_center' : null);
 
-  const protectedPaths = ['/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/pay', '/business', '/terrain', '/abonnements', '/espace'];
-  const isProtected = protectedPaths.some((p) => isPathOrChild(pathname, p)) || tontineActionRoute;
+  const protectedPaths = ['/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications', '/organizations', '/onboarding', '/terrain', '/abonnements', '/espace'];
+  const isProtected = protectedPaths.some((p) => isPathOrChild(pathname, p)) || Boolean(appRoute) || tontineActionRoute;
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
-    url.pathname = requiredAppKey && ['pay', 'business', 'tontine'].includes(requiredAppKey)
+    url.pathname = requiredAppKey && requiredAppKey !== 'global_center'
       ? `/inscription/${requiredAppKey}`
       : '/auth/login';
     url.searchParams.set('redirect', pathname);
