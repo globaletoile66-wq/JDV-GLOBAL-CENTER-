@@ -24,6 +24,7 @@ const MODULE_CODES: Record<string, string> = {
   transport: 'jdv_transport',
   insurance: 'jdv_insurance',
   energy: 'jdv_energy',
+  ai: 'jdv_ai',
   business: 'jdv_business',
   transit: 'jdv_transit',
   services: 'jdv_services',
