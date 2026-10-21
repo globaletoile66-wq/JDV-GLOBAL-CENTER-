@@ -23,12 +23,12 @@ export default function ContactSection() {
   CONTACT.phone?.forEach((phone, index) => channels.push({
     label: CONTACT.phone!.length > 1 ? `Téléphone ${index + 1}` : 'Téléphone',
     value: phone,
-    href: `tel:${phone.replace(/[^+\\d]/g, '')}`,
+    href: `tel:${phone.replace(/[^+\d]/g, '')}`,
   }));
   if (CONTACT.whatsapp) channels.push({ label: 'WhatsApp', value: 'Nous écrire sur WhatsApp', href: `https://wa.me/${CONTACT.whatsapp}` });
   if (CONTACT.address) channels.push({ label: 'Adresse', value: CONTACT.address });
   if (CONTACT.hours) channels.push({ label: 'Horaires', value: CONTACT.hours });
-  CONTACT.socials.forEach((s) => channels.push({ label: s.label, value: s.url.replace(/^https?:\\/\\//, ''), href: s.url }));
+  CONTACT.socials.forEach((s) => channels.push({ label: s.label, value: s.url.replace(/^https?:\/\//, ''), href: s.url }));
 
   const input = 'mt-1 w-full rounded-lg border border-[var(--jdv-border)] px-3 py-2';
   return (
