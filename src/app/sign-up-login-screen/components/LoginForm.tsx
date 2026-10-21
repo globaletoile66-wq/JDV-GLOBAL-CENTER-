@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { getJDVApplication, getJDVApplicationHome } from '@/lib/apps/registry';
 
 interface LoginFormData {
   email: string;
@@ -28,6 +29,7 @@ export default function LoginForm({ onSwitchToRegister, appKey }: Props) {
   const router = useRouter();
   const { signIn, signOut } = useAuth();
   const supabase = useMemo(() => createClient(), []);
+  const application = getJDVApplication(appKey);
 
   const {
     register,
@@ -49,7 +51,11 @@ export default function LoginForm({ onSwitchToRegister, appKey }: Props) {
           .eq('app_key', appKey)
           .maybeSingle();
 
-        if (membershipError) throw membershipError;
+        if (membershipError) {
+          await signOut();
+          setError('root', { message: 'La vérification des droits de cette application est indisponible. Réessayez plus tard ; aucun accès n’a été accordé.' });
+          return;
+        }
         if (!membership || membership.status !== 'active') {
           await signOut();
           setError('root', {
@@ -60,7 +66,7 @@ export default function LoginForm({ onSwitchToRegister, appKey }: Props) {
       }
 
       toast.success('Connexion réussie.');
-      router.push(appKey === 'marketplace' ? '/marketplace' : '/user-dashboard');
+      router.push(getJDVApplicationHome(appKey));
     } catch {
       setError('root', {
         message: 'Connexion impossible. Vérifiez votre adresse email, votre mot de passe et votre inscription à cette application, puis réessayez.',
@@ -75,7 +81,7 @@ export default function LoginForm({ onSwitchToRegister, appKey }: Props) {
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-foreground mb-1">Bon retour</h2>
         <p className="text-sm text-muted-foreground">
-          Connectez-vous à votre espace {appKey === 'marketplace' ? 'JDV Marketplace' : 'JDV Global Center'}
+          Connectez-vous à votre espace {application?.name ?? 'JDV Global Center'}
         </p>
       </div>
 
