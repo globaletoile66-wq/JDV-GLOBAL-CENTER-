@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ShieldCheck, UserRoundPlus } from 'lucide-react';
 import LoginForm from '@/app/sign-up-login-screen/components/LoginForm';
 import RegisterForm from '@/app/sign-up-login-screen/components/RegisterForm';
@@ -16,6 +16,9 @@ export default function ApplicationRegistrationPage() {
   const [mode, setMode] = useState<'register' | 'login'>('register');
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedRedirect = searchParams.get('redirect');
+  const redirectTo = requestedRedirect && requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//') ? requestedRedirect : (app?.homePath ?? '/');
   const supabase = useMemo(() => createClient(), []);
   const [membershipState, setMembershipState] = useState<'checking' | 'none' | 'active' | 'error'>('checking');
   const [joining, setJoining] = useState(false);
@@ -36,8 +39,8 @@ export default function ApplicationRegistrationPage() {
   }, [authLoading, user, app, supabase]);
 
   useEffect(() => {
-    if (membershipState === 'active' && app) router.replace(app.homePath);
-  }, [membershipState, app, router]);
+    if (membershipState === 'active' && app) router.replace(redirectTo);
+  }, [membershipState, app, router, redirectTo]);
 
   const joinApplication = async () => {
     if (!app || !user || joining) return;
@@ -49,7 +52,7 @@ export default function ApplicationRegistrationPage() {
       setJoining(false);
       return;
     }
-    router.replace(app.homePath);
+    router.replace(redirectTo);
   };
 
   if (!app) {
@@ -106,8 +109,8 @@ export default function ApplicationRegistrationPage() {
               <button type="button" onClick={() => setMode('login')} className={`flex-1 rounded-lg px-3 py-3 text-sm font-bold transition ${mode === 'login' ? 'bg-white text-[#0B1B3D] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Se connecter</button>
             </div>
             {mode === 'register'
-              ? <RegisterForm appKey={app.key} onSwitchToLogin={() => setMode('login')} />
-              : <LoginForm appKey={app.key} onSwitchToRegister={() => setMode('register')} />}
+              ? <RegisterForm appKey={app.key} redirectTo={redirectTo} onSwitchToLogin={() => setMode('login')} />
+              : <LoginForm appKey={app.key} redirectTo={redirectTo} onSwitchToRegister={() => setMode('register')} />}
           </div>
         </section>
       </div>
