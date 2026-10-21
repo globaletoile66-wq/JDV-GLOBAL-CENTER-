@@ -46,7 +46,7 @@ export default function ResponsiveMobileNavigation() {
         { href: '/marketplace', label: 'Services', icon: Store },
       ].slice(0, 5);
   const mobileItems = currentApp.id === 'travel' ? travelItems : [
-    { href: currentApp.href, label: currentBranch?.name.replace(/^JDV( Global Center)?/i, '').trim() || 'Accueil', icon: Home },
+    { href: currentApp.href, label: (currentBranch?.name || currentApp.name).replace(/^JDV( Global Center)?/i, '').trim() || 'Accueil', icon: Home },
     { href: '/branches', label: 'Explorer', icon: Compass },
     currentApp.id === 'marketplace'
       ? { href: '/help', label: 'Aide', icon: Compass }
