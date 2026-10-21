@@ -10,6 +10,7 @@ import { getJDVApplication } from '@/lib/apps/registry';
 import BranchSubscriptionSection from '@/components/billing/BranchSubscriptionSection';
 
 const MODULE_CODES: Record<string, string> = {
+  global_center: 'jdv_core',
   marketplace: 'jdv_marketplace',
   agriculture: 'jdv_agriculture',
   immo: 'jdv_immo',
