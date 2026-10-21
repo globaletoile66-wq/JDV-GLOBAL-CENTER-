@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingCart, MapPin, CreditCard, Package, Truck, Plus, CheckCircle2, Loader2, AlertCircle, Trash2, Shield } from 'lucide-react';
@@ -49,7 +49,7 @@ type CheckoutStep = 'cart' | 'address' | 'payment' | 'confirm';
 export default function CheckoutPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
