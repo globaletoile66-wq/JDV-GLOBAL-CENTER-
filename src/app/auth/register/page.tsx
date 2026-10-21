@@ -46,8 +46,9 @@ export default function RegisterPage() {
     if (!phone.trim()) { setError('Le numéro de téléphone est obligatoire.'); return; }
     setLoading(true);
     try {
+      const normalizedPhone = phone.trim().startsWith('+') ? phone.trim() : `${selectedCountry?.phone_code ?? ''} ${phone.trim()}`.trim();
       const result = await signUp(email.trim(), password, {
-        phone: phone.trim(),
+        phone: normalizedPhone,
         country_id: countryId,
         country_iso_code: selectedCountry?.iso_code ?? null,
         country_name: selectedCountry?.name ?? null,
