@@ -67,12 +67,17 @@ export default function CheckoutPage() {
     if (!user) { router.replace('/inscription/marketplace'); return; }
     let active = true;
     void (async () => {
-      const { data: membership, error } = await supabase
-        .from('app_memberships').select('id,status')
-        .eq('user_id', user.id).eq('app_key', 'marketplace').maybeSingle();
+      const [marketplaceResult, payResult] = await Promise.all([
+        supabase.from('app_memberships').select('id,status').eq('user_id', user.id).eq('app_key', 'marketplace').maybeSingle(),
+        supabase.from('app_memberships').select('id,status').eq('user_id', user.id).eq('app_key', 'pay').maybeSingle(),
+      ]);
       if (!active) return;
-      if (error || !membership || membership.status !== 'active') {
+      if (marketplaceResult.error || !marketplaceResult.data || marketplaceResult.data.status !== 'active') {
         router.replace('/inscription/marketplace');
+        return;
+      }
+      if (payResult.error || !payResult.data || payResult.data.status !== 'active') {
+        router.replace('/inscription/pay?redirect=%2Fmarketplace%2Fcheckout');
         return;
       }
       loadCheckoutData();
