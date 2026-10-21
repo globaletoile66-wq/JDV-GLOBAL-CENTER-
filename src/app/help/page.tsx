@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Search, ChevronDown, ChevronRight, MessageCircle, Mail, Phone, MapPin } from 'lucide-react';
 import { CONTACT } from '@/lib/jdv/contact';
 import AppLogo from '@/components/ui/AppLogo';
+import GlobalHeader from '@/components/navigation/GlobalHeader';
 
 const FAQ_ITEMS = [
   {
@@ -55,17 +56,7 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft size={15} />Accueil
-          </Link>
-          <div className="flex items-center gap-2 flex-1">
-            <AppLogo size={28} />
-            <span className="font-semibold text-sm text-foreground">Centre d'aide</span>
-          </div>
-        </div>
-      </header>
+      <GlobalHeader />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
         {/* Hero */}
