@@ -65,7 +65,7 @@ export default function ResponsiveMobileNavigation() {
           <div className="jdv-desktop-context-nav__links">
             {desktopItems.map((item) => {
               const Icon = item.icon;
-              const isContextRoot = currentApp.id !== 'travel' && item.href === currentApp.href;
+              const isContextRoot = currentApp.id === 'travel' && item.href === currentApp.href;
               const active = pathname === item.href || (!isContextRoot && item.href !== '/' && pathname.startsWith(item.href + '/'));
               return (
                 <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={`jdv-desktop-context-nav__link${active ? ' is-active' : ''}`}>
