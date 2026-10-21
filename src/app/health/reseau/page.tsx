@@ -237,8 +237,8 @@ export default function HealthNetworkPage() {
           <label className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm"><MapPin size={16}/><input value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Quartier (ex. Fidjrossè)" className="w-full bg-transparent outline-none placeholder:text-white/60"/></label>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-white/80">
-          <label className="inline-flex items-center gap-2"><input type="checkbox" checked={rememberSearches} onChange={async (e) => { const enabled = e.target.checked; setRememberSearches(enabled); if (userId) await supabase.from('health_search_preferences').upsert({ user_id: userId, remember_searches: enabled, preferred_city: city.trim() || null, preferred_district: district.trim() || null }); if (!enabled) setShowHistory(false); }}/> Mémoriser mes recherches (compte connecté)</label>
-          {showHistory && history.length > 0 && <button onClick={() => void clearHistory()} className="underline">Effacer mon historique</button>}
+          <label className="inline-flex items-center gap-2"><input type="checkbox" checked={rememberSearches} onChange={async (e) => { const enabled = e.target.checked; setRememberSearches(enabled); if (user?.id) await supabase.from('health_search_preferences').upsert({ user_id: user.id, remember_searches: enabled, preferred_city: city.trim() || null, preferred_district: district.trim() || null }); if (!enabled) setShowSuggestions(false); }}/> Mémoriser mes recherches (compte connecté)</label>
+          {showSuggestions && history.length > 0 && <button onClick={() => void clearHistory()} className="underline">Effacer mon historique</button>}
         </div>
       </div>
     </section>
