@@ -109,4 +109,48 @@ create trigger jdv_create_app_membership_after_signup
   after insert on auth.users
   for each row execute function public.jdv_create_app_membership_on_signup();
 
+-- Existing authenticated users may explicitly enroll in another application.
+-- No client-side INSERT policy is granted on app_memberships.
+create or replace function public.jdv_join_application(p_app_key text)
+returns public.app_memberships
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_user_id uuid := auth.uid();
+  v_membership public.app_memberships;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if p_app_key not in (
+    'marketplace', 'agriculture', 'immo', 'health', 'academy', 'social',
+    'media', 'pub', 'pay', 'tontine', 'travel', 'transport', 'insurance',
+    'energy', 'business', 'transit', 'services', 'procurement', 'accounting',
+    'inventory', 'hr', 'jobs', 'entertainment'
+  ) then
+    raise exception 'Unsupported JDV application key';
+  end if;
+
+  insert into public.app_memberships (user_id, app_key, status, role)
+  values (v_user_id, p_app_key, 'active', 'member')
+  on conflict (user_id, app_key) do nothing;
+
+  select * into v_membership
+  from public.app_memberships
+  where user_id = v_user_id and app_key = p_app_key;
+
+  if v_membership.status <> 'active' then
+    raise exception 'Application membership is not active';
+  end if;
+
+  return v_membership;
+end;
+$;
+
+revoke all on function public.jdv_join_application(text) from public;
+grant execute on function public.jdv_join_application(text) to authenticated;
+
 commit;
