@@ -45,6 +45,8 @@ export default function LoginForm({ onSwitchToRegister, appKey, redirectTo }: Pr
       await signIn(data.email, data.password);
 
       if (appKey) {
+        const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_super_admin');
+        if (adminError || isSuperAdmin !== true) {
         const { data: membership, error: membershipError } = await supabase
           .from('app_memberships')
           .select('id,status')
@@ -61,6 +63,7 @@ export default function LoginForm({ onSwitchToRegister, appKey, redirectTo }: Pr
           toast.info('Votre compte JDV existe déjà. Activez maintenant votre espace pour cette application.');
           router.replace(`/inscription/${appKey}${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`);
           return;
+        }
         }
       }
 
