@@ -13,22 +13,7 @@ create table if not exists public.app_memberships (
   unique (user_id, app_key)
 );
 
-create table if not exists public.app_subscriptions (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  app_key text not null check (app_key ~ '^[a-z][a-z0-9_]{1,63}$'),
-  plan_code text not null,
-  status text not null default 'pending' check (status in ('pending','trial','active','past_due','canceled','expired')),
-  starts_at timestamptz,
-  ends_at timestamptz,
-  provider text,
-  provider_reference text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 create index if not exists app_memberships_user_app_idx on public.app_memberships(user_id, app_key, status);
-create index if not exists app_subscriptions_user_app_status_idx on public.app_subscriptions(user_id, app_key, status);
 
 create table if not exists public.app_user_settings (
   id uuid primary key default gen_random_uuid(),
@@ -41,17 +26,11 @@ create table if not exists public.app_user_settings (
 );
 
 alter table public.app_memberships enable row level security;
-alter table public.app_subscriptions enable row level security;
 alter table public.app_user_settings enable row level security;
 
 drop policy if exists "Users can read their own app memberships" on public.app_memberships;
 create policy "Users can read their own app memberships"
   on public.app_memberships for select to authenticated
-  using (user_id = (select auth.uid()));
-
-drop policy if exists "Users can read their own app subscriptions" on public.app_subscriptions;
-create policy "Users can read their own app subscriptions"
-  on public.app_subscriptions for select to authenticated
   using (user_id = (select auth.uid()));
 
 drop policy if exists "Users can read their own app settings" on public.app_user_settings;
