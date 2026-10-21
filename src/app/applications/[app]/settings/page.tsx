@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Bell, CheckCircle2, Loader2, Palette, ShieldCheck, UserRound, Globe2 } from 'lucide-react';
@@ -70,12 +71,12 @@ export default function ApplicationSettingsPage() {
     void load();
   }, [authLoading, user, app, router, load]);
 
-  const update = <K extends keyof Preferences>(key: K, value: Preferences[K]) => {
+  const update = <K extends keyof Preferences,>(key: K, value: Preferences[K]) => {
     setPreferences((current) => ({ ...current, [key]: value }));
     setNotice('');
   };
 
-  const save = async (event: React.FormEvent<HTMLFormElement>) => {
+  const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!app || !user || saving) return;
     setSaving(true);
