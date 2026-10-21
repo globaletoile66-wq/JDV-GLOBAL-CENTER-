@@ -1,5 +1,6 @@
--- JDV Immo persistent workflows (draft migration; review before applying to Supabase).
--- All workflow tables are isolated to JDV Immo. No historical CRM tables are modified.
+-- JDV Immo persistent workflows, reconciled with the active schema.
+-- Preserves the stricter existing construction-brief customer policies and keeps generic Studio config private.
+-- No historical CRM tables are modified.
 
 create table if not exists public.immo_agent_applications (
   id uuid primary key default gen_random_uuid(),
@@ -92,24 +93,23 @@ create table if not exists public.immo_disputes (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.immo_construction_briefs (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  title text not null default 'Avant-projet JDV Immo',
-  parcel_area numeric(12,2) not null default 0 check (parcel_area >= 0),
-  brief jsonb not null default '{}'::jsonb,
-  brief_status text not null default 'draft' check (brief_status in ('draft','submitted','under_review','quoted','approved','archived')),
-  assigned_professional_user_id uuid references auth.users(id) on delete set null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists immo_agent_applications_user_status_idx on public.immo_agent_applications(user_id, application_status);
+create index if not exists immo_agent_applications_status_idx on public.immo_agent_applications(application_status);
+create index if not exists immo_agent_applications_business_id_idx on public.immo_agent_applications(business_id);
+create index if not exists immo_agent_applications_reviewed_by_idx on public.immo_agent_applications(reviewed_by);
 create index if not exists immo_mandates_owner_status_idx on public.immo_mandates(owner_user_id, mandate_status);
 create index if not exists immo_mandates_agent_status_idx on public.immo_mandates(agent_user_id, mandate_status);
+create index if not exists immo_mandates_property_id_idx on public.immo_mandates(property_id);
 create index if not exists immo_commission_rules_status_idx on public.immo_commission_rules(rule_status, transaction_type);
+create index if not exists immo_commission_rules_created_by_idx on public.immo_commission_rules(created_by);
+create index if not exists immo_commission_rules_validated_by_idx on public.immo_commission_rules(validated_by);
 create index if not exists immo_tenant_followups_lease_due_idx on public.immo_tenant_followups(lease_id, due_at);
+create index if not exists immo_tenant_followups_author_user_id_idx on public.immo_tenant_followups(author_user_id);
 create index if not exists immo_disputes_parties_status_idx on public.immo_disputes(opened_by, respondent_user_id, dispute_status);
+create index if not exists immo_disputes_respondent_user_id_idx on public.immo_disputes(respondent_user_id);
+create index if not exists immo_disputes_property_id_idx on public.immo_disputes(property_id);
+create index if not exists immo_disputes_lease_id_idx on public.immo_disputes(lease_id);
+create index if not exists immo_disputes_mandate_id_idx on public.immo_disputes(mandate_id);
+create index if not exists immo_disputes_resolved_by_idx on public.immo_disputes(resolved_by);
 create index if not exists immo_construction_briefs_user_updated_idx on public.immo_construction_briefs(user_id, updated_at desc);
 
 alter table public.immo_agent_applications enable row level security;
@@ -118,6 +118,8 @@ alter table public.immo_commission_rules enable row level security;
 alter table public.immo_tenant_followups enable row level security;
 alter table public.immo_disputes enable row level security;
 alter table public.immo_construction_briefs enable row level security;
+
+grant select, insert, update on public.immo_agent_applications, public.immo_mandates, public.immo_commission_rules, public.immo_tenant_followups, public.immo_disputes to authenticated;
 
 drop policy if exists "Applicants read own JDV Immo application" on public.immo_agent_applications;
 create policy "Applicants read own JDV Immo application" on public.immo_agent_applications for select to authenticated using (user_id = auth.uid());
@@ -154,12 +156,7 @@ create policy "Users open own disputes" on public.immo_disputes for insert to au
 drop policy if exists "Openers edit unresolved disputes" on public.immo_disputes;
 create policy "Openers edit unresolved disputes" on public.immo_disputes for update to authenticated using (opened_by = auth.uid() and dispute_status in ('open','awaiting_response')) with check (opened_by = auth.uid() and dispute_status in ('open','awaiting_response'));
 
-drop policy if exists "Users read own construction briefs" on public.immo_construction_briefs;
-create policy "Users read own construction briefs" on public.immo_construction_briefs for select to authenticated using (user_id = auth.uid() or assigned_professional_user_id = auth.uid());
-drop policy if exists "Users create own construction briefs" on public.immo_construction_briefs;
-create policy "Users create own construction briefs" on public.immo_construction_briefs for insert to authenticated with check (user_id = auth.uid());
-drop policy if exists "Users edit own construction drafts" on public.immo_construction_briefs;
-create policy "Users edit own construction drafts" on public.immo_construction_briefs for update to authenticated using (user_id = auth.uid() and brief_status = 'draft') with check (user_id = auth.uid() and brief_status = 'draft');
+-- Existing customer policies for immo_construction_briefs are deliberately preserved.
 
 comment on table public.immo_agent_applications is 'Applications for JDV Immo agent qualification; final approval is reserved to trusted administration.';
 comment on table public.immo_mandates is 'Owner-to-agent mandate workflow with draft and acceptance metadata.';
@@ -204,12 +201,77 @@ create table if not exists public.jdv_studio_settings (
   scope_key text primary key check (scope_key = 'global'),
   config jsonb not null default '{}'::jsonb,
   updated_by uuid references auth.users(id) on delete set null,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint jdv_studio_settings_public_config_check check (
+    jsonb_typeof(config) = 'object'
+    and (config - 'theme'::text - 'design'::text) = '{}'::jsonb
+  )
 );
+create index if not exists jdv_studio_settings_updated_by_idx on public.jdv_studio_settings(updated_by);
+
+create or replace function public.jdv_studio_settings_guard_config()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  key_name text;
+begin
+  if jsonb_typeof(new.config) <> 'object' then
+    raise exception 'Studio config must be a JSON object';
+  end if;
+
+  for key_name in select jsonb_object_keys(new.config) loop
+    if key_name not in ('theme','design') then
+      raise exception 'Unsupported public Studio config key: %', key_name;
+    end if;
+  end loop;
+
+  if new.config ? 'theme' then
+    if jsonb_typeof(new.config->'theme') <> 'object' then
+      raise exception 'Studio theme must be a JSON object';
+    end if;
+    for key_name in select jsonb_object_keys(new.config->'theme') loop
+      if key_name not in ('primary','accent') then
+        raise exception 'Unsupported public Studio theme key: %', key_name;
+      end if;
+    end loop;
+    if coalesce(new.config->'theme'->>'primary','') !~ '^#[0-9A-Fa-f]{6}$'
+       or coalesce(new.config->'theme'->>'accent','') !~ '^#[0-9A-Fa-f]{6}$' then
+      raise exception 'Studio theme colors must be six-digit hex values';
+    end if;
+  end if;
+
+  if new.config ? 'design' then
+    if jsonb_typeof(new.config->'design') <> 'object' then
+      raise exception 'Studio design must be a JSON object';
+    end if;
+    for key_name in select jsonb_object_keys(new.config->'design') loop
+      if key_name not in ('font','radius','density','cardStyle','showMedia','showHighlights','showAnimations','imageUrl','videoUrl','imageData','videoData') then
+        raise exception 'Unsupported public Studio design key: %', key_name;
+      end if;
+    end loop;
+    if coalesce(new.config->'design'->>'imageData','') <> ''
+       or coalesce(new.config->'design'->>'videoData','') <> '' then
+      raise exception 'Raw media data cannot be stored in public Studio settings';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+revoke all on function public.jdv_studio_settings_guard_config() from public, anon, authenticated;
+drop trigger if exists jdv_studio_settings_guard_config on public.jdv_studio_settings;
+create trigger jdv_studio_settings_guard_config
+before insert or update of config on public.jdv_studio_settings
+for each row execute function public.jdv_studio_settings_guard_config();
 insert into public.jdv_studio_settings (scope_key, config) values ('global', '{}'::jsonb) on conflict (scope_key) do nothing;
 alter table public.jdv_studio_settings enable row level security;
+grant select, insert, update on public.jdv_studio_settings to authenticated;
 drop policy if exists "Super admins read global Studio settings" on public.jdv_studio_settings;
-create policy "Authenticated users read global Studio settings" on public.jdv_studio_settings for select to anon, authenticated using (true);
+drop policy if exists "Authenticated users read global Studio settings" on public.jdv_studio_settings;
+create policy "Public read safe global Studio settings" on public.jdv_studio_settings for select to anon, authenticated using (true);
+grant select (scope_key, config) on public.jdv_studio_settings to anon;
 drop policy if exists "Super admins create global Studio settings" on public.jdv_studio_settings;
 create policy "Super admins create global Studio settings" on public.jdv_studio_settings for insert to authenticated with check (exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
 drop policy if exists "Super admins update global Studio settings" on public.jdv_studio_settings;
@@ -228,12 +290,39 @@ drop policy if exists "Super admins delete JDV Studio brand media" on storage.ob
 create policy "Super admins delete JDV Studio brand media" on storage.objects for delete to authenticated using (bucket_id = 'jdv-studio-media' and exists (select 1 from public.super_admins sa where sa.user_id = auth.uid() and sa.admin_status = 'active'));
 
 
+
+-- Owners may submit their own draft mandate for signatures; only this function advances the workflow.
+create or replace function public.submit_immo_mandate(p_mandate_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  submitted_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+  update public.immo_mandates
+  set mandate_status = 'pending_signature', updated_at = now()
+  where id = p_mandate_id and owner_user_id = auth.uid() and mandate_status = 'draft'
+  returning id into submitted_id;
+  if submitted_id is null then
+    raise exception 'Draft mandate not found or not owned by current user';
+  end if;
+  return submitted_id;
+end;
+$$;
+revoke all on function public.submit_immo_mandate(uuid) from public;
+grant execute on function public.submit_immo_mandate(uuid) to authenticated;
+
 -- A participant can accept only their own side of a mandate; activation requires both acceptances.
 create or replace function public.accept_immo_mandate(p_mandate_id uuid)
 returns uuid
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 declare
   accepted_id uuid;
@@ -282,7 +371,7 @@ create or replace function public.review_immo_agent_application(
 returns uuid
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 declare
   v_application public.immo_agent_applications%rowtype;
@@ -305,6 +394,9 @@ begin
 
   if not found then
     raise exception 'Agent application not found';
+  end if;
+  if p_status = 'qualified' and v_application.business_id is null then
+    raise exception 'A business profile must be assigned before qualifying this agent';
   end if;
 
   update public.immo_agent_applications
@@ -358,7 +450,7 @@ create or replace function public.submit_immo_construction_brief(p_brief_id uuid
 returns uuid
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 declare
   submitted_id uuid;
