@@ -9,6 +9,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { getJDVApplication } from '@/lib/apps/registry';
 
+const MODULE_CODES: Record<string, string> = {
+  marketplace: 'jdv_marketplace', agriculture: 'jdv_agriculture', immo: 'jdv_immo', health: 'jdv_health',
+  academy: 'jdv_academy', social: 'jdv_social', media: 'jdv_media', pub: 'jdv_pub', pay: 'jdv_pay',
+  tontine: 'jdv_tontine', travel: 'jdv_travel', transport: 'jdv_transport', insurance: 'jdv_insurance',
+  energy: 'jdv_energy', business: 'jdv_business', transit: 'jdv_transit', services: 'jdv_services',
+  procurement: 'jdv_procurement', accounting: 'jdv_accounting', inventory: 'jdv_inventory', hr: 'jdv_hr',
+  jobs: 'jdv_jobs', entertainment: 'jdv_entertainment',
+};
+
 type Preferences = {
   display_name: string;
   phone: string;
@@ -36,7 +45,7 @@ export default function ApplicationSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [subscription, setSubscription] = useState<{ plan_code: string; status: string; ends_at: string | null } | null>(null);
+  const [subscription, setSubscription] = useState<{ plan_code: string; plan_name: string; status: string; ends_at: string | null } | null>(null);
 
   const load = useCallback(async () => {
     if (!app || !user) return;
@@ -45,9 +54,9 @@ export default function ApplicationSettingsPage() {
     const [membershipResult, settingsResult, subscriptionResult] = await Promise.all([
       supabase.from('app_memberships').select('id,status').eq('user_id', user.id).eq('app_key', app.key).maybeSingle(),
       supabase.from('app_user_settings').select('settings').eq('user_id', user.id).eq('app_key', app.key).maybeSingle(),
-      supabase.from('app_subscriptions').select('plan_code,status,ends_at').eq('user_id', user.id).eq('app_key', app.key).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.rpc('billing_my_subscriptions'),
     ]);
-    if (membershipResult.error || settingsResult.error || subscriptionResult.error) {
+    if (membershipResult.error || settingsResult.error) {
       setError('Impossible de vérifier vos droits ou de charger vos paramètres. Réessayez lorsque le service sera disponible.');
       setLoading(false);
       return;
@@ -58,7 +67,11 @@ export default function ApplicationSettingsPage() {
     }
     const stored = (settingsResult.data?.settings ?? {}) as Partial<Preferences>;
     setPreferences({ ...DEFAULTS, ...stored, display_name: stored.display_name ?? user.user_metadata?.first_name ?? '' });
-    setSubscription(subscriptionResult.data ?? null);
+    const moduleCode = MODULE_CODES[app.key];
+    const subscriptions = ((subscriptionResult.data ?? []) as { module_code: string; subject_type: string; plan_code: string; plan_name: string; status: string; expires_at: string | null }[])
+      .filter((item) => item.module_code === moduleCode && item.subject_type === 'user');
+    const currentSubscription = subscriptions.find((item) => ['trial', 'active', 'past_due', 'pending'].includes(item.status)) ?? subscriptions[0];
+    setSubscription(currentSubscription ? { plan_code: currentSubscription.plan_code, plan_name: currentSubscription.plan_name, status: currentSubscription.status, ends_at: currentSubscription.expires_at } : null);
     setLoading(false);
   }, [app, user, router, supabase]);
 
@@ -137,7 +150,8 @@ export default function ApplicationSettingsPage() {
           </section>
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-lg font-extrabold"><ShieldCheck size={19}/> Abonnement de cette application</h2>
-            {subscription ? <div className="mt-3 text-sm text-slate-600"><p>Formule : <strong className="text-[#0B1B3D]">{subscription.plan_code}</strong></p><p className="mt-1">Statut : <strong className="text-[#0B1B3D]">{subscription.status}</strong></p>{subscription.ends_at && <p className="mt-1">Échéance : {new Date(subscription.ends_at).toLocaleDateString('fr-FR')}</p>}</div> : <p className="mt-3 text-sm leading-6 text-slate-600">Aucun abonnement n’est enregistré pour {app.name}. Aucun paiement n’a été effectué depuis cette page. Les options d’abonnement seront proposées lorsqu’une fonctionnalité l’exige.</p>}
+            {subscription ? <div className="mt-3 text-sm text-slate-600"><p>Formule : <strong className="text-[#0B1B3D]">{subscription.plan_name} ({subscription.plan_code})</strong></p><p className="mt-1">Statut : <strong className="text-[#0B1B3D]">{subscription.status}</strong></p>{subscription.ends_at && <p className="mt-1">Échéance : {new Date(subscription.ends_at).toLocaleDateString('fr-FR')}</p>}</div> : <p className="mt-3 text-sm leading-6 text-slate-600">Aucun abonnement actif n’est affiché pour {app.name}. Aucun paiement n’a été effectué depuis cette page.</p>}
+            <Link href={`/applications/${app.key}/subscription`} className="mt-4 inline-flex rounded-xl bg-[#0B1B3D] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#173967]">Voir les offres et gérer mon abonnement</Link>
           </section>
           <div className="flex justify-end"><button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#F28C28] px-6 py-3 font-extrabold text-white disabled:opacity-60">{saving && <Loader2 size={16} className="animate-spin"/>}{saving ? 'Enregistrement…' : 'Enregistrer mes paramètres'}</button></div>
         </form>
