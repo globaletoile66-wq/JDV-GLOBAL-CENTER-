@@ -6,10 +6,10 @@ import { ArrowLeft, Check, Eye, Monitor, Smartphone, Tablet, MousePointer2, Save
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-type DesignRule = { selector: string; styles: Record<string, string>; text?: string };
+type DesignRule = { selector: string; styles: Record<string, string>; text?: string; blockId?: string };
 type StudioBlock = { id: string; kind: 'section' | 'text' | 'button' | 'card'; text: string };
 type Config = { designEditor?: { rulesByPath?: Record<string, DesignRule[]>; blocksByPath?: Record<string, StudioBlock[]> }; [key: string]: unknown };
-type Selected = { selector: string; tag: string; text: string; styles: Record<string, string> };
+type Selected = { selector: string; tag: string; text: string; styles: Record<string, string>; blockId?: string };
 
 const editableStyles = [
   { key: 'color', label: 'Couleur du texte', type: 'color', fallback: '#172033' },
@@ -117,11 +117,14 @@ export default function StudioVisualEditorPage() {
       element.setAttribute('data-jdv-editor-selected', 'true');
       const selector = buildSelector(element);
       const computed = win.getComputedStyle(element);
-      const saved = rulesRef.current.find(rule => rule.selector === selector)?.styles ?? {};
+      const blockId = (element as HTMLElement).dataset.jdvStudioBlock;
+      const savedRule = rulesRef.current.find(rule => (blockId && rule.blockId === blockId) || rule.selector === selector);
+      const saved = savedRule?.styles ?? {};
       setSelected({
         selector,
+        blockId,
         tag: element.tagName.toLowerCase(),
-        text: saved.text ?? (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 90),
+        text: savedRule?.text ?? (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 90),
         styles: {
           color: saved.color ?? computed.color,
           'background-color': saved['background-color'] ?? computed.backgroundColor,
@@ -140,7 +143,7 @@ export default function StudioVisualEditorPage() {
           transform: saved.transform ?? computed.transform,
         },
       });
-      setTextDraft(saved.text ?? ((element.children.length === 0 ? element.textContent : '') ?? '').trim().slice(0, 500));
+      setTextDraft(savedRule?.text ?? ((element.children.length === 0 ? element.textContent : '') ?? '').trim().slice(0, 500));
       setNotice('Élément sélectionné. Ajustez les propriétés à droite, puis enregistrez.');
     }, true);
   }, []);
@@ -196,6 +199,8 @@ export default function StudioVisualEditorPage() {
       const node = doc.createElement(block.kind === 'button' ? 'button' : block.kind === 'section' || block.kind === 'card' ? 'section' : 'p');
       node.dataset.jdvStudioBlock = block.id;
       node.textContent = block.text;
+      const blockRule = rules.find(rule => rule.blockId === block.id);
+      if (blockRule) { for (const [key, value] of Object.entries(blockRule.styles)) (node as HTMLElement).style.setProperty(key, value); }
       const style = node as HTMLElement;
       style.style.cssText = block.kind === 'button' ? 'display:inline-block;padding:12px 18px;margin:10px;background:#4f46e5;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer' : block.kind === 'card' ? 'display:block;padding:24px;margin:16px 0;background:#fff;color:#172033;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 8px 24px #0f172a12' : block.kind === 'section' ? 'display:block;min-height:100px;padding:28px;margin:16px 0;background:#f1f5f9;color:#172033;border-radius:16px' : 'padding:8px;margin:8px 0;font-size:18px;color:#172033';
       (doc.querySelector('main') ?? doc.body).appendChild(node);
@@ -210,9 +215,9 @@ export default function StudioVisualEditorPage() {
     const element = doc?.querySelector('[data-jdv-editor-selected]');
     if (element) (element as HTMLElement).style.setProperty(key, value);
     setRules(current => {
-      const found = current.find(rule => rule.selector === next.selector);
-      if (found) return current.map(rule => rule.selector === next.selector ? { ...rule, styles: { ...rule.styles, [key]: value } } : rule);
-      return [...current, { selector: next.selector, styles: { [key]: value } }];
+      const found = current.find(rule => (next.blockId && rule.blockId === next.blockId) || rule.selector === next.selector);
+      if (found) return current.map(rule => ((next.blockId && rule.blockId === next.blockId) || rule.selector === next.selector) ? { ...rule, styles: { ...rule.styles, [key]: value } } : rule);
+      return [...current, { selector: next.selector, blockId: next.blockId, styles: { [key]: value } }];
     });
   };
 
@@ -224,6 +229,8 @@ export default function StudioVisualEditorPage() {
     setBlocks(current => [...current, block]);
     const node = doc.createElement(kind === 'button' ? 'button' : kind === 'section' || kind === 'card' ? 'section' : 'p');
     node.dataset.jdvStudioBlock = block.id; node.textContent = block.text;
+    const blockRule = rulesRef.current.find(rule => rule.blockId === block.id);
+    if (blockRule) for (const [key, value] of Object.entries(blockRule.styles)) (node as HTMLElement).style.setProperty(key, value);
     const style = node as HTMLElement;
     style.style.cssText = kind === 'button' ? 'display:inline-block;padding:12px 18px;margin:10px;background:#4f46e5;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer' : kind === 'card' ? 'display:block;padding:24px;margin:16px 0;background:#fff;color:#172033;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 8px 24px #0f172a12' : kind === 'section' ? 'display:block;min-height:100px;padding:28px;margin:16px 0;background:#f1f5f9;color:#172033;border-radius:16px' : 'padding:8px;margin:8px 0;font-size:18px;color:#172033';
     (doc.querySelector('[data-jdv-editor-selected]')?.parentElement ?? doc.querySelector('main') ?? doc.body).appendChild(node);
@@ -249,11 +256,13 @@ export default function StudioVisualEditorPage() {
       return;
     }
     element.textContent = value;
+    const blockId = element.dataset.jdvStudioBlock;
+    if (blockId) setBlocks(current => current.map(block => block.id === blockId ? { ...block, text: value } : block));
     setSelected(current => current ? { ...current, text: value } : current);
     setRules(current => {
-      const found = current.find(rule => rule.selector === selected.selector);
-      if (found) return current.map(rule => rule.selector === selected.selector ? { ...rule, text: value } : rule);
-      return [...current, { selector: selected.selector, styles: {}, text: value }];
+      const found = current.find(rule => (selected.blockId && rule.blockId === selected.blockId) || rule.selector === selected.selector);
+      if (found) return current.map(rule => ((selected.blockId && rule.blockId === selected.blockId) || rule.selector === selected.selector) ? { ...rule, text: value } : rule);
+      return [...current, { selector: selected.selector, blockId: selected.blockId, styles: {}, text: value }];
     });
   };
 
