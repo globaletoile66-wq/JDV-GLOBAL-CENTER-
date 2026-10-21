@@ -49,18 +49,19 @@ export default function AcademyPage() {
 
     // The RLS policies intentionally expose only published programmes and open
     // courses to visitors. Load that public catalogue even before sign-in.
-    const [programResult, courseResult] = await Promise.all([
+    const [programResult, courseResult, currencyResult] = await Promise.all([
       supabase.from('academy_programs').select('id,organization_id,name,description,program_type,duration_hours,price,currency_id,status').order('created_at', { ascending: false }),
       supabase.from('academy_courses').select('id,program_id,instructor_user_id,title,description,starts_at,capacity,status').order('created_at', { ascending: false }).limit(200),
+      supabase.from('currencies').select('id,code,name,symbol').eq('is_active', true).order('code'),
     ]);
+    setCurrencies((currencyResult.data || []) as Currency[]);
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'academy') : false;
 
     let learnerEnrollments: Enrollment[] = [];
     let organizationIds: string[] = [];
     let enrollmentError: { message: string } | null = null;
 
-    if (user) {
-      const { data: currencyRows } = await supabase.from('currencies').select('id,code,name,symbol').eq('is_active', true).order('code');
-      setCurrencies((currencyRows || []) as Currency[]);
+    if (user && hasMembership) {
       const [enrollmentResult, memberResult] = await Promise.all([
         supabase.from('academy_enrollments').select('id,course_id,student_user_id,enrollment_status'),
         supabase.from('organization_members').select('organization_id,role_id').eq('user_id', user.id).eq('member_status', 'active'),
