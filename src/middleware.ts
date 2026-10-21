@@ -50,7 +50,8 @@ export async function middleware(request: NextRequest) {
     isPathOrChild(pathname, '/tontine/concepteur') ||
     pathname === '/tontine/contrat' ||
     (pathname.startsWith('/tontine/categories/') && pathname.endsWith('/contrat')) ||
-    isPathOrChild(pathname, '/tontine/join');
+    isPathOrChild(pathname, '/tontine/join') ||
+    isPathOrChild(pathname, '/tontine/documents');
   const globalCenterRoute = [
     '/dashboard', '/user-dashboard', '/profile', '/settings', '/notifications',
     '/organizations', '/onboarding', '/terrain', '/abonnements', '/espace',
