@@ -40,7 +40,17 @@ export default function MediaPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    if (!user) { setChannels([]); setContents([]); setBusy(false); return; }
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'media') : false;
+    if (!hasMembership) {
+      setChannels([]);
+      const { data, error: publicContentError } = await supabase.from('media_contents')
+        .select('id,channel_id,title,slug,content_type,body,media_url,published_at,status,created_at')
+        .eq('status', 'published').order('published_at', { ascending: false, nullsFirst: false }).limit(100);
+      if (publicContentError) setError(publicContentError.message);
+      else setContents((data ?? []) as MediaContent[]);
+      setBusy(false);
+      return;
+    }
     const [channelResult, contentResult] = await Promise.all([
       supabase.from('media_channels').select('id,name,channel_type,status').order('name').limit(100),
       supabase.from('media_contents').select('id,channel_id,title,slug,content_type,body,media_url,published_at,status,created_at').order('created_at', { ascending: false }).limit(100),
