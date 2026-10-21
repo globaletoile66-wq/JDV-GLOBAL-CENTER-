@@ -88,9 +88,21 @@ export default function SellerDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'listings' | 'orders' | 'settlements'>('overview');
 
   useEffect(() => {
-    if (!user) { router.push('/auth/login'); return; }
-    loadSellerData();
-  }, [user]);
+    if (!user) { router.replace('/inscription/marketplace'); return; }
+    let active = true;
+    void (async () => {
+      const { data: membership, error } = await supabase
+        .from('app_memberships').select('id,status')
+        .eq('user_id', user.id).eq('app_key', 'marketplace').maybeSingle();
+      if (!active) return;
+      if (error || !membership || membership.status !== 'active') {
+        router.replace('/inscription/marketplace');
+        return;
+      }
+      loadSellerData();
+    })();
+    return () => { active = false; };
+  }, [user, router, supabase]);
 
   const loadSellerData = async () => {
     if (!user) return;
