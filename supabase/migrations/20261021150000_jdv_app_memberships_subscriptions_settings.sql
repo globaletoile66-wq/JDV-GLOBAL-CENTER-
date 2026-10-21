@@ -177,6 +177,7 @@ $jdv_join$;
 
 revoke all on function public.jdv_join_application(text) from public;
 grant execute on function public.jdv_join_application(text) to authenticated;
+revoke all on function public.jdv_create_app_membership_on_signup() from public;
 
 -- Marketplace actions require explicit Marketplace membership. Public listing reads
 -- remain public; the restrictive policies below gate authenticated mutations and
@@ -237,7 +238,7 @@ security definer
 set search_path = ''
 as $jdv_order_membership$
 begin
-  if auth.role() = 'service_role' then
+  if current_setting('request.jwt.claim.role', true) = 'service_role' then
     return new;
   end if;
   if auth.uid() is null or not exists (
@@ -251,6 +252,8 @@ begin
   return new;
 end;
 $jdv_order_membership$;
+
+revoke all on function public.jdv_require_marketplace_membership_for_order() from public;
 
 drop trigger if exists jdv_marketplace_order_membership_required on public.marketplace_orders;
 create trigger jdv_marketplace_order_membership_required
