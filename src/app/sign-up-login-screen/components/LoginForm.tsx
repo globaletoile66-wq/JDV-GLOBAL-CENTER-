@@ -21,9 +21,10 @@ interface Props {
   onSwitchToRegister: () => void;
   /** When set, login is valid only for users enrolled in this application. */
   appKey?: string;
+  redirectTo?: string;
 }
 
-export default function LoginForm({ onSwitchToRegister, appKey }: Props) {
+export default function LoginForm({ onSwitchToRegister, appKey, redirectTo }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -58,13 +59,13 @@ export default function LoginForm({ onSwitchToRegister, appKey }: Props) {
         }
         if (!membership || membership.status !== 'active') {
           toast.info('Votre compte JDV existe déjà. Activez maintenant votre espace pour cette application.');
-          router.replace(`/inscription/${appKey}`);
+          router.replace(`/inscription/${appKey}${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`);
           return;
         }
       }
 
       toast.success('Connexion réussie.');
-      router.push(!appKey || appKey === 'global_center' ? '/user-dashboard' : getJDVApplicationHome(appKey));
+      router.push(redirectTo ?? (!appKey || appKey === 'global_center' ? '/user-dashboard' : getJDVApplicationHome(appKey)));
     } catch {
       setError('root', {
         message: 'Connexion impossible. Vérifiez votre adresse email, votre mot de passe et votre inscription à cette application, puis réessayez.',
