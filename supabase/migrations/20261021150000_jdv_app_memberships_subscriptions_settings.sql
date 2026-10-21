@@ -510,4 +510,63 @@ $jdv_catalog$;
 revoke all on function public.jdv_agriculture_public_catalog() from public;
 grant execute on function public.jdv_agriculture_public_catalog() to anon, authenticated;
 
+
+-- Persist registration contact and locale fields collected by the signup form.
+-- The existing profile trigger is preserved and extended; this migration is not
+-- applied to the remote project until the release is explicitly approved.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = 'public'
+as $jdv_profile_signup$
+declare
+  v_country_id uuid;
+  v_currency_id uuid;
+  v_language_id uuid;
+begin
+  select c.id, c.default_currency_id
+    into v_country_id, v_currency_id
+  from public.countries c
+  where upper(c.iso_code) = upper(new.raw_user_meta_data ->> 'country_code')
+    and c.is_active = true
+  limit 1;
+
+  select l.id into v_language_id
+  from public.languages l
+  where lower(l.code) = lower(coalesce(new.raw_user_meta_data ->> 'preferred_language', 'fr'))
+    and l.is_active = true
+  limit 1;
+
+  insert into public.profiles (
+    id, email, first_name, last_name, full_name, phone, country_id,
+    preferred_language_id, preferred_currency_id, avatar_url, account_status
+  ) values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data ->> 'first_name', ''),
+    coalesce(new.raw_user_meta_data ->> 'last_name', ''),
+    coalesce(new.raw_user_meta_data ->> 'full_name', concat_ws(' ', new.raw_user_meta_data ->> 'first_name', new.raw_user_meta_data ->> 'last_name')),
+    nullif(new.raw_user_meta_data ->> 'phone', ''),
+    v_country_id,
+    v_language_id,
+    v_currency_id,
+    coalesce(new.raw_user_meta_data ->> 'avatar_url', ''),
+    'active'
+  )
+  on conflict (id) do update set
+    phone = coalesce(excluded.phone, public.profiles.phone),
+    country_id = coalesce(excluded.country_id, public.profiles.country_id),
+    preferred_language_id = coalesce(excluded.preferred_language_id, public.profiles.preferred_language_id),
+    preferred_currency_id = coalesce(excluded.preferred_currency_id, public.profiles.preferred_currency_id),
+    updated_at = now();
+
+  return new;
+exception
+  when others then
+    raise notice 'handle_new_user profile sync error: %', sqlerrm;
+    return new;
+end;
+$jdv_profile_signup$;
+
 commit;
