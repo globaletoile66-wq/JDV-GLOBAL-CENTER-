@@ -2,9 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, FilePlus2, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { hasApplicationMembership } from '@/lib/apps/access';
 
 type Channel = { id: string; name: string; channel_type: string; status: string };
 type MediaContent = { id: string; channel_id: string; title: string; slug: string; content_type: string; body: string | null; media_url: string | null; published_at: string | null; status: string; created_at: string };
@@ -21,6 +23,7 @@ function slugify(value: string) {
 
 export default function MediaPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [contents, setContents] = useState<MediaContent[]>([]);
@@ -63,7 +66,7 @@ export default function MediaPage() {
 
   const createDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) { setError('Connectez-vous pour créer un contenu.'); return; }
+    if (!user || !await hasApplicationMembership(supabase, user.id, 'media')) { router.push('/inscription/media'); return; }
     if (!channelId) { setError('Aucune chaîne accessible. Demandez à un administrateur d’associer une chaîne à votre organisation.'); return; }
     if (!title.trim()) { setError('Le titre est obligatoire.'); return; }
     if (mediaUrl.trim() && !safeHttpUrl(mediaUrl.trim())) { setError('Le lien média doit être une URL HTTP ou HTTPS valide.'); return; }
