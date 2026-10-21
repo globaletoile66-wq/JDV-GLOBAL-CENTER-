@@ -132,4 +132,32 @@ $jdv_join$;
 revoke all on function public.jdv_join_application(text) from public;
 grant execute on function public.jdv_join_application(text) to authenticated;
 
+-- Public read-only catalog: exposes only available agricultural offers, never farm ownership data.
+create or replace function public.jdv_agriculture_public_catalog()
+returns table (
+  product_id uuid,
+  product_name text,
+  product_type text,
+  available_quantity numeric,
+  unit text,
+  unit_price numeric,
+  currency_code text,
+  created_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $jdv_catalog$
+  select p.id, p.name, p.product_type, p.quantity, p.unit, p.unit_price, c.code, p.created_at
+  from public.agri_products p
+  left join public.currencies c on c.id = p.currency_id
+  where p.availability_status = 'available'
+  order by p.created_at desc
+  limit 200;
+$jdv_catalog$;
+
+revoke all on function public.jdv_agriculture_public_catalog() from public;
+grant execute on function public.jdv_agriculture_public_catalog() to anon, authenticated;
+
 commit;
