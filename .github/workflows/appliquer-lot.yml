@@ -1,0 +1,64 @@
+name: Appliquer un lot de modifications
+on:
+  workflow_dispatch:
+    inputs:
+      zip:
+        description: Nom du zip du lot (à la racine du depot)
+        default: jdv-lot-2.zip
+      branche:
+        description: Branche de resultat
+        default: integration/lot-2
+permissions:
+  contents: write
+jobs:
+  appliquer:
+    runs-on: ubuntu-latest
+    env:
+      ZIP: ${{ inputs.zip }}
+      BRANCHE: ${{ inputs.branche }}
+      NEXT_PUBLIC_SUPABASE_URL: https://lncgghdbnkehdcyhqdfo.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: cle-factice-pour-le-build
+      NEXT_PUBLIC_SITE_URL: http://localhost:4028
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Appliquer le lot, verifier le build, publier le rapport
+        shell: bash
+        run: |
+          [ -f "$ZIP" ] || { echo "zip introuvable : $ZIP"; exit 1; }
+          rm -rf "$RUNNER_TEMP/lot" && mkdir -p "$RUNNER_TEMP/lot" && unzip -q "$ZIP" -d "$RUNNER_TEMP/lot"
+          git config user.name "jdv-bot"; git config user.email "jdv-bot@users.noreply.github.com"
+          git checkout -b "$BRANCHE"
+          bash "$RUNNER_TEMP/lot/lot/appliquer.sh" 2>&1 | tee "$RUNNER_TEMP/lot.log"
+          git rm -q --ignore-unmatch "$ZIP"
+          git add -A
+          git commit -q -m "Lot : $ZIP" || echo "rien a commiter"
+          git push -f origin "$BRANCHE"
+          set +e
+          npm install --no-audit --no-fund > npm.log 2>&1; npm_rc=$?
+          npx tsc --noEmit > tsc.log 2>&1; tsc_rc=$?
+          npx next build > build.log 2>&1; build_rc=$?
+          R="$RUNNER_TEMP/rapport.md"
+          {
+            echo "# Rapport de build (lot)"
+            echo "Branche : $BRANCHE | commit : $(git rev-parse HEAD)"
+            echo "Resultat : npm=$npm_rc | tsc=$tsc_rc | build=$build_rc (0 = OK)"
+            echo "Erreurs TypeScript : $(grep -c 'error TS' tsc.log)"
+            echo; echo "## Application du lot"; echo '```'; cat "$RUNNER_TEMP/lot.log"; echo '```'
+            echo; echo "## Par dossier"; echo '```'
+            grep 'error TS' tsc.log | cut -d'(' -f1 | awk -F/ '{ if ($1=="src") print $1"/"$2"/"$3; else print $1 }' | sort | uniq -c | sort -rn | head -25
+            echo '```'
+            echo; echo "## 150 premieres erreurs"; echo '```'; grep 'error TS' tsc.log | head -150; echo '```'
+            echo; echo "## Fin du build"; echo '```'; tail -60 build.log; echo '```'
+          } > "$R"
+          cp "$R" "$GITHUB_STEP_SUMMARY"
+          git checkout -q --orphan rapport-build
+          git rm -rfq . ; git clean -fdxq
+          cp "$R" rapport.md
+          git add rapport.md; git commit -q -m "Rapport de build (lot)"
+          git push -f origin rapport-build
+          [ $npm_rc -eq 0 ] && [ $tsc_rc -eq 0 ] && [ $build_rc -eq 0 ]
