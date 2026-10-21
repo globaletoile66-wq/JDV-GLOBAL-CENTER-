@@ -66,14 +66,15 @@ export default function TravelPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'travel') : false;
     const [destinationResult, tourResult, accommodationResult, activityResult, currencyResult, requestResult, favoriteResult] = await Promise.all([
       supabase.from('travel_destinations').select('id,name,city,short_description,description,image_url,is_active,country_id').eq('is_active', true).order('name').limit(100),
       supabase.from('travel_tours').select('id,title,description,duration_days,capacity,price,currency_id,publish_status,travel_tour_stops(destination_id)').eq('publish_status', 'published').order('created_at', { ascending: false }).limit(100),
       supabase.from('travel_accommodations').select('id,name,accommodation_type,description,destination_id,capacity,publish_status').eq('publish_status', 'published').order('name').limit(100),
       supabase.from('travel_activities').select('id,name,description,duration_minutes,price,currency_id,destination_id,publish_status').eq('publish_status', 'published').order('name').limit(100),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
-      user ? supabase.from('travel_requests').select('id,destination_id,travel_type,start_date,end_date,travelers_count,budget_max,currency_id,request_status,created_at').eq('requester_user_id', user.id).order('created_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null } as any),
-      user ? supabase.from('travel_favorites').select('target_id').eq('user_id', user.id).eq('target_type', 'destination') : Promise.resolve({ data: [], error: null } as any),
+      hasMembership && user ? supabase.from('travel_requests').select('id,destination_id,travel_type,start_date,end_date,travelers_count,budget_max,currency_id,request_status,created_at').eq('requester_user_id', user.id).order('created_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null } as any),
+      hasMembership && user ? supabase.from('travel_favorites').select('target_id').eq('user_id', user.id).eq('target_type', 'destination') : Promise.resolve({ data: [], error: null } as any),
     ]);
     if (destinationResult.error) setError(destinationResult.error.message); else { const rows = (destinationResult.data ?? []) as Destination[]; setDestinations(rows); setDestinationId((current) => current || rows[0]?.id || ''); }
     if (tourResult.error) setError((current) => current || tourResult.error!.message); else setTours((tourResult.data ?? []).map((row: any) => ({ ...row, destination_ids: (row.travel_tour_stops ?? []).map((stop: { destination_id: string | null }) => stop.destination_id).filter(Boolean) })) as Tour[]);
