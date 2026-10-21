@@ -18,7 +18,8 @@ function ApplicationRegistrationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedRedirect = searchParams.get('redirect');
-  const redirectTo = requestedRedirect && requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//') ? requestedRedirect : (app?.homePath ?? '/');
+  const hasRequestedRedirect = Boolean(requestedRedirect && requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//'));
+  const redirectTo = hasRequestedRedirect ? requestedRedirect! : (app?.homePath ?? '/');
   const supabase = useMemo(() => createClient(), []);
   const [membershipState, setMembershipState] = useState<'checking' | 'none' | 'active' | 'error'>('checking');
   const [joining, setJoining] = useState(false);
@@ -52,7 +53,7 @@ function ApplicationRegistrationContent() {
       setJoining(false);
       return;
     }
-    router.replace(redirectTo);
+    router.replace(hasRequestedRedirect || app.key === 'global_center' ? redirectTo : `/applications/${app.key}/subscription`);
   };
 
   if (!app) {
