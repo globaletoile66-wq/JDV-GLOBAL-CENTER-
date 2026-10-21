@@ -46,16 +46,16 @@ export default function PubPage() {
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
-    if (!user) {
-      setAdvertiser(null); setCampaigns([]); setPlacements([]); setCurrencies([]); setPricingRules([]); setBusy(false);
-      return;
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'pub') : false;
+    let advertiserRow: Advertiser | null = null;
+    if (hasMembership && user) {
+      const advertiserResult = await supabase.from('pub_advertisers').select('id,legal_name,status,user_id').eq('user_id', user.id).maybeSingle();
+      if (advertiserResult.error) setError(advertiserResult.error.message);
+      advertiserRow = (advertiserResult.data ?? null) as Advertiser | null;
     }
-    const advertiserResult = await supabase.from('pub_advertisers').select('id,legal_name,status,user_id').eq('user_id', user.id).maybeSingle();
-    if (advertiserResult.error) setError(advertiserResult.error.message);
-    const advertiserRow = (advertiserResult.data ?? null) as Advertiser | null;
     setAdvertiser(advertiserRow);
     const [campaignResult, placementResult, currencyResult, pricingResult] = await Promise.all([
-      advertiserRow ? supabase.from('pub_campaigns').select('id,name,objective,starts_at,ends_at,budget_amount,currency_id,status,created_at').eq('advertiser_id', advertiserRow.id).order('created_at', { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
+      hasMembership && advertiserRow ? supabase.from('pub_campaigns').select('id,name,objective,starts_at,ends_at,budget_amount,currency_id,status,created_at').eq('advertiser_id', advertiserRow.id).order('created_at', { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
       supabase.from('pub_placements').select('id,name,placement_type,price_per_day,currency_id,is_active').eq('is_active', true).limit(200),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
       supabase.from('pub_pricing_rules').select('id,name,billing_model,unit_price,currency_id').eq('is_active', true).limit(100),
