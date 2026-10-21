@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Compass, Home, Hotel, Plane, Store, UserRound, UtensilsCrossed, Handshake, BriefcaseBusiness } from 'lucide-react';
+import { Compass, Home, Hotel, Plane, Store, UserRound, UtensilsCrossed, Handshake, BriefcaseBusiness, type LucideIcon } from 'lucide-react';
 import { JDV_MODULES } from '@/lib/jdv/application-registry';
 import { JDV_BRANCHES } from '@/lib/jdv/branch-catalog';
 
-type NavItem = { href: string; label: string; icon: typeof Home };
+type NavItem = { href: string; label: string; icon: LucideIcon };
 
 const travelItems: NavItem[] = [
   { href: '/travel', label: 'Voyage', icon: Plane },
