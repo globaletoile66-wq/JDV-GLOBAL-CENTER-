@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { branchName } from '@/lib/billing/branches';
 import { money, periodLabel, periodPer, savingPercent, STATUS_LABEL, type MySub, type Plan } from '@/lib/billing/format';
@@ -16,7 +16,7 @@ type Props = {
 const dateFr = (d: string | null) => (d ? new Date(d).toLocaleDateString('fr-FR', { dateStyle: 'long' }) : '—');
 
 export default function BranchSubscriptionSection({ moduleCode, branchName: name, organizationId = null }: Props) {
-  const sb = createClient();
+  const sb = useMemo(() => createClient(), []);
   const title = name ?? branchName(moduleCode);
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [subs, setSubs] = useState<MySub[]>([]);
