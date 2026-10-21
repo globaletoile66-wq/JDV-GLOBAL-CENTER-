@@ -43,7 +43,9 @@ export default function ResponsiveMobileNavigation() {
         { href: currentApp.href, label: 'Accueil', icon: Home },
         ...branchModules.slice(0, 2).map((item) => ({ href: item.href, label: item.name.replace(/^JDV( Global Center)?/i, '').trim(), icon: BriefcaseBusiness })),
         { href: '/branches', label: 'Toutes les branches', icon: Compass },
-        { href: '/marketplace', label: 'Services', icon: Store },
+        currentApp.id === 'marketplace'
+          ? { href: '/help', label: 'Centre d’aide', icon: Compass }
+          : { href: '/marketplace', label: 'Services', icon: Store },
       ].slice(0, 5);
   const mobileItems = currentApp.id === 'travel' ? travelItems : [
     { href: currentApp.href, label: (currentBranch?.name || currentApp.name).replace(/^JDV( Global Center)?/i, '').trim() || 'Accueil', icon: Home },
