@@ -2,20 +2,17 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { ArrowRight, Building2, ShoppingBag, Sparkles, BriefcaseBusiness, Settings2, GitMerge, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, Building2, ShoppingBag, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import Image from 'next/image';
 import GlobalHeader from '@/components/navigation/GlobalHeader';
 import { JDV_BRANCHES } from '@/lib/jdv/branch-catalog';
-import { useJDV } from '@/contexts/JDVContext';
-import { translate } from '@/lib/i18n';
 import { getGroupedJDVModules } from '@/lib/jdv/application-registry';
 
 
 export default function HomePage() {
   const { user, loading, isSuperAdmin } = useAuth();
-  const { activeLanguage } = useJDV();
   const [moduleSearch, setModuleSearch] = useState('');
   const moduleGroups = getGroupedJDVModules();
   const moduleCount = moduleGroups.reduce((total, group) => total + group.modules.length, 0);
@@ -66,9 +63,9 @@ export default function HomePage() {
               <Link href="/branches" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-bold transition hover:border-accent/50">Voir les neuf branches <ArrowRight size={16}/></Link>
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {JDV_BRANCHES.map((branch, index) => <Link key={branch.id} href={branch.href === '/admin' || branch.href === '/entertainment' ? '/branches' : branch.href} aria-label={branch.href === '/admin' || branch.href === '/entertainment' ? `Consulter les informations sur ${branch.name}` : `Ouvrir ${branch.name}`} className="group flex min-w-0 items-center gap-4 rounded-2xl border border-border bg-background p-4 transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md">
+              {JDV_BRANCHES.map((branch, index) => <Link key={branch.id} href={branch.href} aria-label={`Ouvrir ${branch.name}`} className="group flex min-w-0 items-center gap-4 rounded-2xl border border-border bg-background p-4 transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md">
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-card p-2"><Image src={branch.logo} alt="" width={48} height={48} className="h-full w-full object-contain" unoptimized /></span>
-                <span className="min-w-0 flex-1"><span className="block text-[10px] font-extrabold uppercase tracking-[.16em] text-accent">0{index + 1} · {branch.eyebrow}</span><span className="mt-1 block font-bold">{branch.name}</span>{(branch.href === '/admin' || branch.href === '/entertainment') && <span className="mt-1 inline-block rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700">Accès à valider</span>}<span className="mt-1 block text-xs leading-5 text-muted-foreground">{branch.description}</span></span>
+                <span className="min-w-0 flex-1"><span className="block text-[10px] font-extrabold uppercase tracking-[.16em] text-accent">0{index + 1} · {branch.eyebrow}</span><span className="mt-1 block font-bold">{branch.name}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{branch.description}</span></span>
                 <ArrowRight size={16} className="shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-accent"/>
               </Link>)}
             </div>
