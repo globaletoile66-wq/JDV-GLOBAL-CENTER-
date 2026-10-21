@@ -57,7 +57,7 @@ export default function CreateBusinessPage() {
         p_trade_name: form.trade_name || null,
         p_country_id: countryId,
         p_currency_id: selectedCountry?.default_currency_id || null,
-        p_phone: form.phone || null,
+        p_phone: form.phone ? (form.phone.trim().startsWith('+') ? form.phone.trim() : `${selectedCountry?.phone_code ?? ''} ${form.phone.trim()}`.trim()) : null,
         p_email: form.email || null,
         p_city: form.city || null,
         p_address: form.address || null,
@@ -87,7 +87,7 @@ export default function CreateBusinessPage() {
             </select>
             {selectedCurrency && <span className="mt-1 block text-xs text-white/50">Devise par défaut : {selectedCurrency.name} ({selectedCurrency.code} {selectedCurrency.symbol})</span>}
           </label>
-          {([['name','Nom de l’entreprise *'],['trade_name','Nom commercial'],['phone','Téléphone professionnel'],['email','Email professionnel'],['city','Ville'],['address','Adresse']] as const).map(([key,label])=><label key={key} className="text-sm font-medium">{label}<input type={key==='email'?'email':key==='phone'?'tel':'text'} value={form[key]} onChange={event=>setForm({...form,[key]:event.target.value})} className="jdv-input mt-1 w-full" required={key==='name'} autoComplete={key==='email'?'email':key==='phone'?'tel':undefined}/></label>)}
+          {([['name','Nom de l’entreprise *'],['trade_name','Nom commercial'],['phone','Téléphone professionnel'],['email','Email professionnel'],['city','Ville'],['address','Adresse']] as const).map(([key,label])=><label key={key} className="text-sm font-medium">{label}{key==='phone' ? <span className="mt-1 flex gap-2"><span className="jdv-input flex min-w-20 items-center justify-center bg-white/10">{selectedCountry?.phone_code || '+…'}</span><input type="tel" value={form.phone} onChange={event=>setForm({...form,phone:event.target.value})} className="jdv-input min-w-0 flex-1" autoComplete="tel" placeholder="Numéro local"/></span> : <input type={key==='email'?'email':'text'} value={form[key]} onChange={event=>setForm({...form,[key]:event.target.value})} className="jdv-input mt-1 w-full" required={key==='name'} autoComplete={key==='email'?'email':undefined}/>}</label>)}
           <label className="sm:col-span-2 text-sm font-medium">Présentation<textarea value={form.description} onChange={event=>setForm({...form,description:event.target.value})} className="jdv-input mt-1 min-h-28 w-full"/></label>
           <div className="sm:col-span-2 flex flex-wrap justify-end gap-3 pt-3"><Link href="/business" className="btn-secondary">Annuler</Link><button disabled={busy || !countries.length} className="btn-primary">{busy?<Loader2 className="animate-spin"/>:'Créer mon espace'}<ArrowRight size={16}/></button></div>
         </form>
