@@ -251,11 +251,14 @@ begin
   if current_setting('request.jwt.claim.role', true) = 'service_role' then
     return new;
   end if;
-  if auth.uid() is null or not exists (
-    select 1 from public.app_memberships m
-    where m.user_id = auth.uid()
-      and m.app_key = 'marketplace'
-      and m.status = 'active'
+  if auth.uid() is null or (
+    not public.is_super_admin()
+    and not exists (
+      select 1 from public.app_memberships m
+      where m.user_id = auth.uid()
+        and m.app_key = 'marketplace'
+        and m.status = 'active'
+    )
   ) then
     raise exception 'JDV_MARKETPLACE_MEMBERSHIP_REQUIRED';
   end if;
@@ -426,8 +429,8 @@ begin
 
   if tg_table_name like 'ai_%' then v_app_key := 'ai';
   elsif tg_table_name like 'health_%' then v_app_key := 'health';
+  elsif tg_table_name = 'tontines' or tg_table_name like 'tontine_%' then v_app_key := 'tontine';
   elsif tg_table_name like 'insurance_%' then v_app_key := 'insurance';
-  elsif tg_table_name like 'tontine_%' then v_app_key := 'tontine';
   elsif tg_table_name like 'travel_%' then v_app_key := 'travel';
   elsif tg_table_name like 'transport_%' then v_app_key := 'transport';
   elsif tg_table_name like 'transit_%' then v_app_key := 'transit';
