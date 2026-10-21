@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, BadgeCheck, Heart, RefreshCw, Search, ShieldCheck, ShoppingBag, Sparkles, Store, Truck, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -11,7 +12,7 @@ type Category = { id:string; name:string; icon_name?:string|null };
 type Currency = { id:string; code:string };
 
 export default function MarketplacePage() {
- const {user,loading}=useAuth(); const supabase=useMemo(()=>createClient(),[]);
+ const {user,loading}=useAuth(); const router=useRouter(); const supabase=useMemo(()=>createClient(),[]);
  const [listings,setListings]=useState<Listing[]>([]); const [categories,setCategories]=useState<Category[]>([]); const [currencies,setCurrencies]=useState<Currency[]>([]); const [favorites,setFavorites]=useState<string[]>([]);
  const [query,setQuery]=useState(''); const [categoryId,setCategoryId]=useState(''); const [busy,setBusy]=useState(true); const [error,setError]=useState(''); const [message,setMessage]=useState('');
  const load=useCallback(async()=>{
