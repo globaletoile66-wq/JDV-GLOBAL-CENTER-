@@ -153,7 +153,7 @@ begin
   if p_app_key not in (
     'marketplace', 'agriculture', 'immo', 'health', 'academy', 'social',
     'media', 'pub', 'pay', 'tontine', 'travel', 'transport', 'insurance',
-    'energy', 'business', 'transit', 'services', 'procurement', 'accounting',
+    'energy', 'ai', 'business', 'transit', 'services', 'procurement', 'accounting',
     'inventory', 'hr', 'jobs', 'entertainment'
   ) then
     raise exception 'Unsupported JDV application key';
