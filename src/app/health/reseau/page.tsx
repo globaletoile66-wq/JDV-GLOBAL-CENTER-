@@ -82,7 +82,7 @@ export default function HealthNetworkPage() {
       }
     });
     return () => { active = false; };
-  }, [supabase, countryId]);
+  }, [supabase, profile?.country_id]);
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
@@ -110,7 +110,7 @@ export default function HealthNetworkPage() {
     if (dutyResult.error && !dutyResult.error.message.includes('does not exist')) setError((current) => current || 'Gardes : ' + dutyResult.error!.message);
     else setDuties((dutyResult.data ?? []) as Duty[]);
     setBusy(false);
-  }, [supabase, profile?.country_id]);
+  }, [supabase, countryId]);
 
   useEffect(() => { void load(); }, [load]);
 
