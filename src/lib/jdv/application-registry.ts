@@ -67,15 +67,15 @@ export type JDVModuleGroup = {
  * découverte sont unifiés ici.
  */
 export const JDV_MODULE_GROUPS: JDVModuleGroup[] = [
-  { id: 'commerce', title: 'Commerce & services', description: 'Vitrine, catalogue, relation clientèle et prestations.', accent: '#34D399', moduleIds: ['marketplace', 'services', 'business', 'crm'] },
-  { id: 'mobility', title: 'Mobilité & logistique', description: 'Voyages, transport et opérations de transit.', accent: '#60A5FA', moduleIds: ['travel', 'transport', 'transit'] },
-  { id: 'habitat', title: 'Habitat & patrimoine', description: 'Recherche immobilière, biens et visites.', accent: '#FBBF24', moduleIds: ['immo'] },
-  { id: 'finance', title: 'Finance communautaire & protection', description: 'Paiements partagés, épargne collective et assurance.', accent: '#2DD4BF', moduleIds: ['pay', 'tontine', 'insurance'] },
-  { id: 'health-learning', title: 'Santé & apprentissage', description: 'Deux domaines spécialisés qui conservent leurs parcours propres.', accent: '#F472B6', moduleIds: ['health', 'academy'] },
-  { id: 'content', title: 'Contenus & communauté', description: 'Réseaux, médias, campagnes, événements et expériences culturelles.', accent: '#FB7185', moduleIds: ['social', 'media', 'entertainment', 'pub', 'community', 'events'] },
-  { id: 'resources', title: 'Ressources & production', description: 'Agriculture et énergie.', accent: '#C4B5FD', moduleIds: ['agriculture', 'energy'] },
-  { id: 'professional', title: 'Outils professionnels & opérations', description: 'Emploi, comptabilité, équipe, achats, stocks et assistance IA.', accent: '#A5B4FC', moduleIds: ['jobs', 'accounting', 'hr', 'procurement', 'inventory', 'ai'] },
-  { id: 'governance', title: 'Légal & gouvernance', description: 'Services juridiques et administration globale.', accent: '#CBD5E1', moduleIds: ['legal', 'admin'] },
+  { id: 'finance-protection', title: 'Finance & Protection', description: 'Paiements, épargne collective, assurance et comptabilité.', accent: '#2DD4BF', moduleIds: ['pay', 'tontine', 'insurance', 'accounting'] },
+  { id: 'immo-patrimoine', title: 'Immobilier & Patrimoine', description: 'Biens, recherche immobilière, visites et projets de construction.', accent: '#FBBF24', moduleIds: ['immo'] },
+  { id: 'entreprises-services', title: 'Entreprises & Services', description: 'Outils de gestion, commerce, clientèle, services et opérations professionnelles.', accent: '#34D399', moduleIds: ['business', 'marketplace', 'crm', 'services', 'legal', 'admin', 'procurement', 'inventory', 'ai', 'hr'] },
+  { id: 'mobilite-logistique', title: 'Mobilité & Logistique', description: 'Voyages, transport et transit dans des parcours dédiés.', accent: '#60A5FA', moduleIds: ['travel', 'transport', 'transit'] },
+  { id: 'sante-bien-etre', title: 'Santé & Bien-être', description: 'Services de santé et parcours de prise de rendez-vous.', accent: '#F472B6', moduleIds: ['health'] },
+  { id: 'social-communaute', title: 'Social & Communauté', description: 'Réseaux, groupes et événements communautaires.', accent: '#A78BFA', moduleIds: ['social', 'community', 'events'] },
+  { id: 'medias-divertissement', title: 'Médias & Divertissement', description: 'Médias, publicité, créateurs et expériences culturelles.', accent: '#FB7185', moduleIds: ['media', 'pub', 'entertainment'] },
+  { id: 'formation-carriere', title: 'Formation & Carrière', description: 'Apprentissage, formation et opportunités professionnelles.', accent: '#818CF8', moduleIds: ['academy', 'jobs'] },
+  { id: 'agriculture-energie', title: 'Agriculture & Énergie', description: 'Production agricole, commercialisation et services énergétiques.', accent: '#84CC16', moduleIds: ['agriculture', 'energy'] },
 ];
 
 export const getGroupedJDVModules = () => {
