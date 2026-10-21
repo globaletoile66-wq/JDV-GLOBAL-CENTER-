@@ -32,7 +32,9 @@ export default function MarketplacePage() {
  const filtered=listings.filter(x=>[x.title,x.description,x.short_description,...(x.tags||[])].join(' ').toLowerCase().includes(query.trim().toLowerCase())&&(!categoryId||x.category_id===categoryId));
  const money=(amount:number,id:string|null)=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(amount)+' '+(currencies.find(x=>x.id===id)?.code||'');
  const toggle=async(item:Listing)=>{
-  if(!user){setError('Connectez-vous pour enregistrer vos favoris.');return}
+  if(!user){router.push('/inscription/marketplace');return}
+  const {data:membership,error:membershipError}=await supabase.from('app_memberships').select('id,status').eq('user_id',user.id).eq('app_key','marketplace').maybeSingle();
+  if(membershipError||!membership||membership.status!=='active'){router.push('/inscription/marketplace');return}
   const exists=favorites.includes(item.id);setError('');setMessage('');
   const result=exists?await supabase.from('marketplace_favorites').delete().eq('user_id',user.id).eq('listing_id',item.id):await supabase.from('marketplace_favorites').insert({user_id:user.id,listing_id:item.id,seller_id:item.seller_id});
   if(result.error)setError(result.error.message);else{setFavorites(old=>exists?old.filter(id=>id!==item.id):[...old,item.id]);setMessage(exists?'Article retiré des favoris.':'Article ajouté aux favoris.')}
@@ -43,7 +45,7 @@ export default function MarketplacePage() {
    <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-4 sm:px-8">
     <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/65 transition hover:text-white"><ArrowLeft size={16}/> Accueil JDV</Link>
     <div className="flex items-center gap-2">
-     <Link href="/marketplace/connexion" className="rounded-xl border border-white/15 px-3 py-2 text-sm hover:border-[#F28C28]/60">Connexion</Link>
+     <Link href={user ? '/applications/marketplace/settings' : '/marketplace/connexion'} className="rounded-xl border border-white/15 px-3 py-2 text-sm hover:border-[#F28C28]/60">{user ? 'Mon espace' : 'Connexion'}</Link>
      <Link href="/marketplace/seller" className="hidden rounded-xl border border-white/15 px-3 py-2 text-sm hover:border-[#F28C28]/60 sm:inline-flex">Espace vendeur</Link>
      <Link href="/marketplace/seller/create" className="inline-flex items-center gap-2 rounded-xl bg-[#F28C28] px-4 py-2.5 text-sm font-bold text-[#10213d] transition hover:bg-[#ffab52]"><Store size={16}/> Ouvrir ma boutique</Link>
     </div>
