@@ -30,13 +30,19 @@ function ApplicationRegistrationContent() {
     if (authLoading) return;
     if (!user || !app) { setMembershipState('none'); return; }
     let active = true;
-    void supabase.from('app_memberships').select('id,status').eq('user_id', user.id).eq('app_key', app.key).maybeSingle()
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (error) setMembershipState('error');
-        else if (data?.status === 'active') setMembershipState('active');
-        else setMembershipState('none');
-      });
+    void (async () => {
+      const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_super_admin');
+      if (!adminError && isSuperAdmin === true) {
+        if (active) setMembershipState('active');
+        return;
+      }
+      const { data, error } = await supabase.from('app_memberships')
+        .select('id,status').eq('user_id', user.id).eq('app_key', app.key).maybeSingle();
+      if (!active) return;
+      if (error) setMembershipState('error');
+      else if (data?.status === 'active') setMembershipState('active');
+      else setMembershipState('none');
+    })();
     return () => { active = false; };
   }, [authLoading, user, app, supabase]);
 
