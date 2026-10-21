@@ -53,9 +53,10 @@ export default function HealthPage() {
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
+    const hasMembership = user ? await hasApplicationMembership(supabase, user.id, 'health') : false;
     const [serviceResult, appointmentResult, currencyResult] = await Promise.all([
       supabase.from('health_services').select('id,name,service_type,description,professional_id,business_id,price,currency_id,duration_minutes,is_active').eq('is_active', true).order('name').limit(100),
-      user ? supabase.from('health_appointments').select('id,service_id,scheduled_at,appointment_status,price,created_at').eq('patient_user_id', user.id).order('scheduled_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
+      hasMembership && user ? supabase.from('health_appointments').select('id,service_id,scheduled_at,appointment_status,price,created_at').eq('patient_user_id', user.id).order('scheduled_at', { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
       supabase.from('currencies').select('id,code,symbol').eq('is_active', true).limit(100),
     ]);
     if (serviceResult.error) setError(serviceResult.error.message);
