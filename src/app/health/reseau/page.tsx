@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Navigation, Search, Stethoscope, Pill, FlaskConical, Building2, LocateFixed, RefreshCw, CircleCheck, Clock3, MessageCircle, Video, History, X } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Search, Stethoscope, Pill, FlaskConical, Building2, LocateFixed, RefreshCw, CircleCheck, MessageCircle, Video, History } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 type Business = {
