@@ -87,8 +87,13 @@ declare
   v_app_key text;
 begin
   v_app_key := coalesce(new.raw_user_meta_data ->> 'jdv_app_key', 'global_center');
-  if v_app_key !~ '^[a-z][a-z0-9_]{1,63}$' then
-    v_app_key := 'global_center';
+  if v_app_key not in (
+    'global_center', 'marketplace', 'agriculture', 'immo', 'health', 'academy',
+    'social', 'media', 'pub', 'pay', 'tontine', 'travel', 'transport',
+    'insurance', 'energy', 'business', 'transit', 'services', 'procurement',
+    'accounting', 'inventory', 'hr', 'jobs', 'entertainment'
+  ) then
+    raise exception 'Unsupported JDV application key';
   end if;
 
   insert into public.app_memberships (user_id, app_key, status, role)
