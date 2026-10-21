@@ -33,6 +33,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-3"><AppLogo size={40}/><div><div className="font-extrabold">JDV</div><div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Global Center</div></div></Link>
+          <nav aria-label="Navigation principale" className="hidden items-center gap-4 text-sm font-semibold text-muted-foreground xl:flex"><Link href="/about" className="transition hover:text-foreground">À propos</Link><Link href="/branches" className="transition hover:text-foreground">Nos branches</Link><Link href="/help" className="transition hover:text-foreground">Aide</Link></nav>
           <div className="flex items-center gap-2">
             {!loading && user && isSuperAdmin && <><Link href="/super-admin" className="inline-flex btn-secondary"><ShieldCheck size={16}/>{translate(activeLanguage, 'superAdmin')}</Link><Link href="/hidden-concepteur-gate/dashboard/studio" className="inline-flex btn-secondary"><SlidersHorizontal size={16}/>{translate(activeLanguage, 'designerStudio')}</Link></>}
             <Link href="/architecture/branches" className="hidden lg:inline-flex btn-secondary"><GitMerge size={16}/>{translate(activeLanguage, 'analytics')}</Link><Link href="/parametres/branches" className="hidden md:inline-flex btn-secondary"><Settings2 size={16}/>{translate(activeLanguage, 'settings')}</Link><Link href="/marketplace" className="hidden sm:inline-flex btn-secondary"><ShoppingBag size={16}/>{translate(activeLanguage, 'marketplace')}</Link><Link href="/business/create" className="hidden lg:inline-flex btn-secondary"><BriefcaseBusiness size={16}/>{translate(activeLanguage, 'registerBusiness')}</Link>
@@ -88,6 +89,40 @@ export default function HomePage() {
           {visibleGroups.length === 0 && <div className="rounded-2xl border border-dashed border-border p-8 text-center"><h3 className="font-bold">Aucune application trouvée</h3><p className="mt-2 text-sm text-muted-foreground">Essayez un autre nom, un service ou un domaine métier.</p></div>}
         </div>
       </section>
+
+      <footer className="border-t border-border bg-card/60">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="sm:col-span-2">
+            <Link href="/" className="inline-flex items-center gap-3">
+              <AppLogo size={36} />
+              <span><span className="block font-extrabold">JDV Global Center</span><span className="block text-xs text-muted-foreground">Un monde de services, une seule plateforme.</span></span>
+            </Link>
+            <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">Un écosystème numérique qui rassemble progressivement des services pour les particuliers, les professionnels et les organisations.</p>
+          </div>
+          <div>
+            <h2 className="text-sm font-bold">Découvrir JDV</h2>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <li><Link className="hover:text-foreground" href="/about">À propos</Link></li>
+              <li><Link className="hover:text-foreground" href="/branches">Nos branches</Link></li>
+              <li><Link className="hover:text-foreground" href="/help">Centre d’aide</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h2 className="text-sm font-bold">Accès rapides</h2>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <li><Link className="hover:text-foreground" href="/marketplace">Marketplace</Link></li>
+              <li><Link className="hover:text-foreground" href="/auth/login">Connexion</Link></li>
+              <li><Link className="hover:text-foreground" href="/auth/register">Créer un compte</Link></li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-border">
+          <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span>© {new Date().getFullYear()} JDV Global Center. Tous droits réservés.</span>
+            <span>Innovation · Confiance · Développement</span>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
