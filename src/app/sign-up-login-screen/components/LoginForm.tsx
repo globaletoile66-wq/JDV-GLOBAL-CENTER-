@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 interface LoginFormData {
   email: string;
@@ -17,13 +18,16 @@ interface LoginFormData {
 
 interface Props {
   onSwitchToRegister: () => void;
+  /** When set, login is valid only for users enrolled in this application. */
+  appKey?: string;
 }
 
-export default function LoginForm({ onSwitchToRegister }: Props) {
+export default function LoginForm({ onSwitchToRegister, appKey }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signOut } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
 
   const {
     register,
@@ -36,11 +40,30 @@ export default function LoginForm({ onSwitchToRegister }: Props) {
     setIsLoading(true);
     try {
       await signIn(data.email, data.password);
-      toast.success('Connexion réussie — Bienvenue sur JDV GLOBAL CENTER');
-      router.push('/user-dashboard');
+
+      if (appKey) {
+        const { data: membership, error: membershipError } = await supabase
+          .from('app_memberships')
+          .select('id,status')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+          .eq('app_key', appKey)
+          .maybeSingle();
+
+        if (membershipError) throw membershipError;
+        if (!membership || membership.status !== 'active') {
+          await signOut();
+          setError('root', {
+            message: `Ce compte n’est pas inscrit à ${appKey === 'marketplace' ? 'JDV Marketplace' : 'cette application'}. Créez un compte depuis la page d’inscription de cette application.`,
+          });
+          return;
+        }
+      }
+
+      toast.success('Connexion réussie.');
+      router.push(appKey === 'marketplace' ? '/marketplace' : '/user-dashboard');
     } catch {
       setError('root', {
-        message: 'Connexion impossible. Vérifiez votre adresse email et votre mot de passe, puis réessayez.',
+        message: 'Connexion impossible. Vérifiez votre adresse email, votre mot de passe et votre inscription à cette application, puis réessayez.',
       });
     } finally {
       setIsLoading(false);
@@ -52,7 +75,7 @@ export default function LoginForm({ onSwitchToRegister }: Props) {
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-foreground mb-1">Bon retour</h2>
         <p className="text-sm text-muted-foreground">
-          Connectez-vous à votre espace JDV GLOBAL CENTER
+          Connectez-vous à votre espace {appKey === 'marketplace' ? 'JDV Marketplace' : 'JDV Global Center'}
         </p>
       </div>
 
