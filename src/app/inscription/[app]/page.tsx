@@ -14,7 +14,7 @@ function ApplicationRegistrationContent() {
   const params = useParams<{ app: string }>();
   const app = getJDVApplication(params.app);
   const [mode, setMode] = useState<'register' | 'login'>('register');
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedRedirect = searchParams.get('redirect');
@@ -37,6 +37,7 @@ function ApplicationRegistrationContent() {
   const accent = branchAccent[app?.key ?? ''] ?? '#F28C28';
   const [membershipState, setMembershipState] = useState<'checking' | 'none' | 'active' | 'error'>('checking');
   const [joining, setJoining] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [joinError, setJoinError] = useState('');
 
   useEffect(() => {
@@ -62,6 +63,21 @@ function ApplicationRegistrationContent() {
   useEffect(() => {
     if (membershipState === 'active' && app) router.replace(redirectTo);
   }, [membershipState, app, router, redirectTo]);
+
+  const switchToRegistration = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    setJoinError('');
+    try {
+      await signOut();
+      setMembershipState('none');
+      setMode('register');
+    } catch {
+      setJoinError('La déconnexion a échoué. Rechargez la page puis réessayez.');
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   const joinApplication = async () => {
     if (!app || !user || joining) return;
@@ -101,9 +117,10 @@ function ApplicationRegistrationContent() {
           <p className="mt-5 text-xs font-extrabold uppercase tracking-[.18em]" style={{ color: accent }}>Espace membre dédié</p>
           <h1 className="mt-2 text-3xl font-black">Activer votre espace {app.name}</h1>
           <p className="mt-3 leading-7 text-slate-600">Vous êtes connecté à JDV, mais vous n’êtes pas encore inscrit à cette application. Confirmez votre inscription ici pour créer votre espace propre à cette branche. Cela n’active aucun abonnement payant et ne donne pas accès aux autres applications.</p>
-          {membershipState === 'error' && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">La vérification de l’inscription est momentanément indisponible.</p>}
+          {membershipState === 'error' && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">La vérification de l’inscription est momentanément indisponible. Vous pouvez vous déconnecter pour afficher le formulaire de création de compte, ou réessayer après vérification de la configuration Supabase.</p>}
           {joinError && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{joinError}</p>}
           <button type="button" disabled={joining || membershipState === 'error'} onClick={() => void joinApplication()} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F28C28] px-5 py-3.5 font-extrabold text-white disabled:opacity-60">{joining ? 'Activation…' : 'M’inscrire à cette application'}</button>
+          <button type="button" disabled={signingOut} onClick={() => void switchToRegistration()} className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3.5 font-bold text-[#0B1B3D] hover:bg-slate-50 disabled:opacity-60">{signingOut ? 'Déconnexion…' : 'Me déconnecter pour créer un compte'}</button>
           <p className="mt-4 text-xs leading-5 text-slate-500">L’activation du compte ne vaut pas abonnement. Les fonctionnalités payantes vérifieront séparément les droits et le statut de paiement.</p>
         </section>
       </main>
