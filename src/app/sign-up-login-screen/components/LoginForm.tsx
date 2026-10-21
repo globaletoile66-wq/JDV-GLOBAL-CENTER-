@@ -57,10 +57,8 @@ export default function LoginForm({ onSwitchToRegister, appKey }: Props) {
           return;
         }
         if (!membership || membership.status !== 'active') {
-          await signOut();
-          setError('root', {
-            message: `Ce compte n’est pas inscrit à ${appKey === 'marketplace' ? 'JDV Marketplace' : 'cette application'}. Créez un compte depuis la page d’inscription de cette application.`,
-          });
+          toast.info('Votre compte JDV existe déjà. Activez maintenant votre espace pour cette application.');
+          router.replace(`/inscription/${appKey}`);
           return;
         }
       }
