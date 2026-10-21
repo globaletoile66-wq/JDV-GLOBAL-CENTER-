@@ -9,7 +9,7 @@ import { JDV_APPLICATIONS } from '@/lib/apps/registry';
 export default function ApplicationAccountShortcut() {
   const pathname = usePathname();
   const { user, loading } = useAuth();
-  if (!pathname || pathname.startsWith('/inscription/') || pathname.startsWith('/applications/') || pathname.startsWith('/auth/') || pathname.startsWith('/hidden-concepteur-gate')) return null;
+  if (!pathname || pathname.startsWith('/inscription/') || pathname.startsWith('/applications/') || pathname.startsWith('/auth/') || pathname.startsWith('/hidden-concepteur-gate') || pathname === '/marketplace/connexion' || pathname === '/sign-up-login-screen') return null;
 
   const app = [...JDV_APPLICATIONS]
     .sort((a, b) => b.homePath.length - a.homePath.length)
