@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Film, Globe2, ImagePlus, Palette, RotateCcw, ShieldCheck, SlidersHorizontal, Type, PanelsTopLeft, Shapes } from 'lucide-react';
+import { ArrowLeft, Check, Film, Globe2, ImagePlus, Palette, RotateCcw, ShieldCheck, SlidersHorizontal, Type, PanelsTopLeft, Shapes, Monitor, Save } from 'lucide-react';
 import { PRESETS, DEFAULT_THEME, type JdvTheme, isHex } from '@/lib/theme/palettes';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
