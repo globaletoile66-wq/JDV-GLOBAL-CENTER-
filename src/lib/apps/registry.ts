@@ -24,6 +24,7 @@ export const JDV_APPLICATIONS: JDVApplication[] = [
   { key: 'transport', name: 'JDV Transport', homePath: '/transport', description: 'Découvrir les offres de transport.' },
   { key: 'insurance', name: 'JDV Assurance', homePath: '/insurance', description: 'Gérer les services et contrats d’assurance.' },
   { key: 'energy', name: 'JDV Énergie', homePath: '/energy', description: 'Découvrir les offres énergétiques.' },
+  { key: 'ai', name: 'JDV AI', homePath: '/ai', description: 'Découvrir les outils d’assistance et de productivité.' },
   { key: 'business', name: 'JDV Business', homePath: '/business', description: 'Gérer les activités professionnelles.' },
   { key: 'transit', name: 'JDV Transit', homePath: '/transit', description: 'Accéder aux services de transit.' },
   { key: 'services', name: 'JDV Services', homePath: '/services', description: 'Explorer les services proposés.' },
